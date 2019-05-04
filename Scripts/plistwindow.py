@@ -354,6 +354,8 @@ class PlistWindow(tk.Toplevel):
             file_menu.add_command(label="Save As ({}Shift+S)".format(sign), command=self.controller.save_plist_as)
             file_menu.add_command(label="Duplicate ({}D)".format(sign), command=self.controller.duplicate_plist)
             file_menu.add_separator()
+            file_menu.add_command(label="OC Snapshot ({}R)".format(sign), command=self.oc_snapshot)
+            file_menu.add_separator()
             file_menu.add_command(label="Convert Window ({}T)".format(sign), command=self.controller.show_convert)
             file_menu.add_command(label="Strip Comments ({}M)".format(sign), command=self.strip_comments)
             file_menu.add_separator()
@@ -383,6 +385,176 @@ class PlistWindow(tk.Toplevel):
         vsb.pack(side="right",fill="y")
         self._tree.pack(side="bottom", fill="both", expand=True)
         self.entry_popup = None
+
+    def walk_kexts(self,path,parent=""):
+        kexts = []
+        for x in os.listdir(path):
+            if x.startswith("."):
+                continue
+            if not x.lower().endswith(".kext"):
+                continue
+            kdir = os.path.join(path,x)
+            if not os.path.isdir(kdir):
+                continue
+            kdict = {
+                "Comment":"",
+                "Enabled":True,
+                "MatchKernel":"",
+                "BundlePath":parent+"/"+x if len(parent) else x
+            }
+            # Should be valid-ish - let's check for a binary
+            binpath = os.path.join(kdir,"Contents","MacOS",os.path.splitext(x)[0])
+            if os.path.exists(binpath):
+                kdict["ExecutablePath"] = "Contents/MacOS/"+os.path.splitext(x)[0]
+            # Get the Info.plist
+            if os.path.exists(os.path.join(kdir,"Contents","Info.plist")):
+                kdict["PlistPath"] = "Contents/Info.plist"
+            elif os.path.exists(os.path.join(kdir,"Info.plist")):
+                kdict["PlistPath"] = "Info.plist"
+            if not kdict.get("PlistPath") and not kdict.get("ExecutablePath"):
+                continue
+            # Should have something here
+            kexts.append(kdict)
+            # Check if we have a PlugIns folder
+            pdir = kdir+"/Contents/PlugIns"
+            if os.path.exists(pdir) and os.path.isdir(pdir):
+                kexts.extend(self.walk_kexts(pdir,parent+"/Contents/PlugIns/"+x))
+        return kexts
+
+    def oc_snapshot(self, event = None):
+        oc_folder = fd.askdirectory(title="Select OC Folder:")
+        if not len(oc_folder):
+            return
+
+        # Verify folder structure - should be as follows:
+        # OC
+        #  +- ACPI
+        #  | +- Custom
+        #  |   +- SSDT.aml
+        #  +- Drivers
+        #  | +- EfiDriver.efi
+        #  +- Kexts
+        #  | +- Something.kext
+        #  +- config.plist
+        
+        oc_acpi    = os.path.join(oc_folder,"ACPI","Custom")
+        oc_drivers = os.path.join(oc_folder,"Drivers")
+        oc_kexts   = os.path.join(oc_folder,"Kexts")
+
+        for x in [oc_acpi,oc_drivers,oc_kexts]:
+            if not os.path.exists(x):
+                self.bell()
+                mb.showerror("Incorrect OC Folder Struction", "{} does not exist.".format(x), parent=self)
+                return
+            if not os.path.isdir(x):
+                self.bell()
+                mb.showerror("Incorrect OC Folder Struction", "{} exists, but is not a directory.".format(x), parent=self)
+                return
+
+        # Folders are valid - lets work through each section
+
+        # ACPI is first, we'll iterate the .aml files we have and add what is missing
+        # while also removing what exists in the plist and not in the folder.
+        # If something exists in the table already, we won't touch it.  This leaves the
+        # enabled and comment properties untouched.
+        #
+        # Let's make sure we have the ACPI -> Add sections in our config
+
+        tree_dict = self.nodes_to_values()
+        # We're going to replace the whole list
+        if not "ACPI" in tree_dict or not isinstance(tree_dict["ACPI"],dict):
+            tree_dict["ACPI"] = {"Add":[]}
+        if not "Add" in tree_dict["ACPI"] or not isinstance(tree_dict["ACPI"]["Add"],list):
+            tree_dict["ACPI"]["Add"] = []
+        # Now we walk the existing add values
+        new_acpi = [x for x in os.listdir(oc_acpi) if x.lower().endswith(".aml") and not x.startswith(".")]
+        add = tree_dict["ACPI"]["Add"]
+        for aml in new_acpi:
+            if aml.lower() in [x.get("Path","").lower() for x in add]:
+                # Found it - skip
+                continue
+            # Doesn't exist, add it
+            add.append({
+                "Enabled":True,
+                "Comment":aml,
+                "Path":aml
+            })
+        new_add = []
+        for aml in add:
+            if not aml.get("Path","").lower() in [x.lower() for x in new_acpi]:
+                # Not there, skip
+                continue
+            new_add.append(aml)
+        tree_dict["ACPI"]["Add"] = new_add
+
+        # Next we need to walk the .efi drivers - in basically the same exact manner
+        if not "UEFI" in tree_dict or not isinstance(tree_dict["UEFI"],dict):
+            tree_dict["UEFI"] = {"Drivers":[]}
+        if not "Drivers" in tree_dict["UEFI"] or not isinstance(tree_dict["UEFI"]["Drivers"],list):
+            tree_dict["UEFI"]["Drivers"] = []
+        # Now we walk the existing values
+        new_efi = [x for x in os.listdir(oc_drivers) if x.lower().endswith(".efi") and not x.startswith(".")]
+        add = tree_dict["UEFI"]["Drivers"]
+        for efi in new_efi:
+            if efi.lower() in [x.lower() for x in add]:
+                # Found it - skip
+                continue
+            # Doesn't exist, add it
+            add.append(efi)
+        new_add = []
+        for efi in add:
+            if not efi.lower() in [x.lower() for x in new_efi]:
+                # Not there, skip
+                continue
+            new_add.append(efi)
+        tree_dict["UEFI"]["Drivers"] = new_add
+
+        # Now we need to walk the kexts
+        if not "Kernel" in tree_dict or not isinstance(tree_dict["Kernel"],dict):
+            tree_dict["Kernel"] = {"Add":[]}
+        if not "Add" in tree_dict["Kernel"] or not isinstance(tree_dict["Kernel"]["Add"],list):
+            tree_dict["Kernel"]["Add"] = []
+        kext_list = self.walk_kexts(oc_kexts)
+        kexts = tree_dict["Kernel"]["Add"]
+        for kext in kext_list:
+            if kext["BundlePath"].lower() in [x.get("BundlePath","").lower() for x in kexts]:
+                # Already have it, skip
+                continue
+            # We need it, it seems
+            kexts.append(kext)
+        new_kexts = []
+        for kext in kexts:
+            if not kext.get("BundlePath","").lower() in [x["BundlePath"].lower() for x in kext_list]:
+                # Not there, skip it
+                continue
+            new_kexts.append(kext)
+        tree_dict["Kernel"]["Add"] = new_kexts
+
+        # Now we remove the original tree - then replace it
+        undo_list = []
+        for x in self._tree.get_children():
+            undo_list.append({
+                "type":"remove",
+                "cell":x,
+                "from":self._tree.parent(x),
+                "index":self._tree.index(x)
+            })
+            self._tree.detach(x)
+        # Finally, we add the nodes back
+        self.add_node(tree_dict)
+        # Add all the root items to our undo list
+        for child in self._tree.get_children():
+            undo_list.append({
+                "type":"add",
+                "cell":child
+            })
+        self.add_undo(undo_list)
+        # Ensure we're edited
+        if not self.edited:
+            self.edited = True
+            self.title(self.title()+" - Edited")
+        self.update_all_children()
+        self.alternate_colors()
 
     def get_check_type(self, cell=None, string=None):
         if not cell == None:
@@ -1038,9 +1210,11 @@ class PlistWindow(tk.Toplevel):
             # Only updating the "text" field
             self._tree.item(child,text=x)
 
-    def change_type(self, value):
+    def change_type(self, value, cell = None):
         # Need to walk the values and pad
-        values = self.get_padded_values(self._tree.focus(), 3)
+        if cell == None:
+            cell = self._tree.focus()
+        values = self.get_padded_values(cell, 3)
         # Verify we actually changed type
         if values[0] == value:
             # No change, bail
@@ -1050,7 +1224,7 @@ class PlistWindow(tk.Toplevel):
         values[0] = value
         # Remove children if needed
         changes = []
-        for i in self._tree.get_children(self._tree.focus()):
+        for i in self._tree.get_children(cell):
             changes.append({
                 "type":"remove",
                 "cell":i,
@@ -1058,7 +1232,6 @@ class PlistWindow(tk.Toplevel):
                 "index":self._tree.index(i)
             })
             self._tree.detach(i)
-        cell = self._tree.focus()
         changes.append({
             "type":"edit",
             "cell":cell,
@@ -1074,10 +1247,10 @@ class PlistWindow(tk.Toplevel):
         elif value.lower() == "boolean":
             values[1] = "True"
         elif value.lower() == "array":
-            self._tree.item(self._tree.focus(),open=True)
+            self._tree.item(cell,open=True)
             values[1] = "0 children"
         elif value.lower() == "dictionary":
-            self._tree.item(self._tree.focus(),open=True)
+            self._tree.item(cell,open=True)
             values[1] = "0 key/value pairs"
         elif value.lower() == "date":
             values[1] = datetime.datetime.now().strftime("%b %d, %Y %I:%M:%S %p")
@@ -1086,7 +1259,7 @@ class PlistWindow(tk.Toplevel):
         else:
             values[1] = ""
         # Set the values
-        self._tree.item(self._tree.focus(), values=values)
+        self._tree.item(cell, values=values)
         if not self.edited:
             self.edited = True
             self.title(self.title()+" - Edited")
@@ -1173,6 +1346,7 @@ class PlistWindow(tk.Toplevel):
         # and ensuring the type
         created = None
         current_cell = ""
+        undo_list = []
         for p,t in izip(paths,types):
             found = False
             needed_type = {"d":"Dictionary","a":"Array"}.get(t.lower(),"Dictionary")
@@ -1191,29 +1365,36 @@ class PlistWindow(tk.Toplevel):
             if not found:
                 # Need to add it
                 current_cell = self._tree.insert(current_cell,"end",text=p,values=(self.menu_code+" "+needed_type,"",self.drag_code,),open=True)
-                if created == None:
-                    # Only get the top level item created
-                    created = current_cell
-        
+                undo_list.append({
+                    "type":"add",
+                    "cell":current_cell
+                })
         # At this point - we should be able to add the final piece
         # let's first make sure it doesn't already exist - if it does, we
         # will overwrite it
-        '''current_type = self.get_check_type(current_cell).lower()
+        current_type = self.get_check_type(current_cell).lower()
         if current_type == "dictionary":
             # Scan through and make sure we have all the keys needed
             for x in self._tree.get_children(current_cell):
                 name = self._tree.item(x,"text")
                 if name in value:
                     # Need to change this one
-                    if len(self._tree.get_children(x)):
-                        # Add some remove commands'''
+                    for child in self._tree.get_children(x):
+                        # Add some remove commands
+                        undo_list.append({
+                            "type":"remove",
+                            "cell":child,
+                            "from":x,
+                            "index":self._tree.index(child)
+                        })
         last_cell = self.add_node(value,current_cell,"")
         if created == None:
             created = last_cell
-        self.add_undo({
+        undo_list.append({
             "type":"add",
             "cell":created
             })
+        self.add_undo(undo_list)
         if not self.edited:
             self.edited = True
             self.title(self.title()+" - Edited")
