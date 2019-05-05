@@ -418,7 +418,7 @@ class PlistWindow(tk.Toplevel):
             # Check if we have a PlugIns folder
             pdir = kdir+"/Contents/PlugIns"
             if os.path.exists(pdir) and os.path.isdir(pdir):
-                kexts.extend(self.walk_kexts(pdir,parent+"/Contents/PlugIns/"+x))
+                kexts.extend(self.walk_kexts(pdir,(parent+"/"+x if len(parent) else x)+"/Contents/PlugIns"))
         return kexts
 
     def oc_snapshot(self, event = None):
