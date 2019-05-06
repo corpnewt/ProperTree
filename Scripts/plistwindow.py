@@ -1439,11 +1439,16 @@ class PlistWindow(tk.Toplevel):
             for item in sorted(oc_valid):
                 item_menu = tk.Menu(oc_menu, tearoff=0)
                 for x in open_core[item]:
-                    name  = x["name"]
-                    value = x["value"]
-                    types = x["types"]
-                    passed = (cell,item,types,value)
-                    item_menu.add_command(label=name, command=lambda item=passed: self.merge_menu_preset(item))
+                    if x.get("separator",False) != False:
+                        item_menu.add_separator()
+                    elif x.get("title",False) != False:
+                        item_menu.add("command",label=x.get("title",""),state="disabled")
+                    else:
+                        name  = x["name"]
+                        value = x["value"]
+                        types = x["types"]
+                        passed = (cell,item,types,value)
+                        item_menu.add_command(label=name, command=lambda item=passed: self.merge_menu_preset(item))
                 oc_menu.add_cascade(label=item,menu=item_menu)
             popup_menu.add_cascade(label="OpenCore",menu=oc_menu)
         if len(cl_valid):
@@ -1451,11 +1456,16 @@ class PlistWindow(tk.Toplevel):
             for item in sorted(cl_valid):
                 item_menu = tk.Menu(clover_menu, tearoff=0)
                 for x in clover[item]:
-                    name  = x["name"]
-                    value = x["value"]
-                    types = x["types"]
-                    passed = (cell,item,types,value)
-                    item_menu.add_command(label=name, command=lambda item=passed: self.merge_menu_preset(item))
+                    if x.get("separator",False) != False:
+                        item_menu.add_separator()
+                    elif x.get("title",False) != False:
+                        item_menu.add("command",label=x.get("name",""),state="disabled")
+                    else:
+                        name  = x["name"]
+                        value = x["value"]
+                        types = x["types"]
+                        passed = (cell,item,types,value)
+                        item_menu.add_command(label=name, command=lambda item=passed: self.merge_menu_preset(item))
                 clover_menu.add_cascade(label=item,menu=item_menu)
             popup_menu.add_cascade(label="Clover",menu=clover_menu)
             
