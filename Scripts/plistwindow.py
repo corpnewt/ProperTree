@@ -115,7 +115,7 @@ class EntryPopup(tk.Entry):
                         # print("Key names must be unique!\a")
                     return
             # Add to undo stack
-            self.master.add_undo({"cell":self.cell,"name":self.parent.item(self.cell,"text")})
+            self.master.add_undo({"type":"edit","cell":self.cell,"text":self.parent.item(self.cell,"text"),"values":self.parent.item(self.cell,"values")})
             # No matches, should be safe to set
             self.parent.item(self.cell, text=self.get())
         else:
@@ -248,7 +248,7 @@ class EntryPopup(tk.Entry):
                 # At this point, we should have the decimal value
                 value = str(value)
             # Add to undo stack
-            self.master.add_undo({"cell":self.cell,"value":original})
+            self.master.add_undo({"type":"edit","cell":self.cell,"text":self.parent.item(self.cell,"text"),"values":original})
             # Replace our value (may be slightly modified)
             values[index-1] = value
             # Set the values
