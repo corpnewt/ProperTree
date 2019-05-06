@@ -13,7 +13,7 @@ except:
 from Scripts import *
 
 class ProperTree:
-    def __init__(self):
+    def __init__(self, plists = []):
         # Create the new tk object
         self.tk = tk.Tk()
         self.tk.title("Convert Values")
@@ -122,8 +122,14 @@ class ProperTree:
             # Rewrite the default Command-Q command
             self.tk.bind_all("<{}-q>".format(key), self.quit)
         
-        # create a fresh plist to start
-        self.start_window = self.new_plist()
+        if isinstance(plists, list) and len(plists):
+            self.start_window = None
+            # Iterate the passed plists and open them
+            for p in plists:
+                self.open_plist_with_path(None,p,None)
+        else:
+            # create a fresh plist to start
+            self.start_window = self.new_plist()
 
         # Start our run loop
         tk.mainloop()
@@ -335,6 +341,12 @@ class ProperTree:
                 window.bell()
                 mb.showerror("File Already Open", "{} is already open here.".format(path), parent=window)
                 return
+        self.open_plist_with_path(event,path,current_window)
+
+    def open_plist_with_path(self, event = None, path = None, current_window = None):
+        if path == None:
+            # Uh... wut?
+            return
         # Let's try to load the plist
         try:
             with open(path,"rb") as f:
@@ -374,4 +386,7 @@ class ProperTree:
         self.tk.destroy()
 
 if __name__ == '__main__':
-    p = ProperTree()
+    plists = []
+    if len(sys.argv) > 1:
+        plists = sys.argv[1:]
+    p = ProperTree(plists)
