@@ -192,8 +192,8 @@ class ProperTree:
             from_value = from_value.replace(" ","")
             if [x for x in from_value if x.lower() not in "0123456789abcdef"]:
                 self.tk.bell()
-                if not mb.showerror("Invalid Hex Data","Invalid character in passed hex data.",parent=self.tk):
-                    return
+                mb.showerror("Invalid Hex Data","Invalid character in passed hex data.",parent=self.tk)
+                return
         try:
             # Handle the from data
             if sys.version_info >= (3,0):
