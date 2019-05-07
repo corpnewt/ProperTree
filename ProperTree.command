@@ -125,7 +125,7 @@ class ProperTree:
         if isinstance(plists, list) and len(plists):
             self.start_window = None
             # Iterate the passed plists and open them
-            for p in plists:
+            for p in set(plists):
                 self.open_plist_with_path(None,p,None)
         else:
             # create a fresh plist to start
