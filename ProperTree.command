@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import sys, os, binascii, base64
+import queue, json, ctypes # Fix for pyinstaller failing to bundle dependencies
 try:
     import Tkinter as tk
     import ttk
