@@ -16,11 +16,4 @@ matrix:
       env: PATH=/c/Python37:/c/Python37/Scripts:$PATH
 install:
   - pip3 install pyinstaller
-script:
-  - pyinstaller \
-      --clean \
-      --windowed \
-      --onedir \
-      --onefile \
-      --add-data Scripts:Scripts \
-      ProperTree.command
+script: pyinstaller --clean --windowed --onedir --onefile --add-data Scripts:Scripts ProperTree.command
