@@ -267,6 +267,7 @@ class PlistWindow(tk.Toplevel):
         self.drag_undo = None
         self.clicked_drag = False
         self.data_display = "hex" # hex or base64
+        self.xcode_data = True # keep <data>xxxx</data> in one line when true
         self.menu_code = u"\u21D5"
         #self.drag_code = u"\u2630"
         self.drag_code = u"\u2261"
@@ -866,8 +867,32 @@ class PlistWindow(tk.Toplevel):
         temp = tempfile.mkdtemp()
         temp_file = os.path.join(temp, os.path.basename(path))
         try:
-            with open(temp_file,"wb") as f:
-                plist.dump(plist_data,f)
+            if not self.xcode_data:
+                with open(temp_file,"wb") as f:
+                    plist.dump(plist_data,f)
+            else:
+                # Dump to a string first
+                plist_text = plist.dumps(plist_data)
+                new_plist = []
+                data_tag = ""
+                for x in plist_text.split("\n"):
+                    if x.strip() == "<data>":
+                        data_tag = x
+                        continue
+                    if not len(data_tag):
+                        # Not primed, and wasn't <data>
+                        new_plist.append(x)
+                        continue
+                    data_tag += x.strip()
+                    # Check for the end
+                    if x.strip() == "</data>":
+                        # Found the end, append it and reset
+                        new_plist.append(data_tag)
+                        data_tag = ""
+                # At this point, we have a list of lines - with all <data> tags on the same line
+                # let's write to file
+                with open(temp_file,"w") as f:
+                    f.write("\n".join(new_plist))
         except Exception as e:
             try:
                 shutil.rmtree(temp,ignore_errors=True)
