@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import sys, os, plistlib, base64, binascii, datetime, tempfile, shutil, re, itertools, math
+from collections import OrderedDict
 try:
     # Python 2
     import Tkinter as tk
@@ -267,7 +268,8 @@ class PlistWindow(tk.Toplevel):
         self.drag_undo = None
         self.clicked_drag = False
         self.data_display = "hex" # hex or base64
-        self.xcode_data = True # keep <data>xxxx</data> in one line when true
+        self.xcode_data = self.controller.xcode_data # keep <data>xxxx</data> in one line when true
+        self.sort_dict = self.controller.sort_dict # Preserve key ordering in dictionaries when loading/saving
         self.menu_code = u"\u21D5"
         #self.drag_code = u"\u2630"
         self.drag_code = u"\u2261"
@@ -378,9 +380,6 @@ class PlistWindow(tk.Toplevel):
             except:
                 pass
         os.chdir(cwd)
-
-        # Sort dictionary keys?
-        self.sort_dict = True
         
         # Add the treeview
         vsb.pack(side="right",fill="y")
@@ -869,10 +868,10 @@ class PlistWindow(tk.Toplevel):
         try:
             if not self.xcode_data:
                 with open(temp_file,"wb") as f:
-                    plist.dump(plist_data,f)
+                    plist.dump(plist_data,f,sort_keys=self.sort_dict)
             else:
                 # Dump to a string first
-                plist_text = plist.dumps(plist_data)
+                plist_text = plist.dumps(plist_data,sort_keys=self.sort_dict)
                 new_plist = []
                 data_tag = ""
                 for x in plist_text.split("\n"):
@@ -1036,7 +1035,7 @@ class PlistWindow(tk.Toplevel):
     def nodes_to_values(self,node="",parent={}):
         if node == "" or node == None:
             # top level
-            parent = {}
+            parent = {} if self.sort_dict else OrderedDict()
             for child in self._tree.get_children(node):
                 parent = self.nodes_to_values(child,parent)
             return parent
@@ -1047,7 +1046,7 @@ class PlistWindow(tk.Toplevel):
         check_type = self.get_check_type(node).lower()
         # Iterate value types
         if check_type == "dictionary":
-            value = {}
+            value = {} if self.sort_dict else OrderedDict()
         elif check_type == "array":
             value = []
         elif check_type == "boolean":

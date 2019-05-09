@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-import sys, os, binascii, base64
+import sys, os, binascii, base64, json
+from collections import OrderedDict
 try:
     import Tkinter as tk
     import ttk
@@ -122,6 +123,18 @@ class ProperTree:
             # Rewrite the default Command-Q command
             self.tk.bind_all("<{}-q>".format(key), self.quit)
         
+        cwd = os.getcwd()
+        os.chdir(os.path.dirname(os.path.realpath(__file__)))
+        settings = {}
+        try:
+            if os.path.exists("Scripts/settings.json"):
+                settings = json.load(open("Scripts/settings.json"))
+        except:
+            pass
+        self.xcode_data = settings.get("xcode_data",True) # keep <data>xxxx</data> in one line when true
+        self.sort_dict = settings.get("sort_dict",False) # Preserve key ordering in dictionaries when loading/saving
+        os.chdir(cwd)
+
         if isinstance(plists, list) and len(plists):
             self.start_window = None
             # Iterate the passed plists and open them
@@ -347,10 +360,11 @@ class ProperTree:
         if path == None:
             # Uh... wut?
             return
+        path = os.path.realpath(os.path.expanduser(path))
         # Let's try to load the plist
         try:
             with open(path,"rb") as f:
-                plist_data = plist.load(f)
+                plist_data = plist.load(f,dict_type=dict if self.sort_dict else OrderedDict)
         except Exception as e:
             # Had an issue, throw up a display box
             # print("{}\a".format(str(e)))

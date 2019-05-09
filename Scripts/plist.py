@@ -63,9 +63,18 @@ def load(fp, fmt=None, use_builtin_types=True, dict_type=dict):
     if _check_py3():
         return plistlib.load(fp, fmt=fmt, use_builtin_types=use_builtin_types, dict_type=dict_type)
     elif not _is_binary(fp):
-        return plistlib.readPlist(fp)
+        # We monkey patch the begin_dict function to allow for other
+        # dict types
+        p = plistlib.PlistParser()
+        def begin_dict(attrs):
+            d = dict_type()
+            p.addObject(d)
+            p.stack.append(d)
+        p.begin_dict = begin_dict
+        root = p.parse(fp)
+        return root
     else:
-        return readBinaryPlistFile(fp)
+        return readBinaryPlistFile(fp,dict_type)
 
 def loads(value, fmt=None, use_builtin_types=True, dict_type=dict):
     if _check_py3():
@@ -78,7 +87,7 @@ def loads(value, fmt=None, use_builtin_types=True, dict_type=dict):
     else:
         if _is_binary(value):
             # Has the proper header to be a binary plist
-            return readBinaryPlistFile(BytesIO(value))
+            return readBinaryPlistFile(BytesIO(value),dict_type)
         else:
             # Is not binary - assume a string - and try to load
             # We avoid using readPlistFromString() as that uses
@@ -88,6 +97,12 @@ def loads(value, fmt=None, use_builtin_types=True, dict_type=dict):
             # Create a new PlistParser object - then we need to set up
             # the values and parse.
             p = plistlib.PlistParser()
+            # We also need to monkey patch this to allow for other dict_types
+            def begin_dict(attrs):
+                d = dict_type()
+                p.addObject(d)
+                p.stack.append(d)
+            p.begin_dict = begin_dict
             parser = ParserCreate()
             parser.StartElementHandler = p.handleBeginElement
             parser.EndElementHandler = p.handleEndElement
@@ -98,24 +113,42 @@ def loads(value, fmt=None, use_builtin_types=True, dict_type=dict):
             # Parse the string
             parser.Parse(value, 1)
             return p.root
-            
-            rootObject = p.parse(s)
-            return rootObject
 
 def dump(value, fp, fmt=FMT_XML, sort_keys=True, skipkeys=False):
     if _check_py3():
         plistlib.dump(value, fp, fmt=fmt, sort_keys=sort_keys, skipkeys=skipkeys)
     else:
-        plistlib.writePlist(value, fp)
+        # We need to monkey patch a bunch here too in order to avoid auto-sorting
+        # of keys
+        writer = plistlib.PlistWriter(fp)
+        def writeDict(d):
+            if d:
+                writer.beginElement("dict")
+                items = sorted(d.items()) if sort_keys else d.items()
+                for key, value in items:
+                    if not isinstance(key, str):
+                        if skipkeys:
+                            continue
+                        raise TypeError("keys must be strings")
+                    writer.simpleElement("key", key)
+                    writer.writeValue(value)
+                writer.endElement("dict")
+            else:
+                writer.simpleElement("dict")
+        writer.writeDict = writeDict
+        writer.writeln("<plist version=\"1.0\">")
+        writer.writeValue(value)
+        writer.writeln("</plist>")
+        # plistlib.writePlist(value, fp)
     
-def dumps(value, fmt=FMT_XML, skipkeys=False):
+def dumps(value, fmt=FMT_XML, skipkeys=False, sort_keys=True):
     if _check_py3():
-        return plistlib.dumps(value, fmt=fmt, skipkeys=skipkeys).decode("utf-8")
+        return plistlib.dumps(value, fmt=fmt, skipkeys=skipkeys, sort_keys=sort_keys).decode("utf-8")
     else:
         # We avoid using writePlistToString() as that uses
         # cStringIO and fails when Unicode strings are detected
         f = StringIO()
-        plistlib.writePlist(value, f)
+        dump(value, f, fmt=fmt, skipkeys=skipkeys, sort_keys=sort_keys)
         return f.getvalue()
 
 ###                        ###
@@ -131,7 +164,7 @@ class InvalidFileException(ValueError):
     def __unicode__(self):
         return "Invalid file"
 
-def readBinaryPlistFile(in_file):
+def readBinaryPlistFile(in_file, dict_type=dict):
     """
     Read a binary plist file, following the description of the binary format: http://opensource.apple.com/source/CF/CF-550/CFBinaryPList.c
     Raise InvalidFileException in case of error, otherwise return the root object, as usual
@@ -202,7 +235,7 @@ def readBinaryPlistFile(in_file):
             obj_refs = struct.unpack('>' + ref_format * s, in_file.read(s * ref_size))
             return set(map(lambda x: readNextObject(object_offsets[x]), obj_refs))
         elif token_h == 0xD0: #dict
-            result = {}
+            result = dict_type()
             s = getSize(token_l)
             key_refs = struct.unpack('>' + ref_format * s, in_file.read(s * ref_size))
             obj_refs = struct.unpack('>' + ref_format * s, in_file.read(s * ref_size))
