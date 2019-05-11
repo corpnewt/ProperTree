@@ -356,6 +356,7 @@ class PlistWindow(tk.Toplevel):
             file_menu.add_command(label="Save ({}S)".format(sign), command=self.controller.save_plist)
             file_menu.add_command(label="Save As ({}Shift+S)".format(sign), command=self.controller.save_plist_as)
             file_menu.add_command(label="Duplicate ({}D)".format(sign), command=self.controller.duplicate_plist)
+            file_menu.add_command(label="Reload From Disk ({}L)".format(sign), command=self.reload_from_disk)
             file_menu.add_separator()
             file_menu.add_command(label="OC Snapshot ({}R)".format(sign), command=self.oc_snapshot)
             file_menu.add_separator()
@@ -385,6 +386,31 @@ class PlistWindow(tk.Toplevel):
         vsb.pack(side="right",fill="y")
         self._tree.pack(side="bottom", fill="both", expand=True)
         self.entry_popup = None
+
+    def reload_from_disk(self, event = None):
+        # If we have opened a file, let's reload it from disk
+        # We'll dump the current undo stack, and load it fresh
+        if not self.current_plist:
+            # Nothing to do - ding and bail
+            self.bell()
+            return
+        # At this point - we should check if we have edited the file, and if so
+        # prompt the user
+        if self.edited:
+            self.bell()
+            if not mb.askyesno("Unsaved Changes","Any unsaved changes will be lost when reloading from disk. Continue?",parent=self):
+                return
+        # If we got here - we're okay with dumping changes (if any)
+        try:
+            with open(self.current_plist,"rb") as f:
+                plist_data = plist.load(f,dict_type=dict if self.sort_dict else OrderedDict)
+        except Exception as e:
+            # Had an issue, throw up a display box
+            self.bell()
+            mb.showerror("An Error Occurred While Opening {}".format(os.path.basename(self.current_plist)), str(e),parent=self)
+            return
+        # We should have the plist data now
+        self.open_plist(self.current_plist,plist_data)
 
     def walk_kexts(self,path,parent=""):
         kexts = []
