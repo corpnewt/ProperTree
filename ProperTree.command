@@ -93,6 +93,7 @@ class ProperTree:
         file_menu.add_command(label="Save ({}S)".format(sign), command=self.save_plist)
         file_menu.add_command(label="Save As ({}Shift+S)".format(sign), command=self.save_plist_as)
         file_menu.add_command(label="Duplicate ({}D)".format(sign), command=self.duplicate_plist)
+        file_menu.add_command(label="Reload From Disk ({}L)".format(sign), command=self.reload_from_disk)
         file_menu.add_separator()
         file_menu.add_command(label="OC Snapshot ({}R)".format(sign), command=self.oc_snapshot)
         file_menu.add_separator()
@@ -119,6 +120,7 @@ class ProperTree:
         self.tk.bind_all("<{}-Z>".format(key), self.redo)
         self.tk.bind_all("<{}-m>".format(key), self.strip_comments)
         self.tk.bind_all("<{}-r>".format(key), self.oc_snapshot)
+        self.tk.bind_all("<{}-l>".format(key), self.reload_from_disk)
         if not str(sys.platform) == "darwin":
             # Rewrite the default Command-Q command
             self.tk.bind_all("<{}-q>".format(key), self.quit)
@@ -146,6 +148,16 @@ class ProperTree:
 
         # Start our run loop
         tk.mainloop()
+
+    def reload_from_disk(self, event = None):
+        windows = self.stackorder(self.tk)
+        if not len(windows):
+            # Nothing to save
+            return
+        window = windows[-1] # Get the last item (most recent)
+        if window == self.tk:
+            return
+        window.reload_from_disk(event)
 
     def change_data_display(self, new_data = None):
         windows = self.stackorder(self.tk)
