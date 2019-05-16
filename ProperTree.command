@@ -279,7 +279,7 @@ class ProperTree:
         try:
             clipboard_string = plist.dumps(window.nodes_to_values(node,{}))
             # Get just the values
-            clipboard_string = "\n".join(clipboard_string.split("\n")[4:-3])
+            # clipboard_string = "\n".join(clipboard_string.split("\n")[4:-3]) # Removed for Xcode-like functionality
             self.tk.clipboard_clear()
             self.tk.clipboard_append(clipboard_string)
         except:
