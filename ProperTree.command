@@ -16,6 +16,13 @@ from Scripts import *
 class ProperTree:
     def __init__(self, plists = []):
         # Create the new tk object
+        self.plist_header = """<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>"""
+        self.plist_footer = """
+</dict>
+</plist>"""
         self.tk = tk.Tk()
         self.tk.title("Convert Values")
         self.tk.minsize(width=640,height=130)
@@ -55,8 +62,6 @@ class ProperTree:
 
         self.tk.bind("<Return>", self.convert_values)
         self.tk.bind("<KP_Enter>", self.convert_values)
-
-        self.clipboard = None
 
         # Setup the menu-related keybinds - and change the app name if needed
         key="Control"
@@ -271,11 +276,29 @@ class ProperTree:
         if node == "":
             # Nothing to copy
             return
-        self.clipboard = window.nodes_to_values(node,{})
+        try:
+            clipboard_string = plist.dumps(window.nodes_to_values(node,{}))
+            # Get just the values
+            clipboard_string = "\n".join(clipboard_string.split("\n")[4:-3])
+            self.tk.clipboard_clear()
+            self.tk.clipboard_append(clipboard_string)
+        except:
+            pass
 
     def paste_selection(self, event = None):
-        if self.clipboard == None:
+        if not self.tk.clipboard_get():
             return
+        # Try to format the clipboard contents as a plist
+        try:
+            plist_data = plist.loads(self.tk.clipboard_get())
+        except:
+            # May need the header
+            cb = self.plist_header + "\n" + self.tk.clipboard_get() + "\n" + self.plist_footer
+            print(cb)
+            try:
+                plist_data = plist.loads(cb)
+            except:
+                return
         windows = self.stackorder(self.tk)
         if not len(windows):
             # Nothing to save
@@ -283,7 +306,7 @@ class ProperTree:
         window = windows[-1] # Get the last item (most recent)
         if window == self.tk:
             return
-        window.paste_selection(self.clipboard)
+        window.paste_selection(plist_data)
 
     def duplicate_plist(self, event = None):
         windows = self.stackorder(self.tk)
