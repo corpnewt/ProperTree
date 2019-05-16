@@ -818,7 +818,11 @@ class PlistWindow(tk.Toplevel):
         else:
             rowid = self._tree.identify_row(event.y)
             column = self._tree.identify_column(event.x)
-            x,y,width,height = self._tree.bbox(rowid, column)
+            try:
+                x,y,width,height = self._tree.bbox(rowid, column)
+            except:
+                # We drug outside the possible bounds - ignore this
+                return
             if event.y >= y+height/2 and event.y < y+height:
                 # Just above should add as a sibling
                 tv_item = self._tree.parent(tv_item)
@@ -832,6 +836,9 @@ class PlistWindow(tk.Toplevel):
         if self._tree.index(target) == move_to and tv_item == target:
             # Already the same
             return
+        # Make sure if we drag to the bottom, it stays at the bottom
+        if self._tree.identify_region(event.x, event.y) == "nothing" and not event.y < 5:
+            move_to = len(self.iter_nodes())
         # Save a reference to the item
         if not self.drag_undo:
             self.drag_undo = {"from":self._tree.parent(target),"index":self._tree.index(target),"name":self._tree.item(target,"text")}
