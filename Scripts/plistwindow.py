@@ -827,6 +827,8 @@ class PlistWindow(tk.Toplevel):
                 # Just below should add it at item 0
                 move_to = 0
         target = self._tree.focus()
+        # Make sure the selected node is closed
+        self._tree.item(target,open=False)
         if self._tree.index(target) == move_to and tv_item == target:
             # Already the same
             return
