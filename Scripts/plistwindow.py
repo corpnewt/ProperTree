@@ -49,6 +49,38 @@ class EntryPopup(tk.Entry):
         self.bind("<KP_Enter>", self.confirm)
         self.bind("<Up>", self.goto_start)
         self.bind("<Down>", self.goto_end)
+        self.bind("<Tab>", self.next_field)
+
+    def next_field(self, event):
+        # We need to determine if our other field can be edited
+        # and if so - trigger another double click event there
+        edit_col = None
+        if self.column == "#0":
+            check_type = self.master.get_check_type(self.cell).lower()
+            # We are currently in the key column
+            if check_type in ["array","dictionary"]:
+                # Can't edit the other field with these - bail
+                return
+            edit_col = "#2"
+        elif self.column == "#2":
+            # It's the value column - let's see if we can edit the key
+            parent = self.master._tree.parent(self.cell)
+            check_type = "dictionary" if not len(parent) else self.master.get_check_type(parent).lower()
+            if check_type == "array":
+                # Can't edit array keys - as they're just indexes
+                return
+            edit_col = "#0"
+        if edit_col:
+            # Let's get the bounding box for our other field
+            x,y,width,height = self.master._tree.bbox(self.cell, edit_col)
+            # Create an event
+            e = tk.Event
+            e.x = x+5
+            e.y = y+5
+            e.x_root = 0
+            e.y_root = 0
+            self.master.on_double_click(e)
+            return
 
     def goto_start(self, event):
         self.selection_range(0, 0)
@@ -254,6 +286,7 @@ class EntryPopup(tk.Entry):
             values[index-1] = value
             # Set the values
             self.parent.item(self.cell, values=values)
+        self.parent.focus_force()
         self.destroy()
 
 class PlistWindow(tk.Toplevel):
@@ -342,6 +375,8 @@ class PlistWindow(tk.Toplevel):
         self._tree.bind("=", self.new_row)
         self._tree.bind("+", self.new_row)
         self._tree.bind("-", self.remove_row)
+        self._tree.bind("<Return>", self.start_editing)
+        self._tree.bind("<KP_Enter>", self.start_editing)
         self.bind("<FocusIn>", self.got_focus)
 
         # Setup menu bar (hopefully per-window) - only happens on non-mac systems
@@ -385,7 +420,32 @@ class PlistWindow(tk.Toplevel):
         # Add the treeview
         vsb.pack(side="right",fill="y")
         self._tree.pack(side="bottom", fill="both", expand=True)
+        self._tree.focus_force()
         self.entry_popup = None
+
+    def start_editing(self, event = None):
+        # Get the currently selected row, if any
+        node = self._tree.focus()
+        parent = self._tree.parent(node)
+        parent_type = "dictionary" if not len(parent) else self.get_check_type(parent).lower()
+        check_type = self.get_check_type(node).lower()
+        edit_col = "#0"
+        if parent_type == "array":
+            if check_type == "boolean":
+                # Can't edit anything - bail
+                return 'break'
+            # Can at least edit the value
+            edit_col = "#2"
+        # Let's get the bounding box for our other field
+        x,y,width,height = self._tree.bbox(node, edit_col)
+        # Create an event
+        e = tk.Event
+        e.x = x+5
+        e.y = y+5
+        e.x_root = 0
+        e.y_root = 0
+        self.on_double_click(e)
+        return 'break'
 
     def reload_from_disk(self, event = None):
         # If we have opened a file, let's reload it from disk
@@ -1573,7 +1633,7 @@ class PlistWindow(tk.Toplevel):
         except:
             t = ""
         try:
-            pt = self._tree.item(self._tree.parent(tv_item),"values")[0]
+            pt = self.get_check_type(self._tree.parent(tv_item))
         except:
             pt = ""
         if index == 1:
