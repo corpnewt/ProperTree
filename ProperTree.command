@@ -288,23 +288,33 @@ class ProperTree:
     def paste_selection(self, event = None):
         if not self.tk.clipboard_get():
             return
-        # Try to format the clipboard contents as a plist
-        try:
-            plist_data = plist.loads(self.tk.clipboard_get())
-        except:
-            # May need the header
-            cb = self.plist_header + "\n" + self.tk.clipboard_get() + "\n" + self.plist_footer
-            print(cb)
-            try:
-                plist_data = plist.loads(cb)
-            except:
-                return
         windows = self.stackorder(self.tk)
         if not len(windows):
-            # Nothing to save
+            # Nothing to do
             return
         window = windows[-1] # Get the last item (most recent)
         if window == self.tk:
+            return
+        # Try to format the clipboard contents as a plist
+        clip = self.tk.clipboard_get()
+        try:
+            plist_data = plist.loads(clip)
+        except:
+            # May need the header
+            cb = self.plist_header + "\n" + clip + "\n" + self.plist_footer
+            try:
+                plist_data = plist.loads(cb)
+            except Exception as e:
+                # Let's throw an error
+                self.tk.bell()
+                mb.showerror("An Error Occurred While Pasting", str(e),parent=window)
+                return
+        if not plist_data:
+            if len(clip):
+                # Check if we actually pasted something
+                self.tk.bell()
+                mb.showerror("An Error Occurred While Pasting", "The pasted value is not a valid plist string.",parent=window)
+            # Nothing to paste
             return
         window.paste_selection(plist_data)
 
