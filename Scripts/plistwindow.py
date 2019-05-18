@@ -346,7 +346,7 @@ class PlistWindow(tk.Toplevel):
         self.bool_menu.add_command(label="False", command=lambda:self.set_bool("False"))
 
         # Create the treeview
-        self._tree = ttk.Treeview(self, columns=("Type","Value","Drag"))
+        self._tree = ttk.Treeview(self, columns=("Type","Value","Drag"), selectmode="browse")
         self._tree.heading("#0", text="Key")
         self._tree.heading("#1", text="Type")
         self._tree.heading("#2", text="Value")
@@ -377,6 +377,7 @@ class PlistWindow(tk.Toplevel):
         self._tree.bind("-", self.remove_row)
         self._tree.bind("<Return>", self.start_editing)
         self._tree.bind("<KP_Enter>", self.start_editing)
+        self._tree.bind("<Escape>", self.deselect)
         self.bind("<FocusIn>", self.got_focus)
 
         # Setup menu bar (hopefully per-window) - only happens on non-mac systems
@@ -422,6 +423,10 @@ class PlistWindow(tk.Toplevel):
         self._tree.pack(side="bottom", fill="both", expand=True)
         self._tree.focus_force()
         self.entry_popup = None
+
+    def deselect(self, event=None):
+        # Clear the table selection
+        self._tree.selection_set()
 
     def start_editing(self, event = None):
         # Get the currently selected row, if any
