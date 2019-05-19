@@ -1068,6 +1068,7 @@ class PlistWindow(tk.Toplevel):
         t = self.get_check_type(node).lower()
         verify = t in ["dictionary",""]
         dict_list = list(value.items()) if not self.sort_dict else sorted(list(value.items()))
+        add_list = []
         for (key,val) in dict_list:
             if verify:
                 # create a unique name
@@ -1084,10 +1085,13 @@ class PlistWindow(tk.Toplevel):
                     break
                 key = name
             last = self.add_node(val, node, key)
+            add_list.append({"type":"add","cell":last})
             self._tree.item(last,open=True)
-        self.add_undo({"type":"add","cell":last})
-        self._tree.focus(last)
-        self._tree.selection_set(last)
+        first = "" if not len(add_list) else add_list[0].get("cell")
+        self.add_undo(add_list)
+        self._tree.focus()
+        self._tree.selection_set(first)
+        self._tree.see(first)
         self._tree.update()
         if not self.edited:
             self.edited = True
