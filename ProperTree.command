@@ -278,7 +278,7 @@ class ProperTree:
             # Nothing to copy
             return
         try:
-            clipboard_string = plist.dumps(window.nodes_to_values(node,{}),sort_keys=window.sort_dict)
+            clipboard_string = plist.dumps(window.nodes_to_values(node,{}),sort_keys=self.sort_dict)
             # Get just the values
             self.tk.clipboard_clear()
             self.tk.clipboard_append(clipboard_string)
@@ -294,7 +294,7 @@ class ProperTree:
         if window == self.tk:
             return
         try:
-            clipboard_string = plist.dumps(window.nodes_to_values("",{}),sort_keys=window.sort_dict)
+            clipboard_string = plist.dumps(window.nodes_to_values("",{}),sort_keys=self.sort_dict)
             # Get just the values
             self.tk.clipboard_clear()
             self.tk.clipboard_append(clipboard_string)
@@ -314,12 +314,12 @@ class ProperTree:
         # Try to format the clipboard contents as a plist
         clip = self.tk.clipboard_get()
         try:
-            plist_data = plist.loads(clip)
+            plist_data = plist.loads(clip,dict_type=dict if self.sort_dict else OrderedDict)
         except:
             # May need the header
             cb = self.plist_header + "\n" + clip + "\n" + self.plist_footer
             try:
-                plist_data = plist.loads(cb)
+                plist_data = plist.loads(cb,dict_type=dict if self.sort_dict else OrderedDict)
             except Exception as e:
                 # Let's throw an error
                 self.tk.bell()
