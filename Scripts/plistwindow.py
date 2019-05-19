@@ -44,12 +44,17 @@ class EntryPopup(tk.Entry):
             self.bind("<Control-a>", self.select_all)
             self.bind("<Control-c>", self.copy)
             self.bind("<Control-v>", self.paste)
-        self.bind("<Escape>", lambda *ignore: self.destroy())
+        self.bind("<Escape>", self.cancel)
         self.bind("<Return>", self.confirm)
         self.bind("<KP_Enter>", self.confirm)
         self.bind("<Up>", self.goto_start)
         self.bind("<Down>", self.goto_end)
         self.bind("<Tab>", self.next_field)
+
+    def cancel(self, event):
+        # Force the parent focus then destroy self
+        self.parent.focus_force()
+        self.destroy()
 
     def next_field(self, event):
         # We need to determine if our other field can be edited
@@ -60,7 +65,7 @@ class EntryPopup(tk.Entry):
             # We are currently in the key column
             if check_type in ["array","dictionary"]:
                 # Can't edit the other field with these - bail
-                return
+                return 'break'
             edit_col = "#2"
         elif self.column == "#2":
             # It's the value column - let's see if we can edit the key
@@ -68,7 +73,7 @@ class EntryPopup(tk.Entry):
             check_type = "dictionary" if not len(parent) else self.master.get_check_type(parent).lower()
             if check_type == "array":
                 # Can't edit array keys - as they're just indexes
-                return
+                return 'break'
             edit_col = "#0"
         if edit_col:
             # Let's get the bounding box for our other field
@@ -80,7 +85,7 @@ class EntryPopup(tk.Entry):
             e.x_root = 0
             e.y_root = 0
             self.master.on_double_click(e)
-            return
+            return 'break'
 
     def goto_start(self, event):
         self.selection_range(0, 0)
@@ -286,8 +291,7 @@ class EntryPopup(tk.Entry):
             values[index-1] = value
             # Set the values
             self.parent.item(self.cell, values=values)
-        self.parent.focus_force()
-        self.destroy()
+        self.cancel(None)
 
 class PlistWindow(tk.Toplevel):
     def __init__(self, controller, root, **kw):
@@ -426,11 +430,12 @@ class PlistWindow(tk.Toplevel):
 
     def deselect(self, event=None):
         # Clear the table selection
-        self._tree.selection_set()
+        for x in self._tree.selection():
+            self._tree.selection_remove(x)
 
     def start_editing(self, event = None):
         # Get the currently selected row, if any
-        node = self._tree.focus()
+        node = "" if not len(self._tree.selection()) else self._tree.selection()[0]
         parent = self._tree.parent(node)
         parent_type = "dictionary" if not len(parent) else self.get_check_type(parent).lower()
         check_type = self.get_check_type(node).lower()
@@ -835,7 +840,7 @@ class PlistWindow(tk.Toplevel):
             else:
                 # Just below should add it at item 0
                 move_to = 0
-        target = self._tree.focus()
+        target = "" if not len(self._tree.selection()) else self._tree.selection()[0]
         # Make sure the selected node is closed
         self._tree.item(target,open=False)
         if self._tree.index(target) == move_to and tv_item == target:
@@ -863,7 +868,7 @@ class PlistWindow(tk.Toplevel):
             return
         self.dragging = False
         self.drag_start = None
-        target = self._tree.focus()
+        target = "" if not len(self._tree.selection()) else self._tree.selection()[0]
         self._tree.item(target,open=True)
         node = self._tree.parent(target)
         # Finalize the drag undo
@@ -1055,7 +1060,7 @@ class PlistWindow(tk.Toplevel):
         return True
 
     def paste_selection(self, value):
-        node = self._tree.focus()
+        node = "" if not len(self._tree.selection()) else self._tree.selection()[0]
         # Verify the type - or get the parent
         t = self.get_check_type(node).lower()
         if not node == "" and not t in ["dictionary","array"]:
@@ -1228,7 +1233,7 @@ class PlistWindow(tk.Toplevel):
 
     def new_row(self,target=None,force_sibling=False):
         if target == None or isinstance(target, tk.Event):
-            target = self._tree.focus()
+            target = "" if not len(self._tree.selection()) else self._tree.selection()[0]
         values = self.get_padded_values(target, 1)
         new_cell = None
         if not self.get_check_type(target).lower() in ["dictionary","array"] or not self._tree.item(target,"open") or force_sibling:
@@ -1270,7 +1275,7 @@ class PlistWindow(tk.Toplevel):
 
     def remove_row(self,target=None):
         if target == None or isinstance(target, tk.Event):
-            target = self._tree.focus()
+            target = "" if not len(self._tree.selection()) else self._tree.selection()[0]
         if target == "":
             # Can't remove top level
             return
@@ -1337,7 +1342,7 @@ class PlistWindow(tk.Toplevel):
     def change_type(self, value, cell = None):
         # Need to walk the values and pad
         if cell == None:
-            cell = self._tree.focus()
+            cell = "" if not len(self._tree.selection()) else self._tree.selection()[0]
         values = self.get_padded_values(cell, 3)
         # Verify we actually changed type
         if values[0] == value:
@@ -1394,8 +1399,8 @@ class PlistWindow(tk.Toplevel):
 
     def set_bool(self, value):
         # Need to walk the values and pad
-        values = self.get_padded_values(self._tree.focus(), 3)
-        cell = self._tree.focus()
+        values = self.get_padded_values("" if not len(self._tree.selection()) else self._tree.selection()[0], 3)
+        cell = "" if not len(self._tree.selection()) else self._tree.selection()[0]
         self.add_undo({
             "type":"edit",
             "cell":cell,
@@ -1404,7 +1409,7 @@ class PlistWindow(tk.Toplevel):
             })
         values[1] = value
         # Set the values
-        self._tree.item(self._tree.focus(), values=values)
+        self._tree.item("" if not len(self._tree.selection()) else self._tree.selection()[0], values=values)
         if not self.edited:
             self.edited = True
             self.title(self.title()+" - Edited")
@@ -1682,7 +1687,7 @@ class PlistWindow(tk.Toplevel):
         if index ==2 and t.lower() == "data":
             # Special formatting of hex values
             text = text.replace("<","").replace(">","")
-        cell = self._tree.item(self._tree.focus())
+        cell = self._tree.item("" if not len(self._tree.selection()) else self._tree.selection()[0])
         # place Entry popup properly
         self.entry_popup = EntryPopup(self._tree, text, tv_item, column)
         self.entry_popup.place( x=x, y=y+pady, anchor="w", width=width)
@@ -1722,7 +1727,7 @@ class PlistWindow(tk.Toplevel):
     def pre_alternate(self, event):
         # Only called before an item opens - we need to open it manually to ensure
         # colors alternate correctly
-        cell = self._tree.focus()
+        cell = "" if not len(self._tree.selection()) else self._tree.selection()[0]
         if not self._tree.item(cell,"open"):
             self._tree.item(cell,open=True)
         # Call the actual alternate_colors function
