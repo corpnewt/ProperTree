@@ -119,6 +119,7 @@ class ProperTree:
         self.tk.bind_all("<{}-S>".format(key), self.save_plist_as)
         self.tk.bind_all("<{}-d>".format(key), self.duplicate_plist)
         self.tk.bind_all("<{}-c>".format(key), self.copy_selection)
+        self.tk.bind_all("<{}-C>".format(key), self.copy_all)
         self.tk.bind_all("<{}-v>".format(key), self.paste_selection)
         self.tk.bind_all("<{}-t>".format(key), self.show_convert)
         self.tk.bind_all("<{}-z>".format(key), self.undo)
@@ -277,9 +278,24 @@ class ProperTree:
             # Nothing to copy
             return
         try:
-            clipboard_string = plist.dumps(window.nodes_to_values(node,{}))
+            clipboard_string = plist.dumps(window.nodes_to_values(node,{}),sort_keys=window.sort_dict)
             # Get just the values
-            # clipboard_string = "\n".join(clipboard_string.split("\n")[4:-3]) # Removed for Xcode-like functionality
+            self.tk.clipboard_clear()
+            self.tk.clipboard_append(clipboard_string)
+        except:
+            pass
+
+    def copy_all(self, event = None):
+        windows = self.stackorder(self.tk)
+        if not len(windows):
+            # Nothing to save
+            return
+        window = windows[-1] # Get the last item (most recent)
+        if window == self.tk:
+            return
+        try:
+            clipboard_string = plist.dumps(window.nodes_to_values("",{}),sort_keys=window.sort_dict)
+            # Get just the values
             self.tk.clipboard_clear()
             self.tk.clipboard_append(clipboard_string)
         except:
