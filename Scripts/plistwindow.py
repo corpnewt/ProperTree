@@ -566,7 +566,7 @@ class PlistWindow(tk.Toplevel):
         new_acpi = [x for x in os.listdir(oc_acpi) if x.lower().endswith(".aml") and not x.startswith(".")]
         add = tree_dict["ACPI"]["Add"]
         for aml in new_acpi:
-            if aml.lower() in [x.get("Path","").lower() for x in add]:
+            if aml.lower() in [x.get("Path","").lower() for x in add if isinstance(x,dict)]:
                 # Found it - skip
                 continue
             # Doesn't exist, add it
@@ -577,6 +577,9 @@ class PlistWindow(tk.Toplevel):
             })
         new_add = []
         for aml in add:
+            if not isinstance(aml,dict):
+                # Not the right type - skip it
+                continue
             if not aml.get("Path","").lower() in [x.lower() for x in new_acpi]:
                 # Not there, skip
                 continue
@@ -613,13 +616,16 @@ class PlistWindow(tk.Toplevel):
         kext_list = self.walk_kexts(oc_kexts)
         kexts = tree_dict["Kernel"]["Add"]
         for kext in kext_list:
-            if kext["BundlePath"].lower() in [x.get("BundlePath","").lower() for x in kexts]:
+            if kext["BundlePath"].lower() in [x.get("BundlePath","").lower() for x in kexts if isinstance(x,dict)]:
                 # Already have it, skip
                 continue
             # We need it, it seems
             kexts.append(kext)
         new_kexts = []
         for kext in kexts:
+            if not isinstance(kext,dict):
+                # Not a dict - skip it
+                continue
             if not kext.get("BundlePath","").lower() in [x["BundlePath"].lower() for x in kext_list]:
                 # Not there, skip it
                 continue
