@@ -19,7 +19,7 @@ sys.path.append(os.path.abspath(os.path.dirname(os.path.realpath(__file__))))
 import plist
 
 class EntryPopup(tk.Entry):
-    def __init__(self, parent, text, cell, column, **kw):
+    def __init__(self, parent, master, text, cell, column, **kw):
         tk.Entry.__init__(self, parent, **kw)
 
         self.insert(0, text)
@@ -32,7 +32,7 @@ class EntryPopup(tk.Entry):
         self.cell = cell
         self.column = column
         self.parent = parent
-        self.master = parent._nametowidget(parent.winfo_parent())
+        self.master = master
 
         self.focus_force()
         
@@ -203,7 +203,7 @@ class EntryPopup(tk.Entry):
                     # Base64 data - we need to make sure all values are within base64 spec, and that we're padded to 4 chars with =
                     # first we strip the = signs, then verify the data, then, if we have anything, we pad to 4 chars
                     value = value.rstrip("=")
-                    if [x for x in value if x.lower() not in "0123456789abcdefghijklmnopqrstuvwxyz+/="]:
+                    if [x for x in value if x.lower() not in "0123456789abcdefghijklmnopqrstuvwxyz+/"]:
                         # Got non-hex values
                         if not event == None:
                             # print("Non-hex character in data!\a")
@@ -297,6 +297,13 @@ class PlistWindow(tk.Toplevel):
     def __init__(self, controller, root, **kw):
         tk.Toplevel.__init__(self, root, **kw)
         os.chdir(os.path.dirname(os.path.realpath(__file__)))
+        self.plist_header = """<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>"""
+        self.plist_footer = """
+</dict>
+</plist>"""
         # Create the window
         self.root = root
         self.controller = controller
@@ -323,17 +330,12 @@ class PlistWindow(tk.Toplevel):
         # Set the title to "Untitled.plist"
         self.title("Untitled.plist")
 
-        # Set the close window binding
-        if str(sys.platform) == "darwin":
-            self.bind("<Command-w>", self.close_window)
-        else:
-            self.bind("<Control-w>", self.close_window)
-
         # Set up the options
         self.current_plist = None # None = new
         self.edited = False
         self.dragging = False
         self.drag_start = None
+        self.show_find_replace = True # Set to the opposite at first so it's hidden when we call hide_show_find
         self.type_menu = tk.Menu(self, tearoff=0)
         self.type_menu.add_command(label="Dictionary", command=lambda:self.change_type(self.menu_code + " Dictionary"))
         self.type_menu.add_command(label="Array", command=lambda:self.change_type(self.menu_code + " Array"))
@@ -350,15 +352,29 @@ class PlistWindow(tk.Toplevel):
         self.bool_menu.add_command(label="False", command=lambda:self.set_bool("False"))
 
         # Create the treeview
-        self._tree = ttk.Treeview(self, columns=("Type","Value","Drag"), selectmode="browse")
+        self._tree_frame = tk.Frame(self)
+        self._tree = ttk.Treeview(self._tree_frame, columns=("Type","Value","Drag"), selectmode="browse")
         self._tree.heading("#0", text="Key")
         self._tree.heading("#1", text="Type")
         self._tree.heading("#2", text="Value")
         self._tree.column("Type",width=100,stretch=False)
         self._tree.column("Drag",minwidth=40,width=40,stretch=False,anchor="center")
 
+        # Set the close window and copy/paste bindings
+        if str(sys.platform) == "darwin":
+            key = "Command"
+        else:
+            key = "Control"
+        # Add the window bindings
+        self.bind("<{}-w>".format(key), self.close_window)
+        self.bind("<{}-f>".format(key), self.hide_show_find)
+        # Add the treeview bindings
+        self._tree.bind("<{}-c>".format(key), self.copy_selection)
+        self._tree.bind("<{}-C>".format(key), self.copy_all)
+        self._tree.bind("<{}-v>".format(key), self.paste_selection)
+
         # Create the scrollbar
-        vsb = ttk.Scrollbar(self, orient='vertical', command=self._tree.yview)
+        vsb = ttk.Scrollbar(self._tree_frame, orient='vertical', command=self._tree.yview)
         self._tree.configure(yscrollcommand=vsb.set)
 
         # Bind right click
@@ -422,11 +438,246 @@ class PlistWindow(tk.Toplevel):
                 pass
         os.chdir(cwd)
         
-        # Add the treeview
+        # Create our find/replace view
+        self.find_frame = tk.Frame(self,height=20)
+        self.find_frame.columnconfigure(1,weight=1)
+        f_label = tk.Label(self.find_frame, text="Find:")
+        f_label.grid(row=0,column=0,sticky="e")
+        r_label = tk.Label(self.find_frame, text="Replace:")
+        r_label.grid(row=1,column=0,sticky="e")
+        rk_label = tk.Label(self.find_frame, text="Key/Str Only")
+        rk_label.grid(row=1,column=2,sticky="e")
+        self.f_text = tk.Entry(self.find_frame)
+        self.f_text.bind("<Return>", self.find_next)
+        self.f_text.bind("<KP_Enter>", self.find_next)
+        self.f_text.delete(0,tk.END)
+        self.f_text.insert(0,"")
+        self.f_text.grid(row=0,column=1,sticky="we",padx=10,pady=10)
+        self.r_text = tk.Entry(self.find_frame)
+        self.r_text.bind("<Return>", self.replace)
+        self.r_text.bind("<KP_Enter>", self.replace)
+        self.r_text.delete(0,tk.END)
+        self.r_text.insert(0,"")
+        self.r_text.grid(row=1,column=1,sticky="we",padx=10,pady=10)
+        self.fn_button = tk.Button(self.find_frame,text="Next",command=self.find_next)
+        self.fn_button.grid(row=0,column=3,sticky="we",padx=10,pady=10)
+        self.fp_button = tk.Button(self.find_frame,text="Previous",command=self.find_prev)
+        self.fp_button.grid(row=0,column=2,sticky="we",padx=10,pady=10)
+        self.r_button = tk.Button(self.find_frame,text="Replace",command=self.replace)
+        self.r_button.grid(row=1,column=3,sticky="we",padx=10,pady=10)
+        self.r_all_var = tk.IntVar()
+        self.r_all = tk.Checkbutton(self.find_frame,text="Replace All",variable=self.r_all_var)
+        self.r_all.grid(row=1,column=4,sticky="w")
+        self.f_case_var = tk.IntVar()
+        self.f_case = tk.Checkbutton(self.find_frame,text="Case-Sensitive",variable=self.f_case_var)
+        self.f_case.grid(row=0,column=4,sticky="w")
+
+        # Add the scroll bars and show the treeview
         vsb.pack(side="right",fill="y")
-        self._tree.pack(side="bottom", fill="both", expand=True)
-        self._tree.focus_force()
+        self._tree.pack(side="bottom",fill="both",expand=True)
+        self.hide_show_find()
         self.entry_popup = None
+
+    def hide_show_find(self, event=None):
+        # Let's find out if we're set to show
+        self.find_frame.pack_forget()
+        self._tree_frame.pack_forget()
+        if self.show_find_replace:
+            # Need to hide it
+            self._tree_frame.pack(side="bottom",fill="both",expand=True)
+            self._tree.focus_force()
+        else:
+            # Need to show it
+            self.find_frame.pack(side="top",fill="x")
+            self._tree_frame.pack(side="bottom",fill="both",expand=True)
+            self.f_text.focus_force()
+        self.show_find_replace ^= True
+
+    def do_replace(self, node, find, new_text):
+        # We can assume that we have a legit match for whatever is passed
+        # Let's get some info first
+        case_sensitive = self.f_case_var.get()
+        node_type      = self.get_check_type(node)
+        parent_type    = self.get_check_type(self._tree.parent(node))
+        check_name = check_value = changed = False
+        if not parent_type.lower() == "array":
+            check_name = True
+        if not node_type.lower() in ["array","dictionary","boolean","date","data"]:
+            check_value = True
+        # Check the name first
+        if check_name:
+            name = self._tree.item(node,"text")
+            new_name = re.sub(("" if case_sensitive else "(?i)")+re.escape(find), lambda m: new_text, name)
+            self._tree.item(node,text=new_name)
+            changed = True
+        if check_value:
+            values = self.get_padded_values(node,3)
+            if node_type.lower() == "string":
+                values[1] = re.sub(("" if case_sensitive else "(?i)")+re.escape(find), lambda m: new_text, values[1])
+                self._tree.item(node,values=values)
+                changed = True
+        return changed
+
+    def replace(self, event=None):
+        find = self.f_text.get()
+        if not len(find):
+            self.bell()
+            mb.showerror("Nothing To Find", "The find textbox is empty, nothing to search for.",parent=self)
+            return None
+        repl = self.r_text.get()
+        if find == repl:
+            # Uh... they're the same - no need to replace bois
+            self.bell()
+            mb.showerror("Find and Replace Are Identical", "The find and replace values are the same.  Nothing to do.",parent=self)
+            return
+        # Find out if we're replacing everything or not
+        replace_all = self.r_all_var.get()
+        node = "" if not len(self._tree.selection()) else self._tree.selection()[0]
+        is_match = False if node == "" else self.is_match(node,find,True)
+        if replace_all:
+            matches = self.find_all(find)
+            if not len(matches):
+                # Nothing found - let's throw an error
+                self.bell()
+                mb.showerror("No Replaceable Matches Found", '"{}" did not match any keys/string values in the current plist.'.format(find),parent=self)
+                return
+        elif not node == "" and not is_match == False:
+            # Current is a match - let's add it
+            matches = [(0,node,is_match[1])]
+        else:
+            # Not matching all, and current cell is not a match, let's get the next
+            node = self.find_next(replacing=True)
+            if node == None:
+                # Nothing found - let's throw an error
+                self.bell()
+                mb.showerror("No Replaceable Matches Found", '"{}" did not match any keys/string values in the current plist.'.format(find),parent=self)
+                return
+            return
+        # At this point, we should have something to replace
+        replacements = []
+        for x in matches:
+            if self.do_replace(x[1],find,repl):
+                replacements.append({
+                    "type":"edit",
+                    "cell":x[1],
+                    "text":self._tree.item(x[1],"text"),
+                    "values":self._tree.item(x[1],"values")
+                    })
+                self._tree.selection_set(x[1])
+                self._tree.see(x[1])
+        self.alternate_colors()
+        if len(replacements):
+            self.add_undo(replacements)
+            # Ensure we're edited
+            if not self.edited:
+                self.edited = True
+                self.title(self.title()+" - Edited")
+
+    def is_match(self, node, text, replace = False):
+        case_sensitive = self.f_case_var.get()
+        node_type = self.get_check_type(node)
+        parent_type = self.get_check_type(self._tree.parent(node))
+        # Let's verify that we can search the name/value:
+        if parent_type.lower() == "array":
+            # Can't check the name
+            if node_type.lower() in ["array","dictionary"]:
+                # Can't check the value either - bail
+                return False
+        else:
+            # Can check the name - do that first, then check the value
+            name = self._tree.item(node,"text")
+            if (text in name if case_sensitive else text.lower() in name.lower()):
+                return (True,0)
+            if node_type.lower() in ["array","dictionary","boolean"]:
+                # Can't check the value - bail
+                return False
+        value = self.get_padded_values(node,2)[1]
+        # Can at last check the value
+        if node_type.lower() == "data" and self.data_display == "hex" and not replace:
+            # Let's strip spaces and case-insensitive compare
+            if text.replace(" ","").replace("<","").replace(">","").lower() in value.replace(" ","").replace("<","").replace(">","").lower():
+                # Got a match!
+                return (True,1)
+        elif not replace or node_type.lower() == "string":
+            # Let's check the values normally
+            if (text in value if case_sensitive else text.lower() in value.lower()):
+                # Got a match!
+                return (True,1)
+        return False
+
+    def find_all(self, text=""):
+        # Builds a list of tuples that list the node, the index of the found entry, and 
+        # where it found it name/value (name == 0, value == 1 respectively)
+        if text == None or not len(text):
+            return []
+        nodes = self.iter_nodes(False)
+        found = []
+        for node in nodes:
+            match = self.is_match(node, text)
+            if not match == False:
+                found.append((nodes.index(node),node,match[1]))
+        return found
+
+    def find_prev(self, event=None):
+        find  = self.f_text.get()
+        if not len(find):
+            self.bell()
+            mb.showerror("Nothing To Find", "The find textbox is empty, nothing to search for.",parent=self)
+            return None
+        matches = self.find_all(find)
+        if not len(matches):
+            # Nothing found - let's throw an error
+            self.bell()
+            mb.showerror("No Matches Found", '"{}" did not match any keys/values in the current plist.'.format(find),parent=self)
+            return None
+        # Let's get the index of our selected item
+        node  = "" if not len(self._tree.selection()) else self._tree.selection()[0]
+        nodes = self.iter_nodes(False)
+        index = len(nodes) if node == "" else nodes.index(node)
+        # Find the item at a lower index than our current selection
+        for match in matches[::-1]:
+            if match[0] < index:
+                # Found one - select it
+                self._tree.selection_set(match[1])
+                self._tree.see(match[1])
+                self.alternate_colors()
+                return match
+        # If we got here - start over
+        self._tree.selection_set(matches[-1][1])
+        self._tree.see(matches[-1][1])
+        self.alternate_colors()
+        return match[-1]
+
+    def find_next(self, event=None, replacing=False):
+        find  = self.f_text.get()
+        if not len(find):
+            self.bell()
+            mb.showerror("Nothing To Find", "The find textbox is empty, nothing to search for.",parent=self)
+            return None
+        matches = self.find_all(find)
+        if not len(matches):
+            # Nothing found - let's throw an error
+            if not replacing:
+                self.bell()
+                mb.showerror("No Matches Found", '"{}" did not match any keys/values in the current plist.'.format(find),parent=self)
+            return None
+        # Let's get the index of our selected item
+        node  = "" if not len(self._tree.selection()) else self._tree.selection()[0]
+        nodes = self.iter_nodes(False)
+        index = len(nodes) if node == "" else nodes.index(node)
+        # Find the item at a higher index than our current selection
+        for match in matches:
+            if match[0] > index:
+                # Found one - select it
+                self._tree.selection_set(match[1])
+                self._tree.see(match[1])
+                self.alternate_colors()
+                return match
+        # If we got here - start over
+        self._tree.selection_set(matches[0][1])
+        self._tree.see(matches[0][1])
+        self.alternate_colors()
+        return match[0]
 
     def deselect(self, event=None):
         # Clear the table selection
@@ -447,7 +698,11 @@ class PlistWindow(tk.Toplevel):
             # Can at least edit the value
             edit_col = "#2"
         # Let's get the bounding box for our other field
-        x,y,width,height = self._tree.bbox(node, edit_col)
+        try:
+            x,y,width,height = self._tree.bbox(node, edit_col)
+        except ValueError:
+            # Couldn't unpack - bail
+            return    
         # Create an event
         e = tk.Event
         e.x = x+5
@@ -1065,7 +1320,50 @@ class PlistWindow(tk.Toplevel):
             self.destroy()
         return True
 
-    def paste_selection(self, value):
+    def copy_selection(self, event = None):
+        node = self._tree.focus()
+        if node == "":
+            # Nothing to copy
+            return
+        try:
+            clipboard_string = plist.dumps(self.nodes_to_values(node,{}),sort_keys=self.sort_dict)
+            # Get just the values
+            self.clipboard_clear()
+            self.clipboard_append(clipboard_string)
+        except:
+            pass
+
+    def copy_all(self, event = None):
+        try:
+            clipboard_string = plist.dumps(self.nodes_to_values("",{}),sort_keys=self.sort_dict)
+            # Get just the values
+            self.clipboard_clear()
+            self.clipboard_append(clipboard_string)
+        except:
+            pass
+
+    def paste_selection(self, event = None):
+        # Try to format the clipboard contents as a plist
+        clip = self.clipboard_get()
+        try:
+            plist_data = plist.loads(clip,dict_type=dict if self.sort_dict else OrderedDict)
+        except:
+            # May need the header
+            cb = self.plist_header + "\n" + clip + "\n" + self.plist_footer
+            try:
+                plist_data = plist.loads(cb,dict_type=dict if self.sort_dict else OrderedDict)
+            except Exception as e:
+                # Let's throw an error
+                self.bell()
+                mb.showerror("An Error Occurred While Pasting", str(e),parent=self)
+                return 'break'
+        if not plist_data:
+            if len(clip):
+                # Check if we actually pasted something
+                self.bell()
+                mb.showerror("An Error Occurred While Pasting", "The pasted value is not a valid plist string.",parent=self)
+            # Nothing to paste
+            return 'break'
         node = "" if not len(self._tree.selection()) else self._tree.selection()[0]
         # Verify the type - or get the parent
         t = self.get_check_type(node).lower()
@@ -1073,7 +1371,7 @@ class PlistWindow(tk.Toplevel):
             node = self._tree.parent(node)
         t = self.get_check_type(node).lower()
         verify = t in ["dictionary",""]
-        dict_list = list(value.items()) if not self.sort_dict else sorted(list(value.items()))
+        dict_list = list(plist_data.items()) if not self.sort_dict else sorted(list(plist_data.items()))
         add_list = []
         for (key,val) in dict_list:
             if verify:
@@ -1415,7 +1713,7 @@ class PlistWindow(tk.Toplevel):
             "type":"edit",
             "cell":cell,
             "text":self._tree.item(cell,"text"),
-            "value":[x for x in values]
+            "values":[x for x in values]
             })
         values[1] = value
         # Set the values
@@ -1699,7 +1997,7 @@ class PlistWindow(tk.Toplevel):
             text = text.replace("<","").replace(">","")
         cell = self._tree.item("" if not len(self._tree.selection()) else self._tree.selection()[0])
         # place Entry popup properly
-        self.entry_popup = EntryPopup(self._tree, text, tv_item, column)
+        self.entry_popup = EntryPopup(self._tree, self, text, tv_item, column)
         self.entry_popup.place( x=x, y=y+pady, anchor="w", width=width)
         if not self.edited:
             self.edited = True
