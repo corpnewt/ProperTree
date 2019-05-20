@@ -16,13 +16,6 @@ from Scripts import *
 class ProperTree:
     def __init__(self, plists = []):
         # Create the new tk object
-        self.plist_header = """<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>"""
-        self.plist_footer = """
-</dict>
-</plist>"""
         self.tk = tk.Tk()
         self.tk.title("Convert Values")
         self.tk.minsize(width=640,height=130)
@@ -118,9 +111,6 @@ class ProperTree:
         self.tk.bind_all("<{}-s>".format(key), self.save_plist)
         self.tk.bind_all("<{}-S>".format(key), self.save_plist_as)
         self.tk.bind_all("<{}-d>".format(key), self.duplicate_plist)
-        self.tk.bind_all("<{}-c>".format(key), self.copy_selection)
-        self.tk.bind_all("<{}-C>".format(key), self.copy_all)
-        self.tk.bind_all("<{}-v>".format(key), self.paste_selection)
         self.tk.bind_all("<{}-t>".format(key), self.show_convert)
         self.tk.bind_all("<{}-z>".format(key), self.undo)
         self.tk.bind_all("<{}-Z>".format(key), self.redo)
@@ -158,7 +148,7 @@ class ProperTree:
     def reload_from_disk(self, event = None):
         windows = self.stackorder(self.tk)
         if not len(windows):
-            # Nothing to save
+            # Nothing to do
             return
         window = windows[-1] # Get the last item (most recent)
         if window == self.tk:
@@ -168,7 +158,7 @@ class ProperTree:
     def change_data_display(self, new_data = None):
         windows = self.stackorder(self.tk)
         if not len(windows):
-            # Nothing to save
+            # Nothing to do
             return
         window = windows[-1] # Get the last item (most recent)
         if window == self.tk:
@@ -178,7 +168,7 @@ class ProperTree:
     def oc_snapshot(self, event = None):
         windows = self.stackorder(self.tk)
         if not len(windows):
-            # Nothing to save
+            # Nothing to do
             return
         window = windows[-1] # Get the last item (most recent)
         if window == self.tk:
@@ -200,7 +190,7 @@ class ProperTree:
     def strip_comments(self, event = None):
         windows = self.stackorder(self.tk)
         if not len(windows):
-            # Nothing to save
+            # Nothing to do
             return
         window = windows[-1] # Get the last item (most recent)
         if window == self.tk:
@@ -265,79 +255,10 @@ class ProperTree:
     # Save/Load Plist Functions #
     ###                       ###
 
-    def copy_selection(self, event = None):
-        windows = self.stackorder(self.tk)
-        if not len(windows):
-            # Nothing to save
-            return
-        window = windows[-1] # Get the last item (most recent)
-        if window == self.tk:
-            return
-        node = window._tree.focus()
-        if node == "":
-            # Nothing to copy
-            return
-        try:
-            clipboard_string = plist.dumps(window.nodes_to_values(node,{}),sort_keys=self.sort_dict)
-            # Get just the values
-            self.tk.clipboard_clear()
-            self.tk.clipboard_append(clipboard_string)
-        except:
-            pass
-
-    def copy_all(self, event = None):
-        windows = self.stackorder(self.tk)
-        if not len(windows):
-            # Nothing to save
-            return
-        window = windows[-1] # Get the last item (most recent)
-        if window == self.tk:
-            return
-        try:
-            clipboard_string = plist.dumps(window.nodes_to_values("",{}),sort_keys=self.sort_dict)
-            # Get just the values
-            self.tk.clipboard_clear()
-            self.tk.clipboard_append(clipboard_string)
-        except:
-            pass
-
-    def paste_selection(self, event = None):
-        if not self.tk.clipboard_get():
-            return
-        windows = self.stackorder(self.tk)
-        if not len(windows):
-            # Nothing to do
-            return
-        window = windows[-1] # Get the last item (most recent)
-        if window == self.tk:
-            return
-        # Try to format the clipboard contents as a plist
-        clip = self.tk.clipboard_get()
-        try:
-            plist_data = plist.loads(clip,dict_type=dict if self.sort_dict else OrderedDict)
-        except:
-            # May need the header
-            cb = self.plist_header + "\n" + clip + "\n" + self.plist_footer
-            try:
-                plist_data = plist.loads(cb,dict_type=dict if self.sort_dict else OrderedDict)
-            except Exception as e:
-                # Let's throw an error
-                self.tk.bell()
-                mb.showerror("An Error Occurred While Pasting", str(e),parent=window)
-                return
-        if not plist_data:
-            if len(clip):
-                # Check if we actually pasted something
-                self.tk.bell()
-                mb.showerror("An Error Occurred While Pasting", "The pasted value is not a valid plist string.",parent=window)
-            # Nothing to paste
-            return
-        window.paste_selection(plist_data)
-
     def duplicate_plist(self, event = None):
         windows = self.stackorder(self.tk)
         if not len(windows):
-            # Nothing to save
+            # Nothing to do
             return
         window = windows[-1] # Get the last item (most recent)
         if window == self.tk:
@@ -348,7 +269,7 @@ class ProperTree:
     def save_plist(self, event = None):
         windows = self.stackorder(self.tk)
         if not len(windows):
-            # Nothing to save
+            # Nothing to do
             return
         window = windows[-1] # Get the last item (most recent)
         if window == self.tk:
@@ -358,7 +279,7 @@ class ProperTree:
     def save_plist_as(self, event = None):
         windows = self.stackorder(self.tk)
         if not len(windows):
-            # Nothing to save
+            # Nothing to do
             return
         window = windows[-1] # Get the last item (most recent)
         if window == self.tk:
@@ -368,7 +289,7 @@ class ProperTree:
     def undo(self, event = None):
         windows = self.stackorder(self.tk)
         if not len(windows):
-            # Nothing to save
+            # Nothing to do
             return
         window = windows[-1] # Get the last item (most recent)
         if window == self.tk:
@@ -378,7 +299,7 @@ class ProperTree:
     def redo(self, event = None):
         windows = self.stackorder(self.tk)
         if not len(windows):
-            # Nothing to save
+            # Nothing to do
             return
         window = windows[-1] # Get the last item (most recent)
         if window == self.tk:
