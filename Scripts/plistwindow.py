@@ -556,12 +556,14 @@ class PlistWindow(tk.Toplevel):
         # At this point, we should have something to replace
         replacements = []
         for x in matches:
+            name = self._tree.item(x[1],"text")
+            values = self._tree.item(x[1],"values")
             if self.do_replace(x[1],find,repl):
                 replacements.append({
                     "type":"edit",
                     "cell":x[1],
-                    "text":self._tree.item(x[1],"text"),
-                    "values":self._tree.item(x[1],"values")
+                    "text":name,
+                    "values":values
                     })
                 self._tree.selection_set(x[1])
                 self._tree.see(x[1])
