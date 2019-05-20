@@ -574,6 +574,8 @@ class PlistWindow(tk.Toplevel):
             if not self.edited:
                 self.edited = True
                 self.title(self.title()+" - Edited")
+        # Let's try to find the next
+        self.find_next(replacing=True)
 
     def is_match(self, node, text, replace = False):
         case_sensitive = self.f_case_var.get()
