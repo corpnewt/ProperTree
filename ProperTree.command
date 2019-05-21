@@ -108,6 +108,7 @@ class ProperTree:
         self.tk.config(menu=main_menu)
 
         # Set bindings
+        self.tk.bind("<{}-w>".format(key), self.close_window)
         self.tk.bind_all("<{}-n>".format(key), self.new_plist)
         self.tk.bind_all("<{}-o>".format(key), self.open_plist)
         self.tk.bind_all("<{}-s>".format(key), self.save_plist)
