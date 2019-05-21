@@ -126,7 +126,7 @@ def dump(value, fp, fmt=FMT_XML, sort_keys=True, skipkeys=False):
                 writer.beginElement("dict")
                 items = sorted(d.items()) if sort_keys else d.items()
                 for key, value in items:
-                    if not isinstance(key, str):
+                    if not isinstance(key, (str,unicode)):
                         if skipkeys:
                             continue
                         raise TypeError("keys must be strings")
@@ -139,7 +139,6 @@ def dump(value, fp, fmt=FMT_XML, sort_keys=True, skipkeys=False):
         writer.writeln("<plist version=\"1.0\">")
         writer.writeValue(value)
         writer.writeln("</plist>")
-        # plistlib.writePlist(value, fp)
     
 def dumps(value, fmt=FMT_XML, skipkeys=False, sort_keys=True):
     if _check_py3():
