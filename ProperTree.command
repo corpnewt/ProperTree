@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys, os, binascii, base64, json
+import sys, os, binascii, base64, json, re
 from collections import OrderedDict
 try:
     import Tkinter as tk
@@ -58,12 +58,20 @@ class ProperTree:
         self.f_text.bind("<Return>", self.convert_values)
         self.f_text.bind("<KP_Enter>", self.convert_values)
 
+        self.start_window = None 
+
+        # Regex to find the processor serial numbers when
+        # opened from the Finder
+        self.regexp = re.compile(r"^-psn_[0-9]+_[0-9]+$")
+
         # Setup the menu-related keybinds - and change the app name if needed
         key="Control"
         sign = "Ctr+"
         if str(sys.platform) == "darwin":
             # Remap the quit function to our own
             self.tk.createcommand('::tk::mac::Quit', self.quit)
+            self.tk.createcommand("::tk::mac::OpenDocument", self.open_plist_from_app)
+            self.tk.createcommand("::tk::mac::ReopenApplication", self.open_plist_from_app)
             # Import the needed modules to change the bundle name and force focus
             try:
                 from Foundation import NSBundle
@@ -136,17 +144,37 @@ class ProperTree:
         self.sort_dict = settings.get("sort_dict",False) # Preserve key ordering in dictionaries when loading/saving
         os.chdir(cwd)
 
-        if isinstance(plists, list) and len(plists):
-            self.start_window = None
-            # Iterate the passed plists and open them
-            for p in set(plists):
-                self.open_plist_with_path(None,p,None)
-        else:
-            # create a fresh plist to start
-            self.start_window = self.new_plist()
+        # Wait before opening a new document to see if we need to.
+        # This was annoying to debug, but seems to work.
+        self.tk.after(100, lambda:self.check_open(plists))
 
         # Start our run loop
         tk.mainloop()
+
+    def check_open(self, plists = []):
+        plists = [x for x in plists if not self.regexp.search(x)]
+        if isinstance(plists, list) and len(plists):
+            # Iterate the passed plists and open them
+            for p in set(plists):
+                window = self.open_plist_with_path(None,p,None)
+                if self.start_window == None:
+                    self.start_window = window
+        elif not len(self.stackorder(self.tk)):
+            # create a fresh plist to start
+            self.start_window = self.new_plist()
+
+    def open_plist_from_app(self, *args):
+        if isinstance(args, str):
+            args = [args]
+        args = [x for x in args if not self.regexp.search(x)]
+        for arg in args:
+            # Let's load the plist
+            if self.start_window == None:
+                self.start_window = self.open_plist_with_path(None,arg,None)
+            elif self.start_window.current_plist == None:
+                self.open_plist_with_path(None,arg,self.start_window)
+            else:
+                self.open_plist_with_path(None,arg,None)
 
     def change_hd_type(self, value):
         self.hd_type = value
