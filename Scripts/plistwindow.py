@@ -170,121 +170,19 @@ class EntryPopup(tk.Entry):
             type_value = self.master.get_check_type(self.cell).lower()
             value = self.get()
             # We need to sanitize data and numbers for sure
-            if type_value == "data":
-                if self.master.data_display == "hex":
-                    # Length must be a multiple of 2, and we need to
-                    # assert only hex chars
-                    # Strip the 0x prefix if it exists
-                    if value.lower().startswith("0x"):
-                        value = value[2:]
-                    # Strip spaces, as some programs include them
-                    value = value.replace(" ","")
-                    # Ensure all chars are hex
-                    if [x for x in value if x.lower() not in "0123456789abcdef"]:
-                        # Got non-hex values
-                        if not event == None:
-                            # print("Non-hex character in data!\a")
-                            self.bell()
-                            if not mb.askyesno("Invalid Hex Data","Invalid character in passed hex data.\n\nWould you like to keep editing?",parent=self.parent):
-                                self.destroy()
-                        return
-                    # Ensure we have an even number of chars
-                    if len(value) % 2:
-                        if not event == None:
-                            self.bell()
-                            if not mb.askyesno("Invalid Hex Data","Hex data must contain an even number of chars.\n\nWould you like to keep editing?",parent=self.parent):
-                                self.destroy()
-                            # print("Hex needs an even number of chars!\a")
-                        return
-                    # At this point, we can split our hex into groups of 8 chars and separate with
-                    # a space for easy readability
-                    value = "<{}>".format(" ".join((value[0+i:8+i] for i in range(0, len(value), 8))).upper())
-                else:
-                    # Base64 data - we need to make sure all values are within base64 spec, and that we're padded to 4 chars with =
-                    # first we strip the = signs, then verify the data, then, if we have anything, we pad to 4 chars
-                    value = value.rstrip("=")
-                    if [x for x in value if x.lower() not in "0123456789abcdefghijklmnopqrstuvwxyz+/"]:
-                        # Got non-hex values
-                        if not event == None:
-                            # print("Non-hex character in data!\a")
-                            self.bell()
-                            if not mb.askyesno("Invalid Base64 Data","Invalid base64 data passed.\n\nWould you like to keep editing?",parent=self.parent):
-                                self.destroy()
-                        return
-                    if len(value) > 0 and len(value) % 4:
-                        # we have leftover chars - pad to 4 with =
-                        value += "=" * (4-len(value)%4)
-                    # As a last resort, we'll convert it to base64 to verify it's good
-                    try:
-                        test = value
-                        if sys.version_info >= (3,0):
-                            test = test.encode("utf-8")
-                        base64.b64decode(test)
-                    except Exception as e:
-                        # Not the correct format :(
-                        if not event == None:
-                            self.bell()
-                            if not mb.askyesno("Invalid Base64 Data","Invalid base64 data passed.\n\n{}\n\nWould you like to keep editing?".format(str(e)),parent=self.parent):
-                                self.destroy()
-                        return
-            elif type_value == "date":
-                # We can take a few options for dates here.
-                #
-                # Now/Today
-                # Mar 11, 2019 12:29:00 PM
-                # YYYY-MM-DD HH:MM:SS Z
-                #
-                if value.lower() in ["now","today"]:
-                    # Get the current date as a datetime object
-                    value = datetime.datetime.now().strftime("%b %d, %Y %I:%M:%S %p")
-                else:
-                    # Try to parse with strptime
-                    try:
-                        value = datetime.datetime.strptime(value,"%b %d, %Y %I:%M:%S %p").strftime("%b %d, %Y %I:%M:%S %p")
-                    except:
-                        # Try the other method
-                        try:
-                            value = datetime.datetime.strptime(value,"%Y-%m-%d %H:%M:%S %z").strftime("%b %d, %Y %I:%M:%S %p")
-                        except:
-                            # Not the correct format :(
-                            if not event == None:
-                                self.bell()
-                                if not mb.askyesno("Invalid Date","Couldn't convert the passed string to a date.\n\nValid formats include:\nNow/Today\nMar 11, 2019 12:29:00 PM\nYYYY-MM-DD HH:MM:SS Z\n\nWould you like to keep editing?",parent=self.parent):
-                                    self.destroy()
-                            return
-            elif type_value == "number":
-                # We need to check if we're using hex or decimal
-                # then verify the chars involved
-                if value.lower().startswith("0x"):
-                    try:
-                        value = int(value,16)
-                    except:
-                        # Something went wrong
-                        if not event == None:
-                            self.bell()
-                            if not mb.askyesno("Invalid Hex Data","Couldn't convert the passed hex string to an integer.\n\nWould you like to keep editing?",parent=self.parent):
-                                self.destroy()
-                            # print("Could not convert hex!\a")
-                        return
-                else:
-                    # Not hex, let's try casting as an int first,
-                    # then as a float second - strip any commas
-                    value = value.replace(",","")
-                    try:
-                        value = int(value)
-                    except:
-                        try:
-                            value = float(value)
-                        except:
-                            # Failure!
-                            if not event == None:
-                                # print("Not a number!\a")
-                                self.bell()
-                                if not mb.askyesno("Invalid Number Data","Couldn't convert to an integer or float.\n\nWould you like to keep editing?",parent=self.parent):
-                                    self.destroy()
-                            return
-                # At this point, we should have the decimal value
-                value = str(value)
+            if type_value.lower() == "date" and value.lower() in ["today","now"]:
+                # Set it to today first
+                value = datetime.datetime.now().strftime("%b %d, %Y %I:%M:%S %p")
+            output = self.master.qualify_value(value,type_value)
+            if output[0] == False:
+                # Didn't pass the test - show the error and prompt for edit continuing
+                if not event == None:
+                    self.bell()
+                    if not mb.askyesno(output[1],output[2]+"\n\nWould you like to keep editing?",parent=self.parent):
+                        self.destroy()
+                return
+            # Set the value to the new output
+            value = output[1]
             # Add to undo stack
             self.master.add_undo({"type":"edit","cell":self.cell,"text":self.parent.item(self.cell,"text"),"values":original})
             # Replace our value (may be slightly modified)
@@ -445,8 +343,7 @@ class PlistWindow(tk.Toplevel):
         f_label.grid(row=0,column=0,sticky="e")
         r_label = tk.Label(self.find_frame, text="Replace:")
         r_label.grid(row=1,column=0,sticky="e")
-        rk_label = tk.Label(self.find_frame, text="Key/Str Only")
-        rk_label.grid(row=1,column=2,sticky="e")
+        self.find_type = "Key"
         self.f_text = tk.Entry(self.find_frame)
         self.f_text.bind("<Return>", self.find_next)
         self.f_text.bind("<KP_Enter>", self.find_next)
@@ -458,25 +355,87 @@ class PlistWindow(tk.Toplevel):
         self.r_text.bind("<KP_Enter>", self.replace)
         self.r_text.delete(0,tk.END)
         self.r_text.insert(0,"")
-        self.r_text.grid(row=1,column=1,sticky="we",padx=10,pady=10)
-        self.fn_button = tk.Button(self.find_frame,text="Next",command=self.find_next)
-        self.fn_button.grid(row=0,column=3,sticky="we",padx=10,pady=10)
+        self.r_text.grid(row=1,column=1,columnspan=1,sticky="we",padx=10,pady=10)
+        f_title = tk.StringVar(self.find_frame)
+        f_title.set("Key")
+        f_option = tk.OptionMenu(self.find_frame, f_title, "Key", "Boolean", "Data", "Date", "Number", "String", command=self.change_find_type)
+        f_option.grid(row=0,column=2)
         self.fp_button = tk.Button(self.find_frame,text="Previous",command=self.find_prev)
-        self.fp_button.grid(row=0,column=2,sticky="we",padx=10,pady=10)
+        self.fp_button.grid(row=0,column=3,sticky="we",padx=10,pady=10)
+        self.fn_button = tk.Button(self.find_frame,text="Next",command=self.find_next)
+        self.fn_button.grid(row=0,column=4,sticky="we",padx=10,pady=10)
         self.r_button = tk.Button(self.find_frame,text="Replace",command=self.replace)
-        self.r_button.grid(row=1,column=3,sticky="we",padx=10,pady=10)
+        self.r_button.grid(row=1,column=4,sticky="we",padx=10,pady=10)
         self.r_all_var = tk.IntVar()
         self.r_all = tk.Checkbutton(self.find_frame,text="Replace All",variable=self.r_all_var)
-        self.r_all.grid(row=1,column=4,sticky="w")
+        self.r_all.grid(row=1,column=5,sticky="w")
         self.f_case_var = tk.IntVar()
         self.f_case = tk.Checkbutton(self.find_frame,text="Case-Sensitive",variable=self.f_case_var)
-        self.f_case.grid(row=0,column=4,sticky="w")
+        self.f_case.grid(row=0,column=5,sticky="w")
 
         # Add the scroll bars and show the treeview
         vsb.pack(side="right",fill="y")
         self._tree.pack(side="bottom",fill="both",expand=True)
         self.hide_show_find()
         self.entry_popup = None
+
+    def change_find_type(self, value):
+        self.find_type = value
+
+    def qualify_value(self, value, value_type):
+        value_type = value_type.lower()
+        if value_type == "data":
+            if self.data_display == "hex":
+                if value.lower().startswith("0x"):
+                    value = value[2:]
+                value = value.replace(" ","").replace("<","").replace(">","")
+                if [x for x in value.lower() if x not in "0123456789abcdef"]:
+                    return (False,"Invalid Hex Data","Invalid character in passed hex data.")
+                if len(value) % 2:
+                    return (False,"Invalid Hex Data","Hex data must contain an even number of chars.")
+                value = "<{}>".format(" ".join((value[0+i:8+i] for i in range(0, len(value), 8))).upper())
+            else:
+                value = value.rstrip("=")
+                if [x for x in value if x.lower() not in "0123456789abcdefghijklmnopqrstuvwxyz+/"]:
+                    return (False,"Invalid Base64 Data","Invalid base64 data passed.")
+                if len(value) > 0 and len(value) % 4:
+                    value += "=" * (4-len(value)%4)
+                try:
+                    test = value
+                    if sys.version_info >= (3,0):
+                        test = test.encode("utf-8")
+                    base64.b64decode(test)
+                except Exception as e:
+                    return (False,"Invalid Base64 Data","Invalid base64 data passed.")
+        elif value_type == "date":
+            try:
+                value = datetime.datetime.strptime(value,"%b %d, %Y %I:%M:%S %p").strftime("%b %d, %Y %I:%M:%S %p")
+            except:
+                try:
+                    value = datetime.datetime.strptime(value,"%Y-%m-%d %H:%M:%S %z").strftime("%b %d, %Y %I:%M:%S %p")
+                except:
+                    return (False,"Invalid Date","Couldn't convert the passed string to a date.\n\nValid formats include:\nMar 11, 2019 12:29:00 PM\nYYYY-MM-DD HH:MM:SS Z")
+        elif value_type == "number":
+            if value.lower().startswith("0x"):
+                try:
+                    value = int(value,16)
+                except:
+                    return (False,"Invalid Hex Data","Couldn't convert the passed hex string to an integer.")
+            else:
+                value = value.replace(",","")
+                try:
+                    value = int(value)
+                except:
+                    try:
+                        value = float(value)
+                    except:
+                        return (False,"Invalid Number Data","Couldn't convert to an integer or float.")
+            value = str(value)
+        elif value_type == "boolean":
+            if not value.lower() in ["true","false"]:
+                return (False,"Invalid Boolean Data","Booleans can only be True/False.")
+            value = "True" if value.lower() == "true" else "False"
+        return (True,value)
 
     def hide_show_find(self, event=None):
         # Let's find out if we're set to show
@@ -499,24 +458,39 @@ class PlistWindow(tk.Toplevel):
         case_sensitive = self.f_case_var.get()
         node_type      = self.get_check_type(node)
         parent_type    = self.get_check_type(self._tree.parent(node))
-        check_name = check_value = changed = False
-        if not parent_type.lower() == "array":
-            check_name = True
-        if not node_type.lower() in ["array","dictionary","boolean","date","data"]:
-            check_value = True
-        # Check the name first
-        if check_name:
+        find_type      = self.find_type.lower()
+
+        if find_type == "key":
+            # We're only replacing the text
             name = self._tree.item(node,"text")
             new_name = re.sub(("" if case_sensitive else "(?i)")+re.escape(find), lambda m: new_text, name)
             self._tree.item(node,text=new_name)
-            changed = True
-        if check_value:
-            values = self.get_padded_values(node,3)
-            if node_type.lower() == "string":
-                values[1] = re.sub(("" if case_sensitive else "(?i)")+re.escape(find), lambda m: new_text, values[1])
-                self._tree.item(node,values=values)
-                changed = True
-        return changed
+            return
+        # Check the values
+        values = self.get_padded_values(node,3)
+        if find_type == "string":
+            # Just replacing the text value
+            values[1] = re.sub(("" if case_sensitive else "(?i)")+re.escape(find), lambda m: new_text, values[1])
+            self._tree.item(node,values=values)
+        elif find_type == "data":
+            # if hex, we need to strip spaces and brackets, upper() both, and compare
+            if self.data_display == "hex":
+                find = find.replace(" ","").replace("<","").replace(">","").upper()
+                new_text = new_text.replace(" ","").replace("<","").replace(">","").upper()
+                values[1] = values[1].upper().replace(" ","").replace("<","").replace(">","").upper().replace(find,new_text)
+                values[1] = "<{}>".format(" ".join((values[1][0+i:8+i] for i in range(0, len(values[1]), 8))))
+            else:
+                # Base64 - let's strip = and compare.  Must be case-sensitive, since b64 be like that
+                find = find.rstrip("=")
+                new_text = new_text.rstrip("=")
+                values[1] = values[1].rstrip("=").replace(find,new_text)
+                if len(values[1]) % 4:
+                    values[1] += "=" * (4-len(values[1])%4)
+            self._tree.item(node,values=values)
+        else:
+            # Do a straight up replace
+            values[1] = new_text
+            self._tree.item(node,values=values)
 
     def replace(self, event=None):
         find = self.f_text.get()
@@ -525,6 +499,26 @@ class PlistWindow(tk.Toplevel):
             mb.showerror("Nothing To Find", "The find textbox is empty, nothing to search for.",parent=self)
             return None
         repl = self.r_text.get()
+        # Let's convert both values to the targets
+        find = self.qualify_value(find,self.find_type)
+        repl = self.qualify_value(repl,self.find_type)
+        if find[0] == False:
+            # Invalid find type
+            self.bell()
+            mb.showerror("Invalid Find Value",find[2],parent=self)
+            return
+        if repl[0] == False:
+            # Invalid find type
+            self.bell()
+            mb.showerror("Invalid Replace Value",repl[2],parent=self)
+            return
+        find = find[1]
+        repl = repl[1]
+        # If it's data - make sure it's the same length
+        if self.find_type.lower() == "data" and not len(find.rstrip("=")) == len(repl.rstrip("=")):
+            self.bell()
+            mb.showerror("Mismatched Data Length","When replacing data, the find and replace values must be the same length.",parent=self)
+            return
         if find == repl:
             # Uh... they're the same - no need to replace bois
             self.bell()
@@ -533,24 +527,24 @@ class PlistWindow(tk.Toplevel):
         # Find out if we're replacing everything or not
         replace_all = self.r_all_var.get()
         node = "" if not len(self._tree.selection()) else self._tree.selection()[0]
-        is_match = False if node == "" else self.is_match(node,find,True)
+        is_match = False if node == "" else self.is_match(node,find)
         if replace_all:
             matches = self.find_all(find)
             if not len(matches):
                 # Nothing found - let's throw an error
                 self.bell()
-                mb.showerror("No Replaceable Matches Found", '"{}" did not match any keys/string values in the current plist.'.format(find),parent=self)
+                mb.showerror("No Replaceable Matches Found", '"{}" did not match any {} fields in the current plist.'.format(find,self.find_type.lower()),parent=self)
                 return
         elif not node == "" and not is_match == False:
             # Current is a match - let's add it
-            matches = [(0,node,is_match[1])]
+            matches = [(0,node)]
         else:
             # Not matching all, and current cell is not a match, let's get the next
             node = self.find_next(replacing=True)
             if node == None:
                 # Nothing found - let's throw an error
                 self.bell()
-                mb.showerror("No Replaceable Matches Found", '"{}" did not match any keys/string values in the current plist.'.format(find),parent=self)
+                mb.showerror("No Replaceable Matches Found", '"{}" did not match any {} fields in the current plist.'.format(find,self.find_type.lower()),parent=self)
                 return
             return
         # At this point, we should have something to replace
@@ -558,55 +552,61 @@ class PlistWindow(tk.Toplevel):
         for x in matches:
             name = self._tree.item(x[1],"text")
             values = self._tree.item(x[1],"values")
-            if self.do_replace(x[1],find,repl):
-                replacements.append({
-                    "type":"edit",
-                    "cell":x[1],
-                    "text":name,
-                    "values":values
-                    })
-                self._tree.selection_set(x[1])
-                self._tree.see(x[1])
+            self.do_replace(x[1],find,repl)
+            replacements.append({
+                "type":"edit",
+                "cell":x[1],
+                "text":name,
+                "values":values
+                })
+            self._tree.selection_set(x[1])
+            self._tree.see(x[1])
         self.alternate_colors()
-        if len(replacements):
-            self.add_undo(replacements)
-            # Ensure we're edited
-            if not self.edited:
-                self.edited = True
-                self.title(self.title()+" - Edited")
+        self.add_undo(replacements)
+        # Ensure we're edited
+        if not self.edited:
+            self.edited = True
+            self.title(self.title()+" - Edited")
         # Let's try to find the next
         self.find_next(replacing=True)
 
-    def is_match(self, node, text, replace = False):
+    def is_match(self, node, text):
         case_sensitive = self.f_case_var.get()
-        node_type = self.get_check_type(node)
-        parent_type = self.get_check_type(self._tree.parent(node))
-        # Let's verify that we can search the name/value:
-        if parent_type.lower() == "array":
-            # Can't check the name
-            if node_type.lower() in ["array","dictionary"]:
-                # Can't check the value either - bail
-                return False
-        else:
-            # Can check the name - do that first, then check the value
+        node_type = self.get_check_type(node).lower()
+        parent_type = self.get_check_type(self._tree.parent(node)).lower()
+        find_type = self.find_type.lower()
+        if find_type == "key" and not parent_type == "array":
+            # We can check the name
             name = self._tree.item(node,"text")
             if (text in name if case_sensitive else text.lower() in name.lower()):
-                return (True,0)
-            if node_type.lower() in ["array","dictionary","boolean"]:
-                # Can't check the value - bail
-                return False
+                return True
+            # Not found - bail
+            return False
+        # We can check values now
         value = self.get_padded_values(node,2)[1]
-        # Can at last check the value
-        if node_type.lower() == "data" and self.data_display == "hex" and not replace:
-            # Let's strip spaces and case-insensitive compare
-            if text.replace(" ","").replace("<","").replace(">","").lower() in value.replace(" ","").replace("<","").replace(">","").lower():
-                # Got a match!
-                return (True,1)
-        elif not replace or node_type.lower() == "string":
-            # Let's check the values normally
+        if node_type != find_type:
+            # Not what we're looking for
+            return False
+        # Break out and compare
+        if node_type == "data":
+            # if hex, we need to strip spaces and brackets, upper() both, and compare
+            if self.data_display == "hex":
+                if text.replace(" ","").replace("<","").replace(">","").upper() in value.replace(" ","").replace("<","").replace(">","").upper():
+                    # Got a match!
+                    return True
+            else:
+                # Base64 - let's strip = and compare.  Must be case-sensitive, since b64 be like that
+                if text.rstrip("=") in value.rstrip("="):
+                    # Yee - is match
+                    return True
+        elif node_type == "string":
             if (text in value if case_sensitive else text.lower() in value.lower()):
-                # Got a match!
-                return (True,1)
+                return True
+        elif node_type in ["date","boolean","number"]:
+            if text.lower() == value.lower():
+                # Can only return if we find the same date
+                return True
+        # If we got here, we didn't find it
         return False
 
     def find_all(self, text=""):
@@ -619,7 +619,7 @@ class PlistWindow(tk.Toplevel):
         for node in nodes:
             match = self.is_match(node, text)
             if not match == False:
-                found.append((nodes.index(node),node,match[1]))
+                found.append((nodes.index(node),node))
         return found
 
     def find_prev(self, event=None):
@@ -628,11 +628,17 @@ class PlistWindow(tk.Toplevel):
             self.bell()
             mb.showerror("Nothing To Find", "The find textbox is empty, nothing to search for.",parent=self)
             return None
-        matches = self.find_all(find)
+        type_check = self.qualify_value(find, self.find_type)
+        if type_check[0] == False:
+            self.bell()
+            mb.showerror("Invalid Find Value",type_check[2],parent=self)
+            return None
+        matches = self.find_all(type_check[1])
         if not len(matches):
             # Nothing found - let's throw an error
-            self.bell()
-            mb.showerror("No Matches Found", '"{}" did not match any keys/values in the current plist.'.format(find),parent=self)
+            if not replacing:
+                self.bell()
+                mb.showerror("No Matches Found", '"{}" did not match any {} fields in the current plist.'.format(type_check[1],self.find_type.lower()),parent=self)
             return None
         # Let's get the index of our selected item
         node  = "" if not len(self._tree.selection()) else self._tree.selection()[0]
@@ -658,12 +664,17 @@ class PlistWindow(tk.Toplevel):
             self.bell()
             mb.showerror("Nothing To Find", "The find textbox is empty, nothing to search for.",parent=self)
             return None
-        matches = self.find_all(find)
+        type_check = self.qualify_value(find, self.find_type)
+        if type_check[0] == False:
+            self.bell()
+            mb.showerror("Invalid Find Value",type_check[2],parent=self)
+            return None
+        matches = self.find_all(type_check[1])
         if not len(matches):
             # Nothing found - let's throw an error
             if not replacing:
                 self.bell()
-                mb.showerror("No Matches Found", '"{}" did not match any keys/values in the current plist.'.format(find),parent=self)
+                mb.showerror("No Matches Found", '"{}" did not match any {} fields in the current plist.'.format(type_check[1],self.find_type.lower()),parent=self)
             return None
         # Let's get the index of our selected item
         node  = "" if not len(self._tree.selection()) else self._tree.selection()[0]
