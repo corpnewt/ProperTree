@@ -359,6 +359,7 @@ class PlistWindow(tk.Toplevel):
         f_title = tk.StringVar(self.find_frame)
         f_title.set("Key")
         f_option = tk.OptionMenu(self.find_frame, f_title, "Key", "Boolean", "Data", "Date", "Number", "String", command=self.change_find_type)
+        f_option['menu'].insert_separator(1)
         f_option.grid(row=0,column=2)
         self.fp_button = tk.Button(self.find_frame,text="Previous",command=self.find_prev)
         self.fp_button.grid(row=0,column=3,sticky="we",padx=10,pady=10)
