@@ -1271,8 +1271,11 @@ class PlistWindow(tk.Toplevel):
                         data_tag = ""
                 # At this point, we have a list of lines - with all <data> tags on the same line
                 # let's write to file
-                with open(temp_file,"w") as f:
-                    f.write("\n".join(new_plist))
+                with open(temp_file,"wb") as f:
+                    temp_string = "\n".join(new_plist)
+                    if sys.version_info >= (3,0):
+                        temp_string = temp_string.encode("utf-8")
+                    f.write(temp_string)
         except Exception as e:
             try:
                 shutil.rmtree(temp,ignore_errors=True)
@@ -1524,7 +1527,7 @@ class PlistWindow(tk.Toplevel):
             return self.menu_code + " Boolean"
         elif isinstance(value, (int,float)):
             return self.menu_code + " Number"
-        elif isinstance(value, str):
+        elif (sys.version_info >= (3, 0) and isinstance(value, str)) or (sys.version_info < (3,0) and isinstance(value, (str,unicode))):
             return self.menu_code + " String"
         else:
             return self.menu_code + type(value)
