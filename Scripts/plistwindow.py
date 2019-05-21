@@ -515,10 +515,10 @@ class PlistWindow(tk.Toplevel):
         find = find[1]
         repl = repl[1]
         # If it's data - make sure it's the same length
-        if self.find_type.lower() == "data" and not len(find.rstrip("=")) == len(repl.rstrip("=")):
+        '''if self.find_type.lower() == "data" and not len(find.rstrip("=")) == len(repl.rstrip("=")):
             self.bell()
             mb.showerror("Mismatched Data Length","When replacing data, the find and replace values must be the same length.",parent=self)
-            return
+            return'''
         if find == repl:
             # Uh... they're the same - no need to replace bois
             self.bell()
