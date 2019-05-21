@@ -211,10 +211,10 @@ class ProperTree:
 
     def close_window(self, event = None, check_close = True):
         # Remove the default window that comes from it
-        if str(sys.platform) == "darwin":
-            self.tk.iconify()
-        else:
-            self.tk.withdraw()
+        #if str(sys.platform) == "darwin":
+        #    self.tk.iconify()
+        #else:
+        self.tk.withdraw()
         if check_close:
             windows = self.stackorder(self.tk)
             if not len(windows):
