@@ -27,24 +27,18 @@ class ProperTree:
         f_label.grid(row=0,column=0)
         t_label = tk.Label(self.tk, text="To:")
         t_label.grid(row=1,column=0)
-        d_label = tk.Label(self.tk, text="Convert Int:")
-        d_label.grid(row=2,column=0)
+
         # Setup the from/to option menus
         f_title = tk.StringVar(self.tk)
         t_title = tk.StringVar(self.tk)
-        d_title = tk.StringVar(self.tk)
         f_title.set("Base64")
         t_title.set("Hex")
-        d_title.set("Hex --> Decimal")
-        f_option = tk.OptionMenu(self.tk, f_title, "Ascii", "Base64", "Hex", command=self.change_from_type)
-        t_option = tk.OptionMenu(self.tk, t_title, "Ascii", "Base64", "Hex", command=self.change_to_type)
-        d_option = tk.OptionMenu(self.tk, d_title, "Hex --> Decimal", "Decimal --> Hex", command=self.change_hd_type)
+        f_option = tk.OptionMenu(self.tk, f_title, "Ascii", "Base64", "Decimal", "Hex", command=self.change_from_type)
+        t_option = tk.OptionMenu(self.tk, t_title, "Ascii", "Base64", "Decimal", "Hex", command=self.change_to_type)
         self.from_type = "Base64"
         self.to_type   = "Hex"
-        self.hd_type   = "Hex --> Decimal"
         f_option.grid(row=0,column=1,sticky="we")
         t_option.grid(row=1,column=1,sticky="we")
-        d_option.grid(row=2,column=1,sticky="we")
 
         self.f_text = tk.Entry(self.tk)
         self.f_text.delete(0,tk.END)
@@ -58,30 +52,11 @@ class ProperTree:
         self.t_text.configure(state='readonly')
         self.t_text.grid(row=1,column=2,columnspan=2,sticky="we",padx=10,pady=10)
 
-        self.d_text = tk.Entry(self.tk)
-        self.d_text.configure(state='normal')
-        self.d_text.delete(0,tk.END)
-        self.d_text.insert(0,"")
-        self.d_text.grid(row=2,column=2,sticky="we",padx=10,pady=10)
-
-        self.h_text = tk.Entry(self.tk)
-        self.h_text.configure(state='normal')
-        self.h_text.delete(0,tk.END)
-        self.h_text.insert(0,"")
-        self.h_text.configure(state='readonly')
-        self.h_text.grid(row=2,column=3,sticky="we",padx=10,pady=10)
-
         self.c_button = tk.Button(self.tk, text="Convert", command=self.convert_values)
-        self.c_button.grid(row=1,column=4,sticky="e",padx=10,pady=10)
-
-        self.ci_button = tk.Button(self.tk, text="Convert", command=self.convert_ints)
-        self.ci_button.grid(row=2,column=4,sticky="e",padx=10,pady=10)
+        self.c_button.grid(row=2,column=3,sticky="e",padx=10,pady=10)
 
         self.f_text.bind("<Return>", self.convert_values)
         self.f_text.bind("<KP_Enter>", self.convert_values)
-
-        self.d_text.bind("<Return>", self.convert_ints)
-        self.d_text.bind("<KP_Enter>", self.convert_ints)
 
         # Setup the menu-related keybinds - and change the app name if needed
         key="Control"
@@ -175,42 +150,6 @@ class ProperTree:
     def change_hd_type(self, value):
         self.hd_type = value
 
-    def convert_ints(self, event = None):
-        from_value = self.d_text.get()
-        if self.hd_type.lower() == "hex --> decimal":
-            if from_value.lower().startswith("0x"):
-                from_value = from_value[2:]
-            from_value = from_value.replace(" ","").replace("<","").replace(">","")
-            if [x for x in from_value if x.lower() not in "0123456789abcdef"]:
-                self.tk.bell()
-                mb.showerror("Invalid Hex Data","Invalid character in passed hex data.",parent=self.tk)
-                return
-            # Convert to int
-            try:
-                to_value = str(int(from_value,16))
-            except Exception as e:
-                mb.showerror("Conversion Error",str(e),parent=self.tk)
-                return
-        else:
-            # From int to hex
-            if "." in from_value:
-                mb.showerror("Conversion Error","Input must be an integer.",parent=self.tk)
-                return
-            try:
-                from_value = int(from_value)
-            except Exception as e:
-                mb.showerror("Conversion Error",str(e),parent=self.tk)
-                return
-            to_value = "{:x}".format(from_value)
-            if len(to_value)%2:
-                to_value = "0"+to_value
-            to_value = "{}".format(" ".join((to_value[0+i:8+i] for i in range(0, len(to_value), 8))).upper())
-        # Set the text box
-        self.h_text.configure(state='normal')
-        self.h_text.delete(0,tk.END)
-        self.h_text.insert(0,to_value)
-        self.h_text.configure(state='readonly')
-
     def reload_from_disk(self, event = None):
         windows = self.stackorder(self.tk)
         if not len(windows):
@@ -288,13 +227,18 @@ class ProperTree:
                 mb.showerror("Invalid Hex Data","Invalid character in passed hex data.",parent=self.tk)
                 return
         try:
+            if self.from_type.lower() == "decimal":
+                # Convert to hex bytes
+                from_value = "{:x}".format(int(from_value))
+                if len(from_value) % 2:
+                    from_value = "0"+from_value
             # Handle the from data
             if sys.version_info >= (3,0):
                 # Convert to bytes
                 from_value = from_value.encode("utf-8")
             if self.from_type.lower() == "base64":
                 from_value = base64.b64decode(from_value)
-            elif self.from_type.lower() == "hex":
+            elif self.from_type.lower() in ["hex","decimal"]:
                 from_value = binascii.unhexlify(from_value)
             # Let's get the data converted
             to_value = from_value
@@ -302,7 +246,9 @@ class ProperTree:
                 to_value = base64.b64encode(from_value)
             elif self.to_type.lower() == "hex":
                 to_value = binascii.hexlify(from_value)
-            if sys.version_info >= (3,0):
+            elif self.to_type.lower() == "decimal":
+                to_value = str(int(binascii.hexlify(from_value),16))
+            if sys.version_info >= (3,0) and not self.to_type.lower() == "decimal":
                 # Convert to bytes
                 to_value = to_value.decode("utf-8")
             if self.to_type.lower() == "hex":
