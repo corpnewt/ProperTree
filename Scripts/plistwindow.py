@@ -110,7 +110,10 @@ class EntryPopup(tk.Entry):
         return 'break'
 
     def paste(self, event):
-        contents = self.clipboard_get()
+        try:
+            contents = self.clipboard_get()
+        except:
+            contents = ""
         if len(contents):
             try:
                 get = self.selection_get()
@@ -1236,7 +1239,7 @@ class PlistWindow(tk.Toplevel):
     def save_plist_as(self, event=None, path=None):
         if path == None:
             # Get the file dialog
-            path = fd.asksaveasfilename(parent=self, title = "Please select a file name for saving:",filetypes=[("Plist files", "*.plist")])
+            path = fd.asksaveasfilename(parent=self, title = "Please select a file name for saving:",defaultextension=".plist",filetypes=[("Plist files", "*.plist")])
             if not len(path):
                 # User cancelled - no changes
                 return None
@@ -1363,7 +1366,10 @@ class PlistWindow(tk.Toplevel):
 
     def paste_selection(self, event = None):
         # Try to format the clipboard contents as a plist
-        clip = self.clipboard_get()
+        try:
+            clip = self.clipboard_get()
+        except:
+            clip = ""
         try:
             plist_data = plist.loads(clip,dict_type=dict if self.sort_dict else OrderedDict)
         except:
@@ -1512,7 +1518,10 @@ class PlistWindow(tk.Toplevel):
         if isinstance(parent,list):
             parent.append(value)
         elif isinstance(parent,dict):
-            parent[name] = value
+            if sys.version_info < (3,0) and isinstance(name,unicode):
+                parent[name] = value
+            else:
+                parent[str(name)] = value
         return parent
 
     def get_type(self, value):
