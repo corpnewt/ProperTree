@@ -1838,26 +1838,35 @@ class PlistWindow(tk.Toplevel):
         # let's first make sure it doesn't already exist - if it does, we
         # will overwrite it
         current_type = self.get_check_type(current_cell).lower()
+        just_add = True
         if current_type == "dictionary":
             # Scan through and make sure we have all the keys needed
             for x in self._tree.get_children(current_cell):
                 name = self._tree.item(x,"text")
+                print(name)
                 if name in value:
-                    # Need to change this one
-                    for child in self._tree.get_children(x):
-                        # Add some remove commands
-                        undo_list.append({
-                            "type":"remove",
-                            "cell":child,
-                            "from":x,
-                            "index":self._tree.index(child)
-                        })
-        last_cell = self.add_node(value,current_cell,"")
-        if created == None:
-            created = last_cell
-        undo_list.append({
-            "type":"add",
-            "cell":created
+                    # Remove the top level item
+                    undo_list.append({
+                        "type":"remove",
+                        "cell":x,
+                        "from":current_cell,
+                        "index":self._tree.index(x)
+                    })
+                    self._tree.detach(x)
+            # Add the entries
+            if isinstance(value,dict):
+                just_add = False
+                for x in value:
+                    created = self.add_node(value[x],current_cell,x)
+                    undo_list.append({
+                        "type":"add",
+                        "cell":created
+                    })
+        if just_add:
+            last_cell = self.add_node(value,current_cell,"")
+            undo_list.append({
+                "type":"add",
+                "cell":created
             })
         self.add_undo(undo_list)
         if not self.edited:
@@ -1893,17 +1902,22 @@ class PlistWindow(tk.Toplevel):
         
         # Walk through the menu data if it exists
         cell_path = self.get_cell_path(cell)
-        open_core = self.menu_data.get("OpenCore",{})
-        clover    = self.menu_data.get("Clover",{})
-        oc_valid  = [x for x in list(open_core) if x.startswith(cell_path)]
-        cl_valid  = [x for x in list(clover) if x.startswith(cell_path)]
-        if len(oc_valid) or len(cl_valid):
-            popup_menu.add_separator()
-        if len(oc_valid):
-            oc_menu = tk.Menu(popup_menu, tearoff=0)
-            for item in sorted(oc_valid):
-                item_menu = tk.Menu(oc_menu, tearoff=0)
-                for x in open_core[item]:
+        first_key = True
+        for key in sorted(list(self.menu_data)):
+            options = self.menu_data[key]
+            valid   = [x for x in list(options) if x.startswith(cell_path)]
+            if not len(valid):
+                # No hits - bail
+                continue
+            # Add a separator
+            if first_key:
+                popup_menu.add_separator()
+                first_key = False
+            # Iterate and add
+            option_menu = tk.Menu(popup_menu,tearoff=0)
+            for item in sorted(valid):
+                item_menu = tk.Menu(option_menu,tearoff=0)
+                for x in options[item]:
                     if x.get("separator",False) != False:
                         item_menu.add_separator()
                     elif x.get("title",False) != False:
@@ -1913,26 +1927,9 @@ class PlistWindow(tk.Toplevel):
                         value = x["value"]
                         types = x["types"]
                         passed = (cell,item,types,value)
-                        item_menu.add_command(label=name, command=lambda item=passed: self.merge_menu_preset(item))
-                oc_menu.add_cascade(label=item,menu=item_menu)
-            popup_menu.add_cascade(label="OpenCore",menu=oc_menu)
-        if len(cl_valid):
-            clover_menu = tk.Menu(popup_menu, tearoff=0)
-            for item in sorted(cl_valid):
-                item_menu = tk.Menu(clover_menu, tearoff=0)
-                for x in clover[item]:
-                    if x.get("separator",False) != False:
-                        item_menu.add_separator()
-                    elif x.get("title",False) != False:
-                        item_menu.add("command",label=x.get("name",""),state="disabled")
-                    else:
-                        name  = x["name"]
-                        value = x["value"]
-                        types = x["types"]
-                        passed = (cell,item,types,value)
-                        item_menu.add_command(label=name, command=lambda item=passed: self.merge_menu_preset(item))
-                clover_menu.add_cascade(label=item,menu=item_menu)
-            popup_menu.add_cascade(label="Clover",menu=clover_menu)
+                        item_menu.add_command(label=name,command=lambda item=passed: self.merge_menu_preset(item))
+                option_menu.add_cascade(label=item,menu=item_menu)
+            popup_menu.add_cascade(label=key,menu=option_menu)
             
         try:
             popup_menu.tk_popup(event.x_root, event.y_root, 0)
