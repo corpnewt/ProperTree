@@ -1843,7 +1843,6 @@ class PlistWindow(tk.Toplevel):
             # Scan through and make sure we have all the keys needed
             for x in self._tree.get_children(current_cell):
                 name = self._tree.item(x,"text")
-                print(name)
                 if name in value:
                     # Remove the top level item
                     undo_list.append({
@@ -1866,7 +1865,7 @@ class PlistWindow(tk.Toplevel):
             last_cell = self.add_node(value,current_cell,"")
             undo_list.append({
                 "type":"add",
-                "cell":created
+                "cell":last_cell
             })
         self.add_undo(undo_list)
         if not self.edited:
