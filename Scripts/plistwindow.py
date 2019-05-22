@@ -1927,7 +1927,7 @@ class PlistWindow(tk.Toplevel):
                         types = x["types"]
                         passed = (cell,item,types,value)
                         item_menu.add_command(label=name,command=lambda item=passed: self.merge_menu_preset(item))
-                option_menu.add_cascade(label=item,menu=item_menu)
+                option_menu.add_cascade(label=" -> ".join(self.split(item)),menu=item_menu)
             popup_menu.add_cascade(label=key,menu=option_menu)
             
         try:
