@@ -993,7 +993,7 @@ class PlistWindow(tk.Toplevel):
         self.undo_stack.append(action)
         self.redo_stack = [] # clear the redo stack
 
-    def reundo(self, event=None, undo = True):
+    def reundo(self, event=None, undo = True, single_undo = None):
         # Let's come up with a more centralized way to do this
         # We'll break down the potential actions into a few types:
         #
@@ -1014,6 +1014,10 @@ class PlistWindow(tk.Toplevel):
         else:
             r = self.undo_stack
             u = self.redo_stack
+        # Allow a single undo without any trace
+        if single_undo != None:
+            u = [single_undo]
+            r = []
         if not len(u):
             self.bell()
             # Nothing to undo/redo
@@ -1063,8 +1067,8 @@ class PlistWindow(tk.Toplevel):
                 })
                 # Let's actually move it now
                 self._tree.move(cell,task["from"],task.get("index","end"))
-        # Let's check if we have an r_task_list - and add it
-        if len(r_task_list):
+        # Let's check if we have an r_task_list - and add it if it wasn't a one-off
+        if len(r_task_list) and single_undo == None:
             r.append(r_task_list)
         # Ensure we're edited
         if not self.edited:
@@ -1822,8 +1826,35 @@ class PlistWindow(tk.Toplevel):
                     if not current_type.lower() == needed_type.lower():
                         # Raise an error - type mismatch
                         self.bell()
-                        mb.showerror("Incorrect Type", "{} is {}, should be {}.".format(cell_name,current_type,needed_type), parent=self)
-                        return
+                        if mb.askyesno("Incorrect Type","{} is {}, should be {}.\n\nWould you like to replace it?".format(cell_name,current_type,needed_type),parent=self):
+                            # We need to remove any children, and change the type
+                            for y in self._tree.get_children(x):
+                                undo_list.append({
+                                    "type":"remove",
+                                    "cell":y,
+                                    "from":x,
+                                    "index":self._tree.index(y)
+                                })
+                                self._tree.detach(y)
+                            # Change the type
+                            undo_list.append({
+                                "type":"edit",
+                                "cell":x,
+                                "text":self._tree.item(x,"text"),
+                                "values":self._tree.item(x,"values")
+                            })
+                            values = self.get_padded_values(x,3)
+                            if needed_type.lower == "dictionary":
+                                values[0] = self.menu_code + " Dictionary"
+                                values[1] = "0 key/value pairs"
+                            else:
+                                values[0] = self.menu_code + " Array"
+                                values[1] = "0 children"
+                            self._tree.item(x, values=values)
+                        else:
+                            # Let's undo anything we've already done and bail
+                            self.reundo(None,True,undo_list)
+                            return
                     found = True
                     current_cell = x
                     break
@@ -1839,11 +1870,21 @@ class PlistWindow(tk.Toplevel):
         # will overwrite it
         current_type = self.get_check_type(current_cell).lower()
         just_add = True
+        replace_asked = False
         if current_type == "dictionary":
             # Scan through and make sure we have all the keys needed
             for x in self._tree.get_children(current_cell):
                 name = self._tree.item(x,"text")
                 if name in value:
+                    if not replace_asked:
+                        # Ask first
+                        self.bell()
+                        if mb.askyesno("Key(s) Already Exist","One or more keys already exist at the destination.\n\nWould you like to replace them?",parent=self):
+                            replace_asked = True
+                        else:
+                            # User said no, let's undo
+                            self.reundo(None,True,undo_list)
+                            return
                     # Remove the top level item
                     undo_list.append({
                         "type":"remove",
