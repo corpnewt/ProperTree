@@ -781,7 +781,8 @@ class PlistWindow(tk.Toplevel):
                 kdict["PlistPath"] = "Contents/Info.plist"
             elif os.path.exists(os.path.join(kdir,"Info.plist")):
                 kdict["PlistPath"] = "Info.plist"
-            if not kdict.get("PlistPath") or not (kdict.get("ExecutablePath") and kdict.get("PlistPath")):
+            if not kdict.get("PlistPath"):
+                # We have at least an Info.plist
                 continue
             # Should have something here
             kexts.append(kdict)
