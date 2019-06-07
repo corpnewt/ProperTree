@@ -24,8 +24,12 @@ goto checkpy
 
 :checkpy
 REM Get python location
-FOR /F "tokens=* USEBACKQ" %%F IN (`where python 2^> nul`) DO (
-    SET "python=%%F"
+set "python="
+FOR /F "tokens=* USEBACKQ" %%F IN (`python -V 2^>^&1`) DO (
+    set "t=%%F"
+    if /i "!t:~0,6!" == "python" (
+        set "python=%%F"
+    )
 )
 
 REM Check for py and give helpful hints!
@@ -174,8 +178,8 @@ exit /b
 REM Python found
 cls
 if "%*"=="" (
-    "!python!" "!thisDir!!script_name!"
+    python "!thisDir!!script_name!"
 ) else (
-    "!python!" "!thisDir!!script_name!" %*
+    python "!thisDir!!script_name!" %*
 )
 goto :EOF

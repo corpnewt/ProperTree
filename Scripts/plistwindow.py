@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import sys, os, plistlib, base64, binascii, datetime, tempfile, shutil, re, itertools, math
+from collections import OrderedDict
 try:
     # Python 2
     import Tkinter as tk
@@ -18,7 +19,7 @@ sys.path.append(os.path.abspath(os.path.dirname(os.path.realpath(__file__))))
 import plist
 
 class EntryPopup(tk.Entry):
-    def __init__(self, parent, text, cell, column, **kw):
+    def __init__(self, parent, master, text, cell, column, **kw):
         tk.Entry.__init__(self, parent, **kw)
 
         self.insert(0, text)
@@ -31,7 +32,7 @@ class EntryPopup(tk.Entry):
         self.cell = cell
         self.column = column
         self.parent = parent
-        self.master = parent._nametowidget(parent.winfo_parent())
+        self.master = master
 
         self.focus_force()
         
@@ -43,11 +44,48 @@ class EntryPopup(tk.Entry):
             self.bind("<Control-a>", self.select_all)
             self.bind("<Control-c>", self.copy)
             self.bind("<Control-v>", self.paste)
-        self.bind("<Escape>", lambda *ignore: self.destroy())
+        self.bind("<Escape>", self.cancel)
         self.bind("<Return>", self.confirm)
         self.bind("<KP_Enter>", self.confirm)
         self.bind("<Up>", self.goto_start)
         self.bind("<Down>", self.goto_end)
+        self.bind("<Tab>", self.next_field)
+
+    def cancel(self, event):
+        # Force the parent focus then destroy self
+        self.parent.focus_force()
+        self.destroy()
+
+    def next_field(self, event):
+        # We need to determine if our other field can be edited
+        # and if so - trigger another double click event there
+        edit_col = None
+        if self.column == "#0":
+            check_type = self.master.get_check_type(self.cell).lower()
+            # We are currently in the key column
+            if check_type in ["array","dictionary"]:
+                # Can't edit the other field with these - bail
+                return 'break'
+            edit_col = "#2"
+        elif self.column == "#2":
+            # It's the value column - let's see if we can edit the key
+            parent = self.master._tree.parent(self.cell)
+            check_type = "dictionary" if not len(parent) else self.master.get_check_type(parent).lower()
+            if check_type == "array":
+                # Can't edit array keys - as they're just indexes
+                return 'break'
+            edit_col = "#0"
+        if edit_col:
+            # Let's get the bounding box for our other field
+            x,y,width,height = self.master._tree.bbox(self.cell, edit_col)
+            # Create an event
+            e = tk.Event
+            e.x = x+5
+            e.y = y+5
+            e.x_root = 0
+            e.y_root = 0
+            self.master.on_double_click(e)
+            return 'break'
 
     def goto_start(self, event):
         self.selection_range(0, 0)
@@ -72,7 +110,10 @@ class EntryPopup(tk.Entry):
         return 'break'
 
     def paste(self, event):
-        contents = self.clipboard_get()
+        try:
+            contents = self.clipboard_get()
+        except:
+            contents = ""
         if len(contents):
             try:
                 get = self.selection_get()
@@ -132,133 +173,38 @@ class EntryPopup(tk.Entry):
             type_value = self.master.get_check_type(self.cell).lower()
             value = self.get()
             # We need to sanitize data and numbers for sure
-            if type_value == "data":
-                if self.master.data_display == "hex":
-                    # Length must be a multiple of 2, and we need to
-                    # assert only hex chars
-                    # Strip the 0x prefix if it exists
-                    if value.lower().startswith("0x"):
-                        value = value[2:]
-                    # Strip spaces, as some programs include them
-                    value = value.replace(" ","")
-                    # Ensure all chars are hex
-                    if [x for x in value if x.lower() not in "0123456789abcdef"]:
-                        # Got non-hex values
-                        if not event == None:
-                            # print("Non-hex character in data!\a")
-                            self.bell()
-                            if not mb.askyesno("Invalid Hex Data","Invalid character in passed hex data.\n\nWould you like to keep editing?",parent=self.parent):
-                                self.destroy()
-                        return
-                    # Ensure we have an even number of chars
-                    if len(value) % 2:
-                        if not event == None:
-                            self.bell()
-                            if not mb.askyesno("Invalid Hex Data","Hex data must contain an even number of chars.\n\nWould you like to keep editing?",parent=self.parent):
-                                self.destroy()
-                            # print("Hex needs an even number of chars!\a")
-                        return
-                    # At this point, we can split our hex into groups of 8 chars and separate with
-                    # a space for easy readability
-                    value = "<{}>".format(" ".join((value[0+i:8+i] for i in range(0, len(value), 8))).upper())
-                else:
-                    # Base64 data - we need to make sure all values are within base64 spec, and that we're padded to 4 chars with =
-                    # first we strip the = signs, then verify the data, then, if we have anything, we pad to 4 chars
-                    value = value.rstrip("=")
-                    if [x for x in value if x.lower() not in "0123456789abcdefghijklmnopqrstuvwxyz+/="]:
-                        # Got non-hex values
-                        if not event == None:
-                            # print("Non-hex character in data!\a")
-                            self.bell()
-                            if not mb.askyesno("Invalid Base64 Data","Invalid base64 data passed.\n\nWould you like to keep editing?",parent=self.parent):
-                                self.destroy()
-                        return
-                    if len(value) > 0 and len(value) % 4:
-                        # we have leftover chars - pad to 4 with =
-                        value += "=" * (4-len(value)%4)
-                    # As a last resort, we'll convert it to base64 to verify it's good
-                    try:
-                        test = value
-                        if sys.version_info >= (3,0):
-                            test = test.encode("utf-8")
-                        base64.b64decode(test)
-                    except Exception as e:
-                        # Not the correct format :(
-                        if not event == None:
-                            self.bell()
-                            if not mb.askyesno("Invalid Base64 Data","Invalid base64 data passed.\n\n{}\n\nWould you like to keep editing?".format(str(e)),parent=self.parent):
-                                self.destroy()
-                        return
-            elif type_value == "date":
-                # We can take a few options for dates here.
-                #
-                # Now/Today
-                # Mar 11, 2019 12:29:00 PM
-                # YYYY-MM-DD HH:MM:SS Z
-                #
-                if value.lower() in ["now","today"]:
-                    # Get the current date as a datetime object
-                    value = datetime.datetime.now().strftime("%b %d, %Y %I:%M:%S %p")
-                else:
-                    # Try to parse with strptime
-                    try:
-                        value = datetime.datetime.strptime(value,"%b %d, %Y %I:%M:%S %p").strftime("%b %d, %Y %I:%M:%S %p")
-                    except:
-                        # Try the other method
-                        try:
-                            value = datetime.datetime.strptime(value,"%Y-%m-%d %H:%M:%S %z").strftime("%b %d, %Y %I:%M:%S %p")
-                        except:
-                            # Not the correct format :(
-                            if not event == None:
-                                self.bell()
-                                if not mb.askyesno("Invalid Date","Couldn't convert the passed string to a date.\n\nValid formats include:\nNow/Today\nMar 11, 2019 12:29:00 PM\nYYYY-MM-DD HH:MM:SS Z\n\nWould you like to keep editing?",parent=self.parent):
-                                    self.destroy()
-                            return
-            elif type_value == "number":
-                # We need to check if we're using hex or decimal
-                # then verify the chars involved
-                if value.lower().startswith("0x"):
-                    try:
-                        value = int(value,16)
-                    except:
-                        # Something went wrong
-                        if not event == None:
-                            self.bell()
-                            if not mb.askyesno("Invalid Hex Data","Couldn't convert the passed hex string to an integer.\n\nWould you like to keep editing?",parent=self.parent):
-                                self.destroy()
-                            # print("Could not convert hex!\a")
-                        return
-                else:
-                    # Not hex, let's try casting as an int first,
-                    # then as a float second - strip any commas
-                    value = value.replace(",","")
-                    try:
-                        value = int(value)
-                    except:
-                        try:
-                            value = float(value)
-                        except:
-                            # Failure!
-                            if not event == None:
-                                # print("Not a number!\a")
-                                self.bell()
-                                if not mb.askyesno("Invalid Number Data","Couldn't convert to an integer or float.\n\nWould you like to keep editing?",parent=self.parent):
-                                    self.destroy()
-                            return
-                # At this point, we should have the decimal value
-                value = str(value)
+            if type_value.lower() == "date" and value.lower() in ["today","now"]:
+                # Set it to today first
+                value = datetime.datetime.now().strftime("%b %d, %Y %I:%M:%S %p")
+            output = self.master.qualify_value(value,type_value)
+            if output[0] == False:
+                # Didn't pass the test - show the error and prompt for edit continuing
+                if not event == None:
+                    self.bell()
+                    if not mb.askyesno(output[1],output[2]+"\n\nWould you like to keep editing?",parent=self.parent):
+                        self.destroy()
+                return
+            # Set the value to the new output
+            value = output[1]
             # Add to undo stack
             self.master.add_undo({"type":"edit","cell":self.cell,"text":self.parent.item(self.cell,"text"),"values":original})
             # Replace our value (may be slightly modified)
             values[index-1] = value
             # Set the values
             self.parent.item(self.cell, values=values)
-        self.destroy()
+        self.cancel(None)
 
 class PlistWindow(tk.Toplevel):
     def __init__(self, controller, root, **kw):
         tk.Toplevel.__init__(self, root, **kw)
         os.chdir(os.path.dirname(os.path.realpath(__file__)))
+        self.plist_header = """<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>"""
+        self.plist_footer = """
+</dict>
+</plist>"""
         # Create the window
         self.root = root
         self.controller = controller
@@ -267,6 +213,8 @@ class PlistWindow(tk.Toplevel):
         self.drag_undo = None
         self.clicked_drag = False
         self.data_display = "hex" # hex or base64
+        self.xcode_data = self.controller.xcode_data # keep <data>xxxx</data> in one line when true
+        self.sort_dict = self.controller.sort_dict # Preserve key ordering in dictionaries when loading/saving
         self.menu_code = u"\u21D5"
         #self.drag_code = u"\u2630"
         self.drag_code = u"\u2261"
@@ -283,17 +231,12 @@ class PlistWindow(tk.Toplevel):
         # Set the title to "Untitled.plist"
         self.title("Untitled.plist")
 
-        # Set the close window binding
-        if str(sys.platform) == "darwin":
-            self.bind("<Command-w>", self.close_window)
-        else:
-            self.bind("<Control-w>", self.close_window)
-
         # Set up the options
         self.current_plist = None # None = new
         self.edited = False
         self.dragging = False
         self.drag_start = None
+        self.show_find_replace = True # Set to the opposite at first so it's hidden when we call hide_show_find
         self.type_menu = tk.Menu(self, tearoff=0)
         self.type_menu.add_command(label="Dictionary", command=lambda:self.change_type(self.menu_code + " Dictionary"))
         self.type_menu.add_command(label="Array", command=lambda:self.change_type(self.menu_code + " Array"))
@@ -310,15 +253,29 @@ class PlistWindow(tk.Toplevel):
         self.bool_menu.add_command(label="False", command=lambda:self.set_bool("False"))
 
         # Create the treeview
-        self._tree = ttk.Treeview(self, columns=("Type","Value","Drag"))
+        self._tree_frame = tk.Frame(self)
+        self._tree = ttk.Treeview(self._tree_frame, columns=("Type","Value","Drag"), selectmode="browse")
         self._tree.heading("#0", text="Key")
         self._tree.heading("#1", text="Type")
         self._tree.heading("#2", text="Value")
         self._tree.column("Type",width=100,stretch=False)
         self._tree.column("Drag",minwidth=40,width=40,stretch=False,anchor="center")
 
+        # Set the close window and copy/paste bindings
+        if str(sys.platform) == "darwin":
+            key = "Command"
+        else:
+            key = "Control"
+        # Add the window bindings
+        self.bind("<{}-w>".format(key), self.close_window)
+        self.bind("<{}-f>".format(key), self.hide_show_find)
+        # Add the treeview bindings
+        self._tree.bind("<{}-c>".format(key), self.copy_selection)
+        self._tree.bind("<{}-C>".format(key), self.copy_all)
+        self._tree.bind("<{}-v>".format(key), self.paste_selection)
+
         # Create the scrollbar
-        vsb = ttk.Scrollbar(self, orient='vertical', command=self._tree.yview)
+        vsb = ttk.Scrollbar(self._tree_frame, orient='vertical', command=self._tree.yview)
         self._tree.configure(yscrollcommand=vsb.set)
 
         # Bind right click
@@ -339,6 +296,9 @@ class PlistWindow(tk.Toplevel):
         self._tree.bind("=", self.new_row)
         self._tree.bind("+", self.new_row)
         self._tree.bind("-", self.remove_row)
+        self._tree.bind("<Return>", self.start_editing)
+        self._tree.bind("<KP_Enter>", self.start_editing)
+        self._tree.bind("<Escape>", self.deselect)
         self.bind("<FocusIn>", self.got_focus)
 
         # Setup menu bar (hopefully per-window) - only happens on non-mac systems
@@ -353,6 +313,7 @@ class PlistWindow(tk.Toplevel):
             file_menu.add_command(label="Save ({}S)".format(sign), command=self.controller.save_plist)
             file_menu.add_command(label="Save As ({}Shift+S)".format(sign), command=self.controller.save_plist_as)
             file_menu.add_command(label="Duplicate ({}D)".format(sign), command=self.controller.duplicate_plist)
+            file_menu.add_command(label="Reload From Disk ({}L)".format(sign), command=self.reload_from_disk)
             file_menu.add_separator()
             file_menu.add_command(label="OC Snapshot ({}R)".format(sign), command=self.oc_snapshot)
             file_menu.add_separator()
@@ -377,14 +338,423 @@ class PlistWindow(tk.Toplevel):
             except:
                 pass
         os.chdir(cwd)
-
-        # Sort dictionary keys?
-        self.sort_dict = True
         
-        # Add the treeview
+        # Create our find/replace view
+        self.find_frame = tk.Frame(self,height=20)
+        self.find_frame.columnconfigure(2,weight=1)
+        f_label = tk.Label(self.find_frame, text="Find:")
+        f_label.grid(row=0,column=0,sticky="e")
+        r_label = tk.Label(self.find_frame, text="Replace:")
+        r_label.grid(row=1,column=0,sticky="e")
+        self.find_type = "Key"
+        self.f_text = tk.Entry(self.find_frame)
+        self.f_text.bind("<Return>", self.find_next)
+        self.f_text.bind("<KP_Enter>", self.find_next)
+        self.f_text.delete(0,tk.END)
+        self.f_text.insert(0,"")
+        self.f_text.grid(row=0,column=2,sticky="we",padx=10,pady=10)
+        self.r_text = tk.Entry(self.find_frame)
+        self.r_text.bind("<Return>", self.replace)
+        self.r_text.bind("<KP_Enter>", self.replace)
+        self.r_text.delete(0,tk.END)
+        self.r_text.insert(0,"")
+        self.r_text.grid(row=1,column=2,columnspan=1,sticky="we",padx=10,pady=10)
+        f_title = tk.StringVar(self.find_frame)
+        f_title.set("Key")
+        f_option = tk.OptionMenu(self.find_frame, f_title, "Key", "Boolean", "Data", "Date", "Number", "String", command=self.change_find_type)
+        f_option['menu'].insert_separator(1)
+        f_option.grid(row=0,column=1)
+        self.fp_button = tk.Button(self.find_frame,text="< Prev",width=8,command=self.find_prev)
+        self.fp_button.grid(row=0,column=3,sticky="e",padx=0,pady=10)
+        self.fn_button = tk.Button(self.find_frame,text="Next >",width=8,command=self.find_next)
+        self.fn_button.grid(row=0,column=4,sticky="w",padx=0,pady=10)
+        self.r_button = tk.Button(self.find_frame,text="Replace",command=self.replace)
+        self.r_button.grid(row=1,column=4,sticky="we",padx=10,pady=10)
+        self.r_all_var = tk.IntVar()
+        self.r_all = tk.Checkbutton(self.find_frame,text="Replace All",variable=self.r_all_var)
+        self.r_all.grid(row=1,column=5,sticky="w")
+        self.f_case_var = tk.IntVar()
+        self.f_case = tk.Checkbutton(self.find_frame,text="Case-Sensitive",variable=self.f_case_var)
+        self.f_case.grid(row=0,column=5,sticky="w")
+
+        # Add the scroll bars and show the treeview
         vsb.pack(side="right",fill="y")
-        self._tree.pack(side="bottom", fill="both", expand=True)
+        self._tree.pack(side="bottom",fill="both",expand=True)
+        self.hide_show_find()
         self.entry_popup = None
+
+    def change_find_type(self, value):
+        self.find_type = value
+
+    def qualify_value(self, value, value_type):
+        value_type = value_type.lower()
+        if value_type == "data":
+            if self.data_display == "hex":
+                if value.lower().startswith("0x"):
+                    value = value[2:]
+                value = value.replace(" ","").replace("<","").replace(">","")
+                if [x for x in value.lower() if x not in "0123456789abcdef"]:
+                    return (False,"Invalid Hex Data","Invalid character in passed hex data.")
+                if len(value) % 2:
+                    return (False,"Invalid Hex Data","Hex data must contain an even number of chars.")
+                value = "<{}>".format(" ".join((value[0+i:8+i] for i in range(0, len(value), 8))).upper())
+            else:
+                value = value.rstrip("=")
+                if [x for x in value if x.lower() not in "0123456789abcdefghijklmnopqrstuvwxyz+/"]:
+                    return (False,"Invalid Base64 Data","Invalid base64 data passed.")
+                if len(value) > 0 and len(value) % 4:
+                    value += "=" * (4-len(value)%4)
+                try:
+                    test = value
+                    if sys.version_info >= (3,0):
+                        test = test.encode("utf-8")
+                    base64.b64decode(test)
+                except Exception as e:
+                    return (False,"Invalid Base64 Data","Invalid base64 data passed.")
+        elif value_type == "date":
+            try:
+                value = datetime.datetime.strptime(value,"%b %d, %Y %I:%M:%S %p").strftime("%b %d, %Y %I:%M:%S %p")
+            except:
+                try:
+                    value = datetime.datetime.strptime(value,"%Y-%m-%d %H:%M:%S %z").strftime("%b %d, %Y %I:%M:%S %p")
+                except:
+                    return (False,"Invalid Date","Couldn't convert the passed string to a date.\n\nValid formats include:\nMar 11, 2019 12:29:00 PM\nYYYY-MM-DD HH:MM:SS Z")
+        elif value_type == "number":
+            if value.lower().startswith("0x"):
+                try:
+                    value = int(value,16)
+                except:
+                    return (False,"Invalid Hex Data","Couldn't convert the passed hex string to an integer.")
+            else:
+                value = value.replace(",","")
+                try:
+                    value = int(value)
+                except:
+                    try:
+                        value = float(value)
+                    except:
+                        return (False,"Invalid Number Data","Couldn't convert to an integer or float.")
+            value = str(value)
+        elif value_type == "boolean":
+            if not value.lower() in ["true","false"]:
+                return (False,"Invalid Boolean Data","Booleans can only be True/False.")
+            value = "True" if value.lower() == "true" else "False"
+        return (True,value)
+
+    def hide_show_find(self, event=None):
+        # Let's find out if we're set to show
+        self.find_frame.pack_forget()
+        self._tree_frame.pack_forget()
+        if self.show_find_replace:
+            # Need to hide it
+            self._tree_frame.pack(side="bottom",fill="both",expand=True)
+            self._tree.focus_force()
+        else:
+            # Need to show it
+            self.find_frame.pack(side="top",fill="x")
+            self._tree_frame.pack(side="bottom",fill="both",expand=True)
+            self.f_text.focus_force()
+        self.show_find_replace ^= True
+
+    def do_replace(self, node, find, new_text):
+        # We can assume that we have a legit match for whatever is passed
+        # Let's get some info first
+        case_sensitive = self.f_case_var.get()
+        node_type      = self.get_check_type(node)
+        parent_type    = self.get_check_type(self._tree.parent(node))
+        find_type      = self.find_type.lower()
+
+        if find_type == "key":
+            # We're only replacing the text
+            name = self._tree.item(node,"text")
+            new_name = re.sub(("" if case_sensitive else "(?i)")+re.escape(find), lambda m: new_text, name)
+            self._tree.item(node,text=new_name)
+            return
+        # Check the values
+        values = self.get_padded_values(node,3)
+        if find_type == "string":
+            # Just replacing the text value
+            values[1] = re.sub(("" if case_sensitive else "(?i)")+re.escape(find), lambda m: new_text, values[1])
+            self._tree.item(node,values=values)
+        elif find_type == "data":
+            # if hex, we need to strip spaces and brackets, upper() both, and compare
+            if self.data_display == "hex":
+                find = find.replace(" ","").replace("<","").replace(">","").upper()
+                new_text = new_text.replace(" ","").replace("<","").replace(">","").upper()
+                values[1] = values[1].upper().replace(" ","").replace("<","").replace(">","").upper().replace(find,new_text)
+                values[1] = "<{}>".format(" ".join((values[1][0+i:8+i] for i in range(0, len(values[1]), 8))))
+            else:
+                # Base64 - let's strip = and compare.  Must be case-sensitive, since b64 be like that
+                find = find.rstrip("=")
+                new_text = new_text.rstrip("=")
+                values[1] = values[1].rstrip("=").replace(find,new_text)
+                if len(values[1]) % 4:
+                    values[1] += "=" * (4-len(values[1])%4)
+            self._tree.item(node,values=values)
+        else:
+            # Do a straight up replace
+            values[1] = new_text
+            self._tree.item(node,values=values)
+
+    def replace(self, event=None):
+        find = self.f_text.get()
+        if not len(find):
+            self.bell()
+            mb.showerror("Nothing To Find", "The find textbox is empty, nothing to search for.",parent=self)
+            return None
+        repl = self.r_text.get()
+        # Let's convert both values to the targets
+        find = self.qualify_value(find,self.find_type)
+        repl = self.qualify_value(repl,self.find_type)
+        if find[0] == False:
+            # Invalid find type
+            self.bell()
+            mb.showerror("Invalid Find Value",find[2],parent=self)
+            return
+        if repl[0] == False:
+            # Invalid find type
+            self.bell()
+            mb.showerror("Invalid Replace Value",repl[2],parent=self)
+            return
+        find = find[1]
+        repl = repl[1]
+        # If it's data - make sure it's the same length
+        '''if self.find_type.lower() == "data" and not len(find.rstrip("=")) == len(repl.rstrip("=")):
+            self.bell()
+            mb.showerror("Mismatched Data Length","When replacing data, the find and replace values must be the same length.",parent=self)
+            return'''
+        if find == repl:
+            # Uh... they're the same - no need to replace bois
+            self.bell()
+            mb.showerror("Find and Replace Are Identical", "The find and replace values are the same.  Nothing to do.",parent=self)
+            return
+        # Find out if we're replacing everything or not
+        replace_all = self.r_all_var.get()
+        node = "" if not len(self._tree.selection()) else self._tree.selection()[0]
+        is_match = False if node == "" else self.is_match(node,find)
+        if replace_all:
+            matches = self.find_all(find)
+            if not len(matches):
+                # Nothing found - let's throw an error
+                self.bell()
+                mb.showerror("No Replaceable Matches Found", '"{}" did not match any {} fields in the current plist.'.format(find,self.find_type.lower()),parent=self)
+                return
+        elif not node == "" and not is_match == False:
+            # Current is a match - let's add it
+            matches = [(0,node)]
+        else:
+            # Not matching all, and current cell is not a match, let's get the next
+            node = self.find_next(replacing=True)
+            if node == None:
+                # Nothing found - let's throw an error
+                self.bell()
+                mb.showerror("No Replaceable Matches Found", '"{}" did not match any {} fields in the current plist.'.format(find,self.find_type.lower()),parent=self)
+                return
+            return
+        # At this point, we should have something to replace
+        replacements = []
+        for x in matches:
+            name = self._tree.item(x[1],"text")
+            values = self._tree.item(x[1],"values")
+            self.do_replace(x[1],find,repl)
+            replacements.append({
+                "type":"edit",
+                "cell":x[1],
+                "text":name,
+                "values":values
+                })
+            self._tree.selection_set(x[1])
+            self._tree.see(x[1])
+        self.alternate_colors()
+        self.add_undo(replacements)
+        # Ensure we're edited
+        if not self.edited:
+            self.edited = True
+            self.title(self.title()+" - Edited")
+        # Let's try to find the next
+        self.find_next(replacing=True)
+
+    def is_match(self, node, text):
+        case_sensitive = self.f_case_var.get()
+        node_type = self.get_check_type(node).lower()
+        parent_type = self.get_check_type(self._tree.parent(node)).lower()
+        find_type = self.find_type.lower()
+        if find_type == "key" and not parent_type == "array":
+            # We can check the name
+            name = self._tree.item(node,"text")
+            if (text in name if case_sensitive else text.lower() in name.lower()):
+                return True
+            # Not found - bail
+            return False
+        # We can check values now
+        value = self.get_padded_values(node,2)[1]
+        if node_type != find_type:
+            # Not what we're looking for
+            return False
+        # Break out and compare
+        if node_type == "data":
+            # if hex, we need to strip spaces and brackets, upper() both, and compare
+            if self.data_display == "hex":
+                if text.replace(" ","").replace("<","").replace(">","").upper() in value.replace(" ","").replace("<","").replace(">","").upper():
+                    # Got a match!
+                    return True
+            else:
+                # Base64 - let's strip = and compare.  Must be case-sensitive, since b64 be like that
+                if text.rstrip("=") in value.rstrip("="):
+                    # Yee - is match
+                    return True
+        elif node_type == "string":
+            if (text in value if case_sensitive else text.lower() in value.lower()):
+                return True
+        elif node_type in ["date","boolean","number"]:
+            if text.lower() == value.lower():
+                # Can only return if we find the same date
+                return True
+        # If we got here, we didn't find it
+        return False
+
+    def find_all(self, text=""):
+        # Builds a list of tuples that list the node, the index of the found entry, and 
+        # where it found it name/value (name == 0, value == 1 respectively)
+        if text == None or not len(text):
+            return []
+        nodes = self.iter_nodes(False)
+        found = []
+        for node in nodes:
+            match = self.is_match(node, text)
+            if not match == False:
+                found.append((nodes.index(node),node))
+        return found
+
+    def find_prev(self, event=None):
+        find  = self.f_text.get()
+        if not len(find):
+            self.bell()
+            mb.showerror("Nothing To Find", "The find textbox is empty, nothing to search for.",parent=self)
+            return None
+        type_check = self.qualify_value(find, self.find_type)
+        if type_check[0] == False:
+            self.bell()
+            mb.showerror("Invalid Find Value",type_check[2],parent=self)
+            return None
+        matches = self.find_all(type_check[1])
+        if not len(matches):
+            # Nothing found - let's throw an error
+            if not replacing:
+                self.bell()
+                mb.showerror("No Matches Found", '"{}" did not match any {} fields in the current plist.'.format(type_check[1],self.find_type.lower()),parent=self)
+            return None
+        # Let's get the index of our selected item
+        node  = "" if not len(self._tree.selection()) else self._tree.selection()[0]
+        nodes = self.iter_nodes(False)
+        index = len(nodes) if node == "" else nodes.index(node)
+        # Find the item at a lower index than our current selection
+        for match in matches[::-1]:
+            if match[0] < index:
+                # Found one - select it
+                self._tree.selection_set(match[1])
+                self._tree.see(match[1])
+                self.alternate_colors()
+                return match
+        # If we got here - start over
+        self._tree.selection_set(matches[-1][1])
+        self._tree.see(matches[-1][1])
+        self.alternate_colors()
+        return match[-1]
+
+    def find_next(self, event=None, replacing=False):
+        find  = self.f_text.get()
+        if not len(find):
+            self.bell()
+            mb.showerror("Nothing To Find", "The find textbox is empty, nothing to search for.",parent=self)
+            return None
+        type_check = self.qualify_value(find, self.find_type)
+        if type_check[0] == False:
+            self.bell()
+            mb.showerror("Invalid Find Value",type_check[2],parent=self)
+            return None
+        matches = self.find_all(type_check[1])
+        if not len(matches):
+            # Nothing found - let's throw an error
+            if not replacing:
+                self.bell()
+                mb.showerror("No Matches Found", '"{}" did not match any {} fields in the current plist.'.format(type_check[1],self.find_type.lower()),parent=self)
+            return None
+        # Let's get the index of our selected item
+        node  = "" if not len(self._tree.selection()) else self._tree.selection()[0]
+        nodes = self.iter_nodes(False)
+        index = len(nodes) if node == "" else nodes.index(node)
+        # Find the item at a higher index than our current selection
+        for match in matches:
+            if match[0] > index:
+                # Found one - select it
+                self._tree.selection_set(match[1])
+                self._tree.see(match[1])
+                self.alternate_colors()
+                return match
+        # If we got here - start over
+        self._tree.selection_set(matches[0][1])
+        self._tree.see(matches[0][1])
+        self.alternate_colors()
+        return match[0]
+
+    def deselect(self, event=None):
+        # Clear the table selection
+        for x in self._tree.selection():
+            self._tree.selection_remove(x)
+
+    def start_editing(self, event = None):
+        # Get the currently selected row, if any
+        node = "" if not len(self._tree.selection()) else self._tree.selection()[0]
+        parent = self._tree.parent(node)
+        parent_type = "dictionary" if not len(parent) else self.get_check_type(parent).lower()
+        check_type = self.get_check_type(node).lower()
+        edit_col = "#0"
+        if parent_type == "array":
+            if check_type == "boolean":
+                # Can't edit anything - bail
+                return 'break'
+            # Can at least edit the value
+            edit_col = "#2"
+        # Let's get the bounding box for our other field
+        try:
+            x,y,width,height = self._tree.bbox(node, edit_col)
+        except ValueError:
+            # Couldn't unpack - bail
+            return    
+        # Create an event
+        e = tk.Event
+        e.x = x+5
+        e.y = y+5
+        e.x_root = 0
+        e.y_root = 0
+        self.on_double_click(e)
+        return 'break'
+
+    def reload_from_disk(self, event = None):
+        # If we have opened a file, let's reload it from disk
+        # We'll dump the current undo stack, and load it fresh
+        if not self.current_plist:
+            # Nothing to do - ding and bail
+            self.bell()
+            return
+        # At this point - we should check if we have edited the file, and if so
+        # prompt the user
+        if self.edited:
+            self.bell()
+            if not mb.askyesno("Unsaved Changes","Any unsaved changes will be lost when reloading from disk. Continue?",parent=self):
+                return
+        # If we got here - we're okay with dumping changes (if any)
+        try:
+            with open(self.current_plist,"rb") as f:
+                plist_data = plist.load(f,dict_type=dict if self.sort_dict else OrderedDict)
+        except Exception as e:
+            # Had an issue, throw up a display box
+            self.bell()
+            mb.showerror("An Error Occurred While Opening {}".format(os.path.basename(self.current_plist)), str(e),parent=self)
+            return
+        # We should have the plist data now
+        self.open_plist(self.current_plist,plist_data)
 
     def walk_kexts(self,path,parent=""):
         kexts = []
@@ -411,7 +781,8 @@ class PlistWindow(tk.Toplevel):
                 kdict["PlistPath"] = "Contents/Info.plist"
             elif os.path.exists(os.path.join(kdir,"Info.plist")):
                 kdict["PlistPath"] = "Info.plist"
-            if not kdict.get("PlistPath") and not kdict.get("ExecutablePath"):
+            if not kdict.get("PlistPath"):
+                # We have at least an Info.plist
                 continue
             # Should have something here
             kexts.append(kdict)
@@ -470,7 +841,7 @@ class PlistWindow(tk.Toplevel):
         new_acpi = [x for x in os.listdir(oc_acpi) if x.lower().endswith(".aml") and not x.startswith(".")]
         add = tree_dict["ACPI"]["Add"]
         for aml in new_acpi:
-            if aml.lower() in [x.get("Path","").lower() for x in add]:
+            if aml.lower() in [x.get("Path","").lower() for x in add if isinstance(x,dict)]:
                 # Found it - skip
                 continue
             # Doesn't exist, add it
@@ -481,6 +852,9 @@ class PlistWindow(tk.Toplevel):
             })
         new_add = []
         for aml in add:
+            if not isinstance(aml,dict):
+                # Not the right type - skip it
+                continue
             if not aml.get("Path","").lower() in [x.lower() for x in new_acpi]:
                 # Not there, skip
                 continue
@@ -517,13 +891,16 @@ class PlistWindow(tk.Toplevel):
         kext_list = self.walk_kexts(oc_kexts)
         kexts = tree_dict["Kernel"]["Add"]
         for kext in kext_list:
-            if kext["BundlePath"].lower() in [x.get("BundlePath","").lower() for x in kexts]:
+            if kext["BundlePath"].lower() in [x.get("BundlePath","").lower() for x in kexts if isinstance(x,dict)]:
                 # Already have it, skip
                 continue
             # We need it, it seems
             kexts.append(kext)
         new_kexts = []
         for kext in kexts:
+            if not isinstance(kext,dict):
+                # Not a dict - skip it
+                continue
             if not kext.get("BundlePath","").lower() in [x["BundlePath"].lower() for x in kext_list]:
                 # Not there, skip it
                 continue
@@ -617,7 +994,7 @@ class PlistWindow(tk.Toplevel):
         self.undo_stack.append(action)
         self.redo_stack = [] # clear the redo stack
 
-    def reundo(self, event=None, undo = True):
+    def reundo(self, event=None, undo = True, single_undo = None):
         # Let's come up with a more centralized way to do this
         # We'll break down the potential actions into a few types:
         #
@@ -638,6 +1015,10 @@ class PlistWindow(tk.Toplevel):
         else:
             r = self.undo_stack
             u = self.redo_stack
+        # Allow a single undo without any trace
+        if single_undo != None:
+            u = [single_undo]
+            r = []
         if not len(u):
             self.bell()
             # Nothing to undo/redo
@@ -687,8 +1068,8 @@ class PlistWindow(tk.Toplevel):
                 })
                 # Let's actually move it now
                 self._tree.move(cell,task["from"],task.get("index","end"))
-        # Let's check if we have an r_task_list - and add it
-        if len(r_task_list):
+        # Let's check if we have an r_task_list - and add it if it wasn't a one-off
+        if len(r_task_list) and single_undo == None:
             r.append(r_task_list)
         # Ensure we're edited
         if not self.edited:
@@ -732,7 +1113,11 @@ class PlistWindow(tk.Toplevel):
         else:
             rowid = self._tree.identify_row(event.y)
             column = self._tree.identify_column(event.x)
-            x,y,width,height = self._tree.bbox(rowid, column)
+            try:
+                x,y,width,height = self._tree.bbox(rowid, column)
+            except:
+                # We drug outside the possible bounds - ignore this
+                return
             if event.y >= y+height/2 and event.y < y+height:
                 # Just above should add as a sibling
                 tv_item = self._tree.parent(tv_item)
@@ -740,10 +1125,15 @@ class PlistWindow(tk.Toplevel):
             else:
                 # Just below should add it at item 0
                 move_to = 0
-        target = self._tree.focus()
+        target = "" if not len(self._tree.selection()) else self._tree.selection()[0]
+        # Make sure the selected node is closed
+        self._tree.item(target,open=False)
         if self._tree.index(target) == move_to and tv_item == target:
             # Already the same
             return
+        # Make sure if we drag to the bottom, it stays at the bottom
+        if self._tree.identify_region(event.x, event.y) == "nothing" and not event.y < 5:
+            move_to = len(self.iter_nodes())
         # Save a reference to the item
         if not self.drag_undo:
             self.drag_undo = {"from":self._tree.parent(target),"index":self._tree.index(target),"name":self._tree.item(target,"text")}
@@ -763,7 +1153,7 @@ class PlistWindow(tk.Toplevel):
             return
         self.dragging = False
         self.drag_start = None
-        target = self._tree.focus()
+        target = "" if not len(self._tree.selection()) else self._tree.selection()[0]
         self._tree.item(target,open=True)
         node = self._tree.parent(target)
         # Finalize the drag undo
@@ -854,7 +1244,7 @@ class PlistWindow(tk.Toplevel):
     def save_plist_as(self, event=None, path=None):
         if path == None:
             # Get the file dialog
-            path = fd.asksaveasfilename(parent=self, title = "Please select a file name for saving:",filetypes=[("Plist files", "*.plist")])
+            path = fd.asksaveasfilename(parent=self, title = "Please select a file name for saving:",defaultextension=".plist",filetypes=[("Plist files", "*.plist")])
             if not len(path):
                 # User cancelled - no changes
                 return None
@@ -866,8 +1256,35 @@ class PlistWindow(tk.Toplevel):
         temp = tempfile.mkdtemp()
         temp_file = os.path.join(temp, os.path.basename(path))
         try:
-            with open(temp_file,"wb") as f:
-                plist.dump(plist_data,f)
+            if not self.xcode_data:
+                with open(temp_file,"wb") as f:
+                    plist.dump(plist_data,f,sort_keys=self.sort_dict)
+            else:
+                # Dump to a string first
+                plist_text = plist.dumps(plist_data,sort_keys=self.sort_dict)
+                new_plist = []
+                data_tag = ""
+                for x in plist_text.split("\n"):
+                    if x.strip() == "<data>":
+                        data_tag = x
+                        continue
+                    if not len(data_tag):
+                        # Not primed, and wasn't <data>
+                        new_plist.append(x)
+                        continue
+                    data_tag += x.strip()
+                    # Check for the end
+                    if x.strip() == "</data>":
+                        # Found the end, append it and reset
+                        new_plist.append(data_tag)
+                        data_tag = ""
+                # At this point, we have a list of lines - with all <data> tags on the same line
+                # let's write to file
+                with open(temp_file,"wb") as f:
+                    temp_string = "\n".join(new_plist)
+                    if sys.version_info >= (3,0):
+                        temp_string = temp_string.encode("utf-8")
+                    f.write(temp_string)
         except Exception as e:
             try:
                 shutil.rmtree(temp,ignore_errors=True)
@@ -930,15 +1347,62 @@ class PlistWindow(tk.Toplevel):
             self.destroy()
         return True
 
-    def paste_selection(self, value):
+    def copy_selection(self, event = None):
         node = self._tree.focus()
+        if node == "":
+            # Nothing to copy
+            return
+        try:
+            clipboard_string = plist.dumps(self.nodes_to_values(node,{}),sort_keys=self.sort_dict)
+            # Get just the values
+            self.clipboard_clear()
+            self.clipboard_append(clipboard_string)
+        except:
+            pass
+
+    def copy_all(self, event = None):
+        try:
+            clipboard_string = plist.dumps(self.nodes_to_values("",{}),sort_keys=self.sort_dict)
+            # Get just the values
+            self.clipboard_clear()
+            self.clipboard_append(clipboard_string)
+        except:
+            pass
+
+    def paste_selection(self, event = None):
+        # Try to format the clipboard contents as a plist
+        try:
+            clip = self.clipboard_get()
+        except:
+            clip = ""
+        try:
+            plist_data = plist.loads(clip,dict_type=dict if self.sort_dict else OrderedDict)
+        except:
+            # May need the header
+            cb = self.plist_header + "\n" + clip + "\n" + self.plist_footer
+            try:
+                plist_data = plist.loads(cb,dict_type=dict if self.sort_dict else OrderedDict)
+            except Exception as e:
+                # Let's throw an error
+                self.bell()
+                mb.showerror("An Error Occurred While Pasting", str(e),parent=self)
+                return 'break'
+        if not plist_data:
+            if len(clip):
+                # Check if we actually pasted something
+                self.bell()
+                mb.showerror("An Error Occurred While Pasting", "The pasted value is not a valid plist string.",parent=self)
+            # Nothing to paste
+            return 'break'
+        node = "" if not len(self._tree.selection()) else self._tree.selection()[0]
         # Verify the type - or get the parent
         t = self.get_check_type(node).lower()
         if not node == "" and not t in ["dictionary","array"]:
             node = self._tree.parent(node)
         t = self.get_check_type(node).lower()
         verify = t in ["dictionary",""]
-        dict_list = list(value.items()) if not self.sort_dict else sorted(list(value.items()))
+        dict_list = list(plist_data.items()) if not self.sort_dict else sorted(list(plist_data.items()))
+        add_list = []
         for (key,val) in dict_list:
             if verify:
                 # create a unique name
@@ -955,10 +1419,13 @@ class PlistWindow(tk.Toplevel):
                     break
                 key = name
             last = self.add_node(val, node, key)
+            add_list.append({"type":"add","cell":last})
             self._tree.item(last,open=True)
-        self.add_undo({"type":"add","cell":last})
-        self._tree.focus(last)
-        self._tree.selection_set(last)
+        first = "" if not len(add_list) else add_list[0].get("cell")
+        self.add_undo(add_list)
+        self._tree.focus()
+        self._tree.selection_set(first)
+        self._tree.see(first)
         self._tree.update()
         if not self.edited:
             self.edited = True
@@ -1011,7 +1478,7 @@ class PlistWindow(tk.Toplevel):
     def nodes_to_values(self,node="",parent={}):
         if node == "" or node == None:
             # top level
-            parent = {}
+            parent = {} if self.sort_dict else OrderedDict()
             for child in self._tree.get_children(node):
                 parent = self.nodes_to_values(child,parent)
             return parent
@@ -1022,7 +1489,7 @@ class PlistWindow(tk.Toplevel):
         check_type = self.get_check_type(node).lower()
         # Iterate value types
         if check_type == "dictionary":
-            value = {}
+            value = {} if self.sort_dict else OrderedDict()
         elif check_type == "array":
             value = []
         elif check_type == "boolean":
@@ -1056,7 +1523,10 @@ class PlistWindow(tk.Toplevel):
         if isinstance(parent,list):
             parent.append(value)
         elif isinstance(parent,dict):
-            parent[name] = value
+            if sys.version_info < (3,0) and isinstance(name,unicode):
+                parent[name] = value
+            else:
+                parent[str(name)] = value
         return parent
 
     def get_type(self, value):
@@ -1072,7 +1542,7 @@ class PlistWindow(tk.Toplevel):
             return self.menu_code + " Boolean"
         elif isinstance(value, (int,float)):
             return self.menu_code + " Number"
-        elif isinstance(value, str):
+        elif (sys.version_info >= (3, 0) and isinstance(value, str)) or (sys.version_info < (3,0) and isinstance(value, (str,unicode))):
             return self.menu_code + " String"
         else:
             return self.menu_code + type(value)
@@ -1104,7 +1574,7 @@ class PlistWindow(tk.Toplevel):
 
     def new_row(self,target=None,force_sibling=False):
         if target == None or isinstance(target, tk.Event):
-            target = self._tree.focus()
+            target = "" if not len(self._tree.selection()) else self._tree.selection()[0]
         values = self.get_padded_values(target, 1)
         new_cell = None
         if not self.get_check_type(target).lower() in ["dictionary","array"] or not self._tree.item(target,"open") or force_sibling:
@@ -1146,7 +1616,7 @@ class PlistWindow(tk.Toplevel):
 
     def remove_row(self,target=None):
         if target == None or isinstance(target, tk.Event):
-            target = self._tree.focus()
+            target = "" if not len(self._tree.selection()) else self._tree.selection()[0]
         if target == "":
             # Can't remove top level
             return
@@ -1213,7 +1683,7 @@ class PlistWindow(tk.Toplevel):
     def change_type(self, value, cell = None):
         # Need to walk the values and pad
         if cell == None:
-            cell = self._tree.focus()
+            cell = "" if not len(self._tree.selection()) else self._tree.selection()[0]
         values = self.get_padded_values(cell, 3)
         # Verify we actually changed type
         if values[0] == value:
@@ -1270,17 +1740,17 @@ class PlistWindow(tk.Toplevel):
 
     def set_bool(self, value):
         # Need to walk the values and pad
-        values = self.get_padded_values(self._tree.focus(), 3)
-        cell = self._tree.focus()
+        values = self.get_padded_values("" if not len(self._tree.selection()) else self._tree.selection()[0], 3)
+        cell = "" if not len(self._tree.selection()) else self._tree.selection()[0]
         self.add_undo({
             "type":"edit",
             "cell":cell,
             "text":self._tree.item(cell,"text"),
-            "value":[x for x in values]
+            "values":[x for x in values]
             })
         values[1] = value
         # Set the values
-        self._tree.item(self._tree.focus(), values=values)
+        self._tree.item("" if not len(self._tree.selection()) else self._tree.selection()[0], values=values)
         if not self.edited:
             self.edited = True
             self.title(self.title()+" - Edited")
@@ -1357,8 +1827,35 @@ class PlistWindow(tk.Toplevel):
                     if not current_type.lower() == needed_type.lower():
                         # Raise an error - type mismatch
                         self.bell()
-                        mb.showerror("Incorrect Type", "{} is {}, should be {}.".format(cell_name,current_type,needed_type), parent=self)
-                        return
+                        if mb.askyesno("Incorrect Type","{} is {}, should be {}.\n\nWould you like to replace it?".format(cell_name,current_type,needed_type),parent=self):
+                            # We need to remove any children, and change the type
+                            for y in self._tree.get_children(x):
+                                undo_list.append({
+                                    "type":"remove",
+                                    "cell":y,
+                                    "from":x,
+                                    "index":self._tree.index(y)
+                                })
+                                self._tree.detach(y)
+                            # Change the type
+                            undo_list.append({
+                                "type":"edit",
+                                "cell":x,
+                                "text":self._tree.item(x,"text"),
+                                "values":self._tree.item(x,"values")
+                            })
+                            values = self.get_padded_values(x,3)
+                            if needed_type.lower == "dictionary":
+                                values[0] = self.menu_code + " Dictionary"
+                                values[1] = "0 key/value pairs"
+                            else:
+                                values[0] = self.menu_code + " Array"
+                                values[1] = "0 children"
+                            self._tree.item(x, values=values)
+                        else:
+                            # Let's undo anything we've already done and bail
+                            self.reundo(None,True,undo_list)
+                            return
                     found = True
                     current_cell = x
                     break
@@ -1373,26 +1870,44 @@ class PlistWindow(tk.Toplevel):
         # let's first make sure it doesn't already exist - if it does, we
         # will overwrite it
         current_type = self.get_check_type(current_cell).lower()
+        just_add = True
+        replace_asked = False
         if current_type == "dictionary":
             # Scan through and make sure we have all the keys needed
             for x in self._tree.get_children(current_cell):
                 name = self._tree.item(x,"text")
                 if name in value:
-                    # Need to change this one
-                    for child in self._tree.get_children(x):
-                        # Add some remove commands
-                        undo_list.append({
-                            "type":"remove",
-                            "cell":child,
-                            "from":x,
-                            "index":self._tree.index(child)
-                        })
-        last_cell = self.add_node(value,current_cell,"")
-        if created == None:
-            created = last_cell
-        undo_list.append({
-            "type":"add",
-            "cell":created
+                    if not replace_asked:
+                        # Ask first
+                        self.bell()
+                        if mb.askyesno("Key(s) Already Exist","One or more keys already exist at the destination.\n\nWould you like to replace them?",parent=self):
+                            replace_asked = True
+                        else:
+                            # User said no, let's undo
+                            self.reundo(None,True,undo_list)
+                            return
+                    # Remove the top level item
+                    undo_list.append({
+                        "type":"remove",
+                        "cell":x,
+                        "from":current_cell,
+                        "index":self._tree.index(x)
+                    })
+                    self._tree.detach(x)
+            # Add the entries
+            if isinstance(value,dict):
+                just_add = False
+                for x in value:
+                    created = self.add_node(value[x],current_cell,x)
+                    undo_list.append({
+                        "type":"add",
+                        "cell":created
+                    })
+        if just_add:
+            last_cell = self.add_node(value,current_cell,"")
+            undo_list.append({
+                "type":"add",
+                "cell":last_cell
             })
         self.add_undo(undo_list)
         if not self.edited:
@@ -1428,17 +1943,22 @@ class PlistWindow(tk.Toplevel):
         
         # Walk through the menu data if it exists
         cell_path = self.get_cell_path(cell)
-        open_core = self.menu_data.get("OpenCore",{})
-        clover    = self.menu_data.get("Clover",{})
-        oc_valid  = [x for x in list(open_core) if x.startswith(cell_path)]
-        cl_valid  = [x for x in list(clover) if x.startswith(cell_path)]
-        if len(oc_valid) or len(cl_valid):
-            popup_menu.add_separator()
-        if len(oc_valid):
-            oc_menu = tk.Menu(popup_menu, tearoff=0)
-            for item in sorted(oc_valid):
-                item_menu = tk.Menu(oc_menu, tearoff=0)
-                for x in open_core[item]:
+        first_key = True
+        for key in sorted(list(self.menu_data)):
+            options = self.menu_data[key]
+            valid   = [x for x in list(options) if x.startswith(cell_path)]
+            if not len(valid):
+                # No hits - bail
+                continue
+            # Add a separator
+            if first_key:
+                popup_menu.add_separator()
+                first_key = False
+            # Iterate and add
+            option_menu = tk.Menu(popup_menu,tearoff=0)
+            for item in sorted(valid):
+                item_menu = tk.Menu(option_menu,tearoff=0)
+                for x in options[item]:
                     if x.get("separator",False) != False:
                         item_menu.add_separator()
                     elif x.get("title",False) != False:
@@ -1448,26 +1968,9 @@ class PlistWindow(tk.Toplevel):
                         value = x["value"]
                         types = x["types"]
                         passed = (cell,item,types,value)
-                        item_menu.add_command(label=name, command=lambda item=passed: self.merge_menu_preset(item))
-                oc_menu.add_cascade(label=item,menu=item_menu)
-            popup_menu.add_cascade(label="OpenCore",menu=oc_menu)
-        if len(cl_valid):
-            clover_menu = tk.Menu(popup_menu, tearoff=0)
-            for item in sorted(cl_valid):
-                item_menu = tk.Menu(clover_menu, tearoff=0)
-                for x in clover[item]:
-                    if x.get("separator",False) != False:
-                        item_menu.add_separator()
-                    elif x.get("title",False) != False:
-                        item_menu.add("command",label=x.get("name",""),state="disabled")
-                    else:
-                        name  = x["name"]
-                        value = x["value"]
-                        types = x["types"]
-                        passed = (cell,item,types,value)
-                        item_menu.add_command(label=name, command=lambda item=passed: self.merge_menu_preset(item))
-                clover_menu.add_cascade(label=item,menu=item_menu)
-            popup_menu.add_cascade(label="Clover",menu=clover_menu)
+                        item_menu.add_command(label=name,command=lambda item=passed: self.merge_menu_preset(item))
+                option_menu.add_cascade(label=" -> ".join(self.split(item)),menu=item_menu)
+            popup_menu.add_cascade(label=key,menu=option_menu)
             
         try:
             popup_menu.tk_popup(event.x_root, event.y_root, 0)
@@ -1523,7 +2026,7 @@ class PlistWindow(tk.Toplevel):
         except:
             t = ""
         try:
-            pt = self._tree.item(self._tree.parent(tv_item),"values")[0]
+            pt = self.get_check_type(self._tree.parent(tv_item))
         except:
             pt = ""
         if index == 1:
@@ -1558,9 +2061,9 @@ class PlistWindow(tk.Toplevel):
         if index ==2 and t.lower() == "data":
             # Special formatting of hex values
             text = text.replace("<","").replace(">","")
-        cell = self._tree.item(self._tree.focus())
+        cell = self._tree.item("" if not len(self._tree.selection()) else self._tree.selection()[0])
         # place Entry popup properly
-        self.entry_popup = EntryPopup(self._tree, text, tv_item, column)
+        self.entry_popup = EntryPopup(self._tree, self, text, tv_item, column)
         self.entry_popup.place( x=x, y=y+pady, anchor="w", width=width)
         if not self.edited:
             self.edited = True
@@ -1598,7 +2101,7 @@ class PlistWindow(tk.Toplevel):
     def pre_alternate(self, event):
         # Only called before an item opens - we need to open it manually to ensure
         # colors alternate correctly
-        cell = self._tree.focus()
+        cell = "" if not len(self._tree.selection()) else self._tree.selection()[0]
         if not self._tree.item(cell,"open"):
             self._tree.item(cell,open=True)
         # Call the actual alternate_colors function
