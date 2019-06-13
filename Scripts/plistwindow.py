@@ -800,15 +800,14 @@ class PlistWindow(tk.Toplevel):
         # Verify folder structure - should be as follows:
         # OC
         #  +- ACPI
-        #  | +- Custom
-        #  |   +- SSDT.aml
+        #  | +- SSDT.aml
         #  +- Drivers
         #  | +- EfiDriver.efi
         #  +- Kexts
         #  | +- Something.kext
         #  +- config.plist
         
-        oc_acpi    = os.path.join(oc_folder,"ACPI","Custom")
+        oc_acpi    = os.path.join(oc_folder,"ACPI")
         oc_drivers = os.path.join(oc_folder,"Drivers")
         oc_kexts   = os.path.join(oc_folder,"Kexts")
 
