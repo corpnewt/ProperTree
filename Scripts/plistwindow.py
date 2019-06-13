@@ -770,7 +770,8 @@ class PlistWindow(tk.Toplevel):
                 "Comment":"",
                 "Enabled":True,
                 "MatchKernel":"",
-                "BundlePath":parent+"/"+x if len(parent) else x
+                "BundlePath":parent+"/"+x if len(parent) else x,
+                "ExecutablePath":""
             }
             # Should be valid-ish - let's check for a binary
             binpath = os.path.join(kdir,"Contents","MacOS",os.path.splitext(x)[0])
