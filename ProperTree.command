@@ -362,7 +362,7 @@ class ProperTree:
         if len(windows) == 1 and windows[0] == self.start_window and windows[0].edited == False and windows[0].current_plist == None:
             # Fresh window - replace the contents
             current_window = windows[0]
-        path = fd.askopenfilename(title = "Select config.plist",filetypes=[("Plist files", "*.plist")],parent=current_window)
+        path = fd.askopenfilename(title = "Select config.plist",filetypes=[("Plist files", "*.plist")]) #,parent=current_window) # Apparently parent here breaks on 10.15?
         if not len(path):
             # User cancelled - bail
             return None
