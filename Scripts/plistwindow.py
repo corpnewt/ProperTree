@@ -807,10 +807,15 @@ class PlistWindow(tk.Toplevel):
         #  +- Kexts
         #  | +- Something.kext
         #  +- config.plist
+        #  +- Tools (Optional)
+        #  | +- SomeTool.efi
+        #  | +- SomeFolder
+        #  | | +- SomeOtherTool.efi
         
         oc_acpi    = os.path.join(oc_folder,"ACPI")
         oc_drivers = os.path.join(oc_folder,"Drivers")
         oc_kexts   = os.path.join(oc_folder,"Kexts")
+        oc_tools   = os.path.join(oc_folder,"Tools")
 
         for x in [oc_acpi,oc_drivers,oc_kexts]:
             if not os.path.exists(x):
@@ -906,6 +911,45 @@ class PlistWindow(tk.Toplevel):
                 continue
             new_kexts.append(kext)
         tree_dict["Kernel"]["Add"] = new_kexts
+
+        # Let's walk the Tools folder if it exists
+        if not "Misc" in tree_dict or not isinstance(tree_dict["Misc"],dict):
+            tree_dict["Misc"] = {"Tools":[]}
+        if not "Drivers" in tree_dict["Misc"] or not isinstance(tree_dict["Misc"]["Tools"],list):
+            tree_dict["Misc"]["Tools"] = []
+        if os.path.exists(oc_tools) and os.path.isdir(oc_tools):
+            tools_list = []
+            # We need to gather a list of all the files inside that and with .efi
+            for path, subdirs, files in os.walk(oc_tools):
+                for name in files:
+                    if not name.startswith(".") and name.lower().endswith(".efi"):
+                        # Save it
+                        tools_list.append({
+                            "Name":name,
+                            "Comment":name,
+                            "Enabled":True,
+                            "Path":os.path.join(path,name)[len(oc_tools):].replace("\\", "/").lstrip("/") # Strip the /Volumes/EFI/
+                        })
+            tools = tree_dict["Misc"]["Tools"]
+            for tool in tools_list:
+                if tool["Path"].lower() in [x.get("Path","").lower() for x in tool if isinstance(x,dict)]:
+                    # Already have it, skip
+                    continue
+                # We need it, it seems
+                tools.append(tool)
+            new_tools = []
+            for tool in tools:
+                if not isinstance(tool,dict):
+                    # Not a dict - skip it
+                    continue
+                if not tool.get("Path","").lower() in [x["Path"].lower() for x in tools_list]:
+                    # Not there, skip it
+                    continue
+                new_tools.append(tool)
+            tree_dict["Misc"]["Tools"] = new_tools
+        else:
+            # Make sure our Tools list is empty
+            tree_dict["Misc"]["Tools"] = []
 
         # Now we remove the original tree - then replace it
         undo_list = []
