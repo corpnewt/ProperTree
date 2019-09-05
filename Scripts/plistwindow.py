@@ -1271,6 +1271,9 @@ class PlistWindow(tk.Toplevel):
         name = self.title()[0:-len(" - Edited")] if self.edited else self.title()
         return os.path.basename(name)
 
+    def get_dir(self):
+        return os.path.dirname(self.current_plist) if self.current_plist else None
+
     def check_save(self):
         if not self.edited:
             return True # No changes, all good
@@ -1291,7 +1294,9 @@ class PlistWindow(tk.Toplevel):
                 title="Please select a file name for saving:",
                 defaultextension=".plist",
                 filetypes=[("Plist files", "*.plist")],
-                initialfile=self.get_title())
+                initialfile=self.get_title(),
+                initialdir=self.get_dir()
+                )
             if not len(path):
                 # User cancelled - no changes
                 return None
