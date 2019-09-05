@@ -518,11 +518,6 @@ class PlistWindow(tk.Toplevel):
             return
         find = find[1]
         repl = repl[1]
-        # If it's data - make sure it's the same length
-        '''if self.find_type.lower() == "data" and not len(find.rstrip("=")) == len(repl.rstrip("=")):
-            self.bell()
-            mb.showerror("Mismatched Data Length","When replacing data, the find and replace values must be the same length.",parent=self)
-            return'''
         if find == repl:
             # Uh... they're the same - no need to replace bois
             self.bell()
@@ -1272,11 +1267,15 @@ class PlistWindow(tk.Toplevel):
     # Save/Load Plist Functions #
     ###                       ###
 
+    def get_title(self):
+        name = self.title()[0:-len(" - Edited")] if self.edited else self.title()
+        return os.path.basename(name)
+
     def check_save(self):
         if not self.edited:
             return True # No changes, all good
         # Post a dialog asking if we want to save the current plist
-        answer = mb.askyesnocancel("Unsaved Changes", "Save changes to current document?", parent=self)
+        answer = mb.askyesnocancel("Unsaved Changes", "Save changes to {}?".format(self.get_title()))
         if answer == True:
             return self.save_plist()
         return answer
@@ -1288,7 +1287,11 @@ class PlistWindow(tk.Toplevel):
     def save_plist_as(self, event=None, path=None):
         if path == None:
             # Get the file dialog
-            path = fd.asksaveasfilename(parent=self, title = "Please select a file name for saving:",defaultextension=".plist",filetypes=[("Plist files", "*.plist")])
+            path = fd.asksaveasfilename(
+                title="Please select a file name for saving:",
+                defaultextension=".plist",
+                filetypes=[("Plist files", "*.plist")],
+                initialfile=self.get_title())
             if not len(path):
                 # User cancelled - no changes
                 return None
