@@ -58,7 +58,7 @@ class ProperTree:
         self.f_text.bind("<Return>", self.convert_values)
         self.f_text.bind("<KP_Enter>", self.convert_values)
 
-        self.start_window = None 
+        self.start_window = None
 
         # Regex to find the processor serial numbers when
         # opened from the Finder
@@ -349,7 +349,18 @@ class ProperTree:
     
     def new_plist(self, event = None):
         # Creates a new plistwindow object
+        # Let's try to create a unique name (if Untitled.plist is used, add a number)
+        titles = [x.title().lower() for x in self.stackorder(self.tk)]
+        number = 0
+        final_title = "Untitled.plist"
+        while True:
+            temp = "Untitled{}.plist".format("" if number == 0 else "-"+str(number))
+            if not temp.lower() in titles:
+                final_title = temp
+                break
+            number += 1
         window = plistwindow.PlistWindow(self, self.tk)
+        window.title(final_title)
         window.focus_force()
         window.update()
         return window
