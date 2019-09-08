@@ -18,11 +18,9 @@
 					<key>Disabled</key>
 					<false/>
 					<key>Find</key>
-					<data>
-					</data>
+					<data></data>
 					<key>Replace</key>
-					<data>
-					</data>
+					<data></data>
 				</dict>
 			</dict>
 		</array>
@@ -63,16 +61,18 @@
 					<key>Enabled</key>
 					<true/>
 					<key>OemTableId</key>
-					<data>
-					</data>
+					<data></data>
 					<key>Path</key>
 					<string></string>
 					<key>TableLength</key>
 					<integer>0</integer>
 					<key>TableSignature</key>
-					<data>
-					</data>
+					<data></data>
 				</dict>
+			</dict>
+			<dict>
+				<key>separator</key>
+				<true/>
 			</dict>
 			<dict>
 				<key>name</key>
@@ -88,21 +88,43 @@
 					<key>Enabled</key>
 					<true/>
 					<key>OemTableId</key>
-					<data>
-					</data>
+					<data></data>
 					<key>Path</key>
 					<string></string>
 					<key>TableLength</key>
 					<integer>0</integer>
 					<key>TableSignature</key>
-					<data>
-					RE1BUg==
-					</data>
+					<data>RE1BUg==</data>
 				</dict>
 			</dict>
 		</array>
 		<key>Kernel/Add</key>
 		<array>
+			<dict>
+				<key>name</key>
+				<string>New Blank Entry</string>
+				<key>types</key>
+				<string>s/a</string>
+				<key>value</key>
+				<dict>
+					<key>BundlePath</key>
+					<string></string>
+					<key>Comment</key>
+					<string></string>
+					<key>Enabled</key>
+					<true/>
+					<key>ExecutablePath</key>
+					<string></string>
+					<key>MatchKernel</key>
+					<string></string>
+					<key>PlistPath</key>
+					<string>Contents/Info.plist</string>
+				</dict>
+			</dict>
+			<dict>
+				<key>separator</key>
+				<true/>
+			</dict>
 			<dict>
 				<key>name</key>
 				<string>Add Lilu kext</string>
@@ -523,25 +545,40 @@
 					<string>Contents/Info.plist</string>
 				</dict>
 			</dict>
+		</array>
+		<key>ACPI/Patch</key>
+		<array>
 			<dict>
 				<key>name</key>
-				<string>Add New Blank Entry</string>
+				<string>New Blank Entry</string>
 				<key>types</key>
-				<string>s/a</string>
+				<string>d/a</string>
 				<key>value</key>
 				<dict>
-					<key>BundlePath</key>
-					<string></string>
 					<key>Comment</key>
 					<string></string>
+					<key>Count</key>
+					<integer>0</integer>
 					<key>Enabled</key>
 					<true/>
-					<key>ExecutablePath</key>
-					<string></string>
-					<key>MatchKernel</key>
-					<string></string>
-					<key>PlistPath</key>
-					<string>Contents/Info.plist</string>
+					<key>Find</key>
+					<data></data>
+					<key>Limit</key>
+					<integer>0</integer>
+					<key>Mask</key>
+					<data></data>
+					<key>OemTableId</key>
+					<data></data>
+					<key>Replace</key>
+					<data></data>
+					<key>ReplaceMask</key>
+					<data></data>
+					<key>Skip</key>
+					<integer>0</integer>
+					<key>TableLength</key>
+					<integer>0</integer>
+					<key>TableSignature</key>
+					<data>AAAAAA==</data>
 				</dict>
 			</dict>
 		</array>
