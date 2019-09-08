@@ -18,7 +18,7 @@ def main():
     print(" - ProperTree.command")
     shutil.copy("ProperTree.command","ProperTree.app/Contents/MacOS")
     for x in os.listdir("Scripts"):
-        if x.startswith(".") or not x.lower().endswith(".py"):
+        if x.startswith(".") or not x.lower().endswith((".py",".plist")):
             continue
         print(" - "+x)
         shutil.copy(os.path.join("Scripts",x),"ProperTree.app/Contents/MacOS/Scripts")
