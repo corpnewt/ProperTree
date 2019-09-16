@@ -1592,12 +1592,12 @@ class PlistWindow(tk.Toplevel):
             return self.menu_code + " Data"
         elif isinstance(value, bool):
             return self.menu_code + " Boolean"
-        elif isinstance(value, (int,float)):
+        elif (sys.version_info >= (3, 0) and isinstance(value, (int,float))) or (sys.version_info < (3,0) and isinstance(value, (int,float,long))):
             return self.menu_code + " Number"
         elif (sys.version_info >= (3, 0) and isinstance(value, str)) or (sys.version_info < (3,0) and isinstance(value, (str,unicode))):
             return self.menu_code + " String"
         else:
-            return self.menu_code + type(value)
+            return self.menu_code + str(type(value))
 
     def is_data(self, value):
         if (sys.version_info >= (3, 0) and isinstance(value, bytes)) or (sys.version_info < (3,0) and isinstance(value, plistlib.Data)):
