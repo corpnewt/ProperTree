@@ -920,6 +920,7 @@ class PlistWindow(tk.Toplevel):
                     if not name.startswith(".") and name.lower().endswith(".efi"):
                         # Save it
                         tools_list.append({
+                            "Arguments":"",
                             "Name":name,
                             "Comment":name,
                             "Enabled":True,
