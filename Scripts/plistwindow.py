@@ -764,7 +764,8 @@ class PlistWindow(tk.Toplevel):
             kdict = {
                 "Comment":"",
                 "Enabled":True,
-                "MatchKernel":"",
+                "MaxKernel":"",
+                "MinKernel":"",
                 "BundlePath":parent+"/"+x if len(parent) else x,
                 "ExecutablePath":""
             }
