@@ -754,8 +754,8 @@ class PlistWindow(tk.Toplevel):
     def walk_kexts(self,path,parent=""):
         kexts = []
         # Let's make sure we check Lilu first if it exists
-        kext_list   = sorted([x for x in os.listdir(path) if not x.lower() == "lilu.kext"])
-        merged_list = sorted([x for x in os.listdir(path) if x.lower() == "lilu.kext"])
+        kext_list   = sorted([x for x in os.listdir(path) if not x.lower() in ("fakesmc.kext","lilu.kext","virtualsmc.kext")])
+        merged_list = sorted([x for x in os.listdir(path) if x.lower() in ("fakesmc.kext","lilu.kext","virtualsmc.kext")])
         merged_list.extend(kext_list)
         for x in merged_list:
             if x.startswith("."):
