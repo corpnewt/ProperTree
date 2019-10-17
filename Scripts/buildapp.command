@@ -18,10 +18,11 @@ def main():
     print(" - ProperTree.command")
     shutil.copy("ProperTree.command","ProperTree.app/Contents/MacOS")
     for x in os.listdir("Scripts"):
-        if x.startswith(".") or not x.lower().endswith((".py",".plist")):
+        if x.startswith(".") or not x.lower().endswith((".py",".plist",".icns")):
             continue
         print(" - "+x)
-        shutil.copy(os.path.join("Scripts",x),"ProperTree.app/Contents/MacOS/Scripts")
+        target = "ProperTree.app/Contents/Resources" if x.lower().endswith(".icns") else "ProperTree.app/Contents/MacOS/Scripts"
+        shutil.copy(os.path.join("Scripts",x),target)
     print("Building Info.plist...")
     info = {
         "CFBundleShortVersionString": "0.0", 
@@ -29,6 +30,7 @@ def main():
         "CFBundleInfoDictionaryVersion": "0.0", 
         "CFBundleIconFile": "icon", 
         "NSHumanReadableCopyright": "Copyright 2019 CorpNewt", 
+        "CFBundleIconFile": "shortcut.icns",
         "CFBundleIdentifier": "com.corpnewt.ProperTree", 
         "CFBundleDocumentTypes": [
             {
