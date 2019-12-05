@@ -451,7 +451,7 @@ class PlistWindow(tk.Toplevel):
             self._tree.focus_force()
         else:
             # Need to show it
-            self.find_frame.pack(side="top",fill="x")
+            self.find_frame.pack(side="top",fill="x",padx=10)
             self._tree_frame.pack(side="bottom",fill="both",expand=True)
             self.f_text.focus_force()
         self.show_find_replace ^= True
