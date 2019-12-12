@@ -115,7 +115,9 @@
 					<true/>
 					<key>ExecutablePath</key>
 					<string></string>
-					<key>MatchKernel</key>
+					<key>MinKernel</key>
+					<string></string>
+					<key>MaxKernel</key>
 					<string></string>
 					<key>PlistPath</key>
 					<string>Contents/Info.plist</string>
@@ -140,7 +142,9 @@
 					<true/>
 					<key>ExecutablePath</key>
 					<string>Contents/MacOS/Lilu</string>
-					<key>MatchKernel</key>
+					<key>MinKernel</key>
+					<string></string>
+					<key>MaxKernel</key>
 					<string></string>
 					<key>PlistPath</key>
 					<string>Contents/Info.plist</string>
@@ -161,7 +165,9 @@
 					<true/>
 					<key>ExecutablePath</key>
 					<string>Contents/MacOS/VirtualSMC</string>
-					<key>MatchKernel</key>
+					<key>MinKernel</key>
+					<string></string>
+					<key>MaxKernel</key>
 					<string></string>
 					<key>PlistPath</key>
 					<string>Contents/Info.plist</string>
@@ -182,7 +188,9 @@
 					<true/>
 					<key>ExecutablePath</key>
 					<string>Contents/MacOS/WhateverGreen</string>
-					<key>MatchKernel</key>
+					<key>MinKernel</key>
+					<string></string>
+					<key>MaxKernel</key>
 					<string></string>
 					<key>PlistPath</key>
 					<string>Contents/Info.plist</string>
@@ -203,7 +211,9 @@
 					<true/>
 					<key>ExecutablePath</key>
 					<string>Contents/MacOS/AppleALC</string>
-					<key>MatchKernel</key>
+					<key>MinKernel</key>
+					<string></string>
+					<key>MaxKernel</key>
 					<string></string>
 					<key>PlistPath</key>
 					<string>Contents/Info.plist</string>
@@ -224,7 +234,9 @@
 					<true/>
 					<key>ExecutablePath</key>
 					<string>Contents/MacOS/USBInjectAll</string>
-					<key>MatchKernel</key>
+					<key>MinKernel</key>
+					<string></string>
+					<key>MaxKernel</key>
 					<string></string>
 					<key>PlistPath</key>
 					<string>Contents/Info.plist</string>
@@ -245,7 +257,9 @@
 					<true/>
 					<key>ExecutablePath</key>
 					<string>Contents/MacOS/VoodooPS2Controller</string>
-					<key>MatchKernel</key>
+					<key>MinKernel</key>
+					<string></string>
+					<key>MaxKernel</key>
 					<string></string>
 					<key>PlistPath</key>
 					<string>Contents/Info.plist</string>
@@ -266,7 +280,9 @@
 					<true/>
 					<key>ExecutablePath</key>
 					<string>Contents/MacOS/VoodooPS2Keyboard</string>
-					<key>MatchKernel</key>
+					<key>MinKernel</key>
+					<string></string>
+					<key>MaxKernel</key>
 					<string></string>
 					<key>PlistPath</key>
 					<string>Contents/Info.plist</string>
@@ -287,7 +303,9 @@
 					<true/>
 					<key>ExecutablePath</key>
 					<string>Contents/MacOS/VoodooPS2Trackpad</string>
-					<key>MatchKernel</key>
+					<key>MinKernel</key>
+					<string></string>
+					<key>MaxKernel</key>
 					<string></string>
 					<key>PlistPath</key>
 					<string>Contents/Info.plist</string>
@@ -308,7 +326,9 @@
 					<true/>
 					<key>ExecutablePath</key>
 					<string>Contents/MacOS/AirportBrcmFixup</string>
-					<key>MatchKernel</key>
+					<key>MinKernel</key>
+					<string></string>
+					<key>MaxKernel</key>
 					<string></string>
 					<key>PlistPath</key>
 					<string>Contents/Info.plist</string>
@@ -329,7 +349,9 @@
 					<true/>
 					<key>ExecutablePath</key>
 					<string>Contents/MacOS/CPUFriend</string>
-					<key>MatchKernel</key>
+					<key>MinKernel</key>
+					<string></string>
+					<key>MaxKernel</key>
 					<string></string>
 					<key>PlistPath</key>
 					<string>Contents/Info.plist</string>
@@ -350,7 +372,9 @@
 					<true/>
 					<key>ExecutablePath</key>
 					<string></string>
-					<key>MatchKernel</key>
+					<key>MinKernel</key>
+					<string></string>
+					<key>MaxKernel</key>
 					<string></string>
 					<key>PlistPath</key>
 					<string>Contents/Info.plist</string>
@@ -371,7 +395,9 @@
 					<true/>
 					<key>ExecutablePath</key>
 					<string>Contents/MacOS/VoodooI2CServices</string>
-					<key>MatchKernel</key>
+					<key>MinKernel</key>
+					<string></string>
+					<key>MaxKernel</key>
 					<string></string>
 					<key>PlistPath</key>
 					<string>Contents/Info.plist</string>
@@ -392,7 +418,9 @@
 					<true/>
 					<key>ExecutablePath</key>
 					<string>Contents/MacOS/VoodooGPIO</string>
-					<key>MatchKernel</key>
+					<key>MinKernel</key>
+					<string></string>
+					<key>MaxKernel</key>
 					<string></string>
 					<key>PlistPath</key>
 					<string>Contents/Info.plist</string>
@@ -413,7 +441,9 @@
 					<true/>
 					<key>ExecutablePath</key>
 					<string>Contents/MacOS/VoodooI2C</string>
-					<key>MatchKernel</key>
+					<key>MinKernel</key>
+					<string></string>
+					<key>MaxKernel</key>
 					<string></string>
 					<key>PlistPath</key>
 					<string>Contents/Info.plist</string>
@@ -434,7 +464,9 @@
 					<true/>
 					<key>ExecutablePath</key>
 					<string>Contents/MacOS/VoodooI2CHID</string>
-					<key>MatchKernel</key>
+					<key>MinKernel</key>
+					<string></string>
+					<key>MaxKernel</key>
 					<string></string>
 					<key>PlistPath</key>
 					<string>Contents/Info.plist</string>
@@ -455,7 +487,9 @@
 					<true/>
 					<key>ExecutablePath</key>
 					<string>Contents/MacOS/NoTouchID</string>
-					<key>MatchKernel</key>
+					<key>MinKernel</key>
+					<string></string>
+					<key>MaxKernel</key>
 					<string></string>
 					<key>PlistPath</key>
 					<string>Contents/Info.plist</string>
@@ -476,7 +510,9 @@
 					<true/>
 					<key>ExecutablePath</key>
 					<string>Contents/MacOS/BrcmFirmwareData</string>
-					<key>MatchKernel</key>
+					<key>MinKernel</key>
+					<string></string>
+					<key>MaxKernel</key>
 					<string></string>
 					<key>PlistPath</key>
 					<string>Contents/Info.plist</string>
@@ -497,7 +533,9 @@
 					<true/>
 					<key>ExecutablePath</key>
 					<string>Contents/MacOS/BrcmPatchRAM2</string>
-					<key>MatchKernel</key>
+					<key>MinKernel</key>
+					<string></string>
+					<key>MaxKernel</key>
 					<string></string>
 					<key>PlistPath</key>
 					<string>Contents/Info.plist</string>
@@ -518,7 +556,9 @@
 					<true/>
 					<key>ExecutablePath</key>
 					<string>Contents/MacOS/SMCBatteryManager</string>
-					<key>MatchKernel</key>
+					<key>MinKernel</key>
+					<string></string>
+					<key>MaxKernel</key>
 					<string></string>
 					<key>PlistPath</key>
 					<string>Contents/Info.plist</string>
@@ -539,7 +579,9 @@
 					<true/>
 					<key>ExecutablePath</key>
 					<string>Contents/MacOS/SMCProcessor</string>
-					<key>MatchKernel</key>
+					<key>MinKernel</key>
+					<string></string>
+					<key>MaxKernel</key>
 					<string></string>
 					<key>PlistPath</key>
 					<string>Contents/Info.plist</string>
