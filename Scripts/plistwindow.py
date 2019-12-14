@@ -71,7 +71,7 @@ class EntryPopup(tk.Entry):
             # It's the value column - let's see if we can edit the key
             parent = self.master._tree.parent(self.cell)
             check_type = "dictionary" if not len(parent) else self.master.get_check_type(parent).lower()
-            if check_type == "array":
+            if check_type == "array" or self.cell == self.master.get_root_node():
                 # Can't edit array keys - as they're just indexes
                 return 'break'
             edit_col = "#0"
@@ -246,6 +246,11 @@ class PlistWindow(tk.Toplevel):
         self.type_menu.add_command(label="Date", command=lambda:self.change_type(self.menu_code + " Date"))
         self.type_menu.add_command(label="Number", command=lambda:self.change_type(self.menu_code + " Number"))
         self.type_menu.add_command(label="String", command=lambda:self.change_type(self.menu_code + " String"))
+
+        # Set up the Root node type menu - only supports Array and Dict
+        self.root_type_menu = tk.Menu(self, tearoff=0)
+        self.root_type_menu.add_command(label="Dictionary", command=lambda:self.change_type(self.menu_code + " Dictionary"))
+        self.root_type_menu.add_command(label="Array", command=lambda:self.change_type(self.menu_code + " Array"))
         
         # Set up the boolean selection menu
         self.bool_menu = tk.Menu(self, tearoff=0)
@@ -700,10 +705,17 @@ class PlistWindow(tk.Toplevel):
 
     def start_editing(self, event = None):
         # Get the currently selected row, if any
-        node = "" if not len(self._tree.selection()) else self._tree.selection()[0]
+        node = self.get_root_node() if not len(self._tree.selection()) else self._tree.selection()[0]
         parent = self._tree.parent(node)
         parent_type = "dictionary" if not len(parent) else self.get_check_type(parent).lower()
         check_type = self.get_check_type(node).lower()
+        if node == self.get_root_node(): # Let's see if we're trying to edit the Root node
+            if check_type in ("array","dictionary"):
+                # Nothing to do here - can't edit the Root node's name
+                return 'break'
+            else:
+                # Should at least be able to edit the value - *probably*
+                parent_type = "array"
         edit_col = "#0"
         if parent_type == "array":
             if check_type == "boolean":
@@ -1147,10 +1159,11 @@ class PlistWindow(tk.Toplevel):
                 return
         move_to = self._tree.index(self._tree.identify_row(event.y))
         tv_item = self._tree.identify('item', event.x, event.y)
+        tv_item = self.get_root_node() if tv_item == "" else tv_item # Force Root node as needed
         self._tree.item(tv_item,open=True)
         if not self.get_check_type(tv_item).lower() in ["dictionary","array"]:
             # Allow adding as child
-            if not tv_item == "":
+            if not tv_item == self.get_root_node():
                 tv_item = self._tree.parent(tv_item)
                 self._tree.item(tv_item,open=True)
         # Let's get the bounding box for the target, and if we're in the lower half,
@@ -1163,14 +1176,15 @@ class PlistWindow(tk.Toplevel):
             except:
                 # We drug outside the possible bounds - ignore this
                 return
-            if event.y >= y+height/2 and event.y < y+height:
+            if event.y >= y+height/2 and event.y < y+height and not self._tree.parent(tv_item) == "":
                 # Just above should add as a sibling
                 tv_item = self._tree.parent(tv_item)
                 self._tree.item(tv_item,open=True)
             else:
                 # Just below should add it at item 0
                 move_to = 0
-        target = "" if not len(self._tree.selection()) else self._tree.selection()[0]
+        target = self.get_root_node() if not len(self._tree.selection()) else self._tree.selection()[0]
+        if target == self.get_root_node(): return # Nothing to do here as we can't drag it
         # Make sure the selected node is closed
         self._tree.item(target,open=False)
         if self._tree.index(target) == move_to and tv_item == target:
@@ -1198,7 +1212,7 @@ class PlistWindow(tk.Toplevel):
             return
         self.dragging = False
         self.drag_start = None
-        target = "" if not len(self._tree.selection()) else self._tree.selection()[0]
+        target = self.get_root_node() if not len(self._tree.selection()) else self._tree.selection()[0]
         self._tree.item(target,open=True)
         node = self._tree.parent(target)
         # Finalize the drag undo
@@ -1411,7 +1425,7 @@ class PlistWindow(tk.Toplevel):
             # Nothing to copy
             return
         try:
-            clipboard_string = plist.dumps(self.nodes_to_values(node,{}),sort_keys=self.sort_dict)
+            clipboard_string = plist.dumps(self.nodes_to_values(node,None),sort_keys=self.sort_dict)
             # Get just the values
             self.clipboard_clear()
             self.clipboard_append(clipboard_string)
@@ -1420,7 +1434,7 @@ class PlistWindow(tk.Toplevel):
 
     def copy_all(self, event = None):
         try:
-            clipboard_string = plist.dumps(self.nodes_to_values("",{}),sort_keys=self.sort_dict)
+            clipboard_string = plist.dumps(self.nodes_to_values(self.get_root_node(),None),sort_keys=self.sort_dict)
             # Get just the values
             self.clipboard_clear()
             self.clipboard_append(clipboard_string)
@@ -1457,29 +1471,51 @@ class PlistWindow(tk.Toplevel):
         t = self.get_check_type(node).lower()
         if not node == "" and not t in ["dictionary","array"]:
             node = self._tree.parent(node)
+        node = self.get_root_node() if node == "" else node # Force Root node if need be
         t = self.get_check_type(node).lower()
-        verify = t in ["dictionary",""]
-        dict_list = list(plist_data.items()) if not self.sort_dict else sorted(list(plist_data.items()))
+        # Convert data to dict first
+        if isinstance(plist_data,list): # Convert to a dict to add
+            new_plist = {} if self.sort_dict else OrderedDict()
+            for i,x in enumerate(plist_data):
+                new_plist[str(i)] = x
+            plist_data = new_plist
         add_list = []
-        for (key,val) in dict_list:
-            if verify:
-                # create a unique name
-                names = [self._tree.item(x,"text") for x in self._tree.get_children(node)]
-                name = str(key)
-                num  = 0
-                while True:
-                    temp_name = name if num == 0 else name+" "+str(num)
-                    if temp_name in names:
-                        num += 1
-                        continue
-                    # Should be good here
-                    name = temp_name
-                    break
-                key = name
-            last = self.add_node(val, node, key)
-            add_list.append({"type":"add","cell":last})
-            self._tree.item(last,open=True)
-        first = "" if not len(add_list) else add_list[0].get("cell")
+        if not isinstance(plist_data,dict):
+            # Check if we're replacing the Root node
+            if node == self.get_root_node() and self.get_root_type() == None:
+                # Update the cell to reflect what's going on
+                add_list.append({"type":"edit","cell":node,"text":self._tree.item(node,"text"),"values":self._tree.item(node,"values")})
+                print(add_list)
+                if self.is_data(plist_data):
+                    self._tree.item(node, values=(self.get_type(plist_data),self.get_data(plist_data),"",))
+                elif isinstance(plist_data, datetime.datetime):
+                    self._tree.item(node, values=(self.get_type(plist_data),plist_data.strftime("%b %d, %Y %I:%M:%S %p"),"",))
+                else:
+                    self._tree.item(node, values=(self.get_type(plist_data),plist_data,"",))
+            else:
+                # I guess we're not - let's force it into a dict to be savage
+                plist_data = {"New item":plist_data}
+        if isinstance(plist_data,dict):
+            dict_list = list(plist_data.items()) if not self.sort_dict else sorted(list(plist_data.items()))
+            for (key,val) in dict_list:
+                if t == "dictionary":
+                    # create a unique name
+                    names = [self._tree.item(x,"text") for x in self._tree.get_children(node)]
+                    name = str(key)
+                    num  = 0
+                    while True:
+                        temp_name = name if num == 0 else name+" "+str(num)
+                        if temp_name in names:
+                            num += 1
+                            continue
+                        # Should be good here
+                        name = temp_name
+                        break
+                    key = name
+                last = self.add_node(val, node, key)
+                add_list.append({"type":"add","cell":last})
+                self._tree.item(last,open=True)
+        first = self.get_root_node() if not len(add_list) else add_list[0].get("cell")
         self.add_undo(add_list)
         self._tree.focus()
         self._tree.selection_set(first)
@@ -1504,17 +1540,16 @@ class PlistWindow(tk.Toplevel):
 
     def add_node(self, value, parentNode="", key=None):
         if key is None:
-            i = ""
+            key = "Root" # Show the Root
+        if isinstance(value,(list,tuple)):
+            children = "1 child" if len(value) == 1 else "{} children".format(len(value))
+            values = (self.get_type(value),children,"" if parentNode == "" else self.drag_code)
+        elif isinstance(value,dict):
+            children = "1 key/value pair" if len(value) == 1 else "{} key/value pairs".format(len(value))
+            values = (self.get_type(value),children,"" if parentNode == "" else self.drag_code)
         else:
-            if isinstance(value,(list,tuple)):
-                children = "1 child" if len(value) == 1 else "{} children".format(len(value))
-                values = (self.get_type(value),children,self.drag_code)
-            elif isinstance(value,dict):
-                children = "1 key/value pair" if len(value) == 1 else "{} key/value pairs".format(len(value))
-                values = (self.get_type(value),children,self.drag_code)
-            else:
-                values = (self.get_type(value),value,self.drag_code)
-            i = self._tree.insert(parentNode, "end", text=key, values=values)
+            values = (self.get_type(value),value,"" if parentNode == "" else self.drag_code)
+        i = self._tree.insert(parentNode, "end", text=key, values=values)
 
         if isinstance(value, dict):
             self._tree.item(i, open=True)
@@ -1526,22 +1561,14 @@ class PlistWindow(tk.Toplevel):
             for (key,val) in enumerate(value):
                 self.add_node(val, i, key)
         elif self.is_data(value):
-            self._tree.item(i, values=(self.get_type(value),self.get_data(value),self.drag_code,))
+            self._tree.item(i, values=(self.get_type(value),self.get_data(value),"" if parentNode == "" else self.drag_code,))
         elif isinstance(value, datetime.datetime):
-            self._tree.item(i, values=(self.get_type(value),value.strftime("%b %d, %Y %I:%M:%S %p"),self.drag_code,))
+            self._tree.item(i, values=(self.get_type(value),value.strftime("%b %d, %Y %I:%M:%S %p"),"" if parentNode == "" else self.drag_code,))
         else:
-            self._tree.item(i, values=(self.get_type(value),value,self.drag_code,))
+            self._tree.item(i, values=(self.get_type(value),value,"" if parentNode == "" else self.drag_code,))
         return i
 
-    def nodes_to_values(self,node="",parent={}):
-        if node == "" or node == None:
-            # top level
-            parent = {} if self.sort_dict else OrderedDict()
-            for child in self._tree.get_children(node):
-                parent = self.nodes_to_values(child,parent)
-            return parent
-        # Not top - process
-        name = self._tree.item(node,"text")
+    def get_value_from_node(self,node=""):
         values = self.get_padded_values(node, 3)
         value = values[1]
         check_type = self.get_check_type(node).lower()
@@ -1575,6 +1602,29 @@ class PlistWindow(tk.Toplevel):
                     value = base64.b64decode(value.encode("utf-8"))
         elif check_type == "date":
             value = datetime.datetime.strptime(value,"%b %d, %Y %I:%M:%S %p")
+        return value
+
+    def nodes_to_values(self,node="",parent=None):
+        if node in ("",None,self.get_root_node()):
+            # Top level - set the parent to the type of our Root
+            node = self.get_root_node()
+            parent = self.get_root_type()
+            if parent == None: return self.get_value_from_node(node) # Return the raw value - we don't have a collection
+            for child in self._tree.get_children(node):
+                parent = self.nodes_to_values(child,parent)
+            return parent
+        # Not top - process
+        if parent == None:
+            # We need to setup the parent
+            p = self._tree.parent(node)
+            if p in ("",self.get_root_node()):
+                # The parent is the Root node
+                parent = self.get_root_type()
+            else:
+                # Get the type based on our prefs
+                parent = [] if self.get_check_type(p).lower() == "array" else {} if self.sort_dict else OrderedDict()
+        name = self._tree.item(node,"text")
+        value = self.get_value_from_node(node)
         # At this point, we should have the name and value
         for child in self._tree.get_children(node):
             value = self.nodes_to_values(child,value)
@@ -1633,6 +1683,9 @@ class PlistWindow(tk.Toplevel):
     def new_row(self,target=None,force_sibling=False):
         if target == None or isinstance(target, tk.Event):
             target = "" if not len(self._tree.selection()) else self._tree.selection()[0]
+        target = self.get_root_node() if target == "" else target # Force the Root node if need be
+        if target == self.get_root_node() and not self.get_check_type(self.get_root_node()).lower() in ("array","dictionary"):
+            return # Can't add to a non-collection!
         values = self.get_padded_values(target, 1)
         new_cell = None
         if not self.get_check_type(target).lower() in ["dictionary","array"] or not self._tree.item(target,"open") or force_sibling:
@@ -1675,7 +1728,7 @@ class PlistWindow(tk.Toplevel):
     def remove_row(self,target=None):
         if target == None or isinstance(target, tk.Event):
             target = "" if not len(self._tree.selection()) else self._tree.selection()[0]
-        if target == "":
+        if target in ("",self.get_root_node()):
             # Can't remove top level
             return
         parent = self._tree.parent(target)
@@ -1987,9 +2040,10 @@ class PlistWindow(tk.Toplevel):
         popup_menu.add_command(label="Collapse All", command=self.collapse_all)
         popup_menu.add_separator()
         # Determine if we are adding a child or a sibling
-        if cell == "":
-            # Top level
-            popup_menu.add_command(label="New top level entry (+)".format(self._tree.item(cell,"text")), command=lambda:self.new_row(cell))
+        if cell in ("",self.get_root_node()):
+            # Top level - get the Root
+            if self.get_check_type(self.get_root_node()).lower() in ("array","dictionary"):
+                popup_menu.add_command(label="New top level entry (+)".format(self._tree.item(cell,"text")), command=lambda:self.new_row(self.get_root_node()))
         else:
             if self.get_check_type(cell).lower() in ["array","dictionary"] and (self._tree.item(cell,"open") or not len(self._tree.get_children(cell))):
                 popup_menu.add_command(label="New child under '{}' (+)".format(self._tree.item(cell,"text")), command=lambda:self.new_row(cell))
@@ -2089,11 +2143,13 @@ class PlistWindow(tk.Toplevel):
             pt = ""
         if index == 1:
             # Type change - let's show our menu
+            type_menu = self.root_type_menu if parent == "" else self.type_menu
             try:
-                self.type_menu.tk_popup(event.x_root, event.y_root, 0)
+                type_menu.tk_popup(event.x_root, event.y_root, 0)
             finally:
-                self.type_menu.grab_release()
+                type_menu.grab_release()
             return 'break'
+        if parent == "" and (index == 0 or self.get_check_type(self.get_root_node()).lower() in ("array","dictionary")): return 'break' # Not changing the type - can't change the name of Root
         if index == 2:
             if t.lower() in ["dictionary","array"]:
                 # Can't edit the "value" directly - should only show the number of children
@@ -2155,6 +2211,20 @@ class PlistWindow(tk.Toplevel):
             if not visible or self._tree.item(child,"open"):
                 items.extend(self.iter_nodes(visible, child))
         return items
+
+    def get_root_node(self):
+        children = self._tree.get_children("")
+        if not len(children) == 1: raise Exception("Root is malformed!")
+        return children[0]
+
+    def get_root_type(self):
+        check_type = self.get_check_type(self.get_root_node()).lower()
+        # Iterate value types
+        if check_type == "dictionary":
+            return {} if self.sort_dict else OrderedDict()
+        elif check_type == "array":
+            return []
+        return None
 
     def pre_alternate(self, event):
         # Only called before an item opens - we need to open it manually to ensure
