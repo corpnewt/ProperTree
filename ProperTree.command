@@ -360,7 +360,8 @@ class ProperTree:
                 break
             number += 1
         window = plistwindow.PlistWindow(self, self.tk)
-        window.title(final_title)
+        window.open_plist(final_title,{}) # Created an empty root
+        window.current_plist = None # Ensure it's initialized as new
         window.focus_force()
         window.update()
         return window
@@ -401,7 +402,6 @@ class ProperTree:
                 plist_data = plist.load(f,dict_type=dict if self.sort_dict else OrderedDict)
         except Exception as e:
             # Had an issue, throw up a display box
-            # print("{}\a".format(str(e)))
             self.tk.bell()
             mb.showerror("An Error Occurred While Opening {}".format(os.path.basename(path)), str(e),parent=current_window)
             return None
