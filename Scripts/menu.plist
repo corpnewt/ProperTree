@@ -4,13 +4,13 @@
 <dict>
 	<key>Clover</key>
 	<dict>
-		<key>ACPI/DSDT/Patches</key>
+		<key>Root/ACPI/DSDT/Patches</key>
 		<array>
 			<dict>
 				<key>name</key>
 				<string>New Blank Entry</string>
 				<key>types</key>
-				<string>d/d/a</string>
+				<string>d/d/d/a</string>
 				<key>value</key>
 				<dict>
 					<key>Comment</key>
@@ -27,13 +27,13 @@
 	</dict>
 	<key>OpenCore</key>
 	<dict>
-		<key>ACPI/Add</key>
+		<key>Root/ACPI/Add</key>
 		<array>
 			<dict>
 				<key>name</key>
 				<string>New Blank Entry</string>
 				<key>types</key>
-				<string>d/a</string>
+				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
 					<key>Comment</key>
@@ -45,13 +45,13 @@
 				</dict>
 			</dict>
 		</array>
-		<key>ACPI/Block</key>
+		<key>Root/ACPI/Block</key>
 		<array>
 			<dict>
 				<key>name</key>
 				<string>New Blank Entry</string>
 				<key>types</key>
-				<string>d/a</string>
+				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
 					<key>All</key>
@@ -98,13 +98,13 @@
 				</dict>
 			</dict>
 		</array>
-		<key>Kernel/Add</key>
+		<key>Root/Kernel/Add</key>
 		<array>
 			<dict>
 				<key>name</key>
 				<string>New Blank Entry</string>
 				<key>types</key>
-				<string>s/a</string>
+				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
 					<key>BundlePath</key>
@@ -131,7 +131,7 @@
 				<key>name</key>
 				<string>Add Lilu kext</string>
 				<key>types</key>
-				<string>s/a</string>
+				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
 					<key>BundlePath</key>
@@ -154,7 +154,7 @@
 				<key>name</key>
 				<string>Add VirtualSmc kext</string>
 				<key>types</key>
-				<string>s/a</string>
+				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
 					<key>BundlePath</key>
@@ -177,7 +177,7 @@
 				<key>name</key>
 				<string>Add WhateverGreen kext</string>
 				<key>types</key>
-				<string>s/a</string>
+				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
 					<key>BundlePath</key>
@@ -200,7 +200,7 @@
 				<key>name</key>
 				<string>Add AppleALC kext</string>
 				<key>types</key>
-				<string>s/a</string>
+				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
 					<key>BundlePath</key>
@@ -223,7 +223,7 @@
 				<key>name</key>
 				<string>Add USBInjectAll kext</string>
 				<key>types</key>
-				<string>s/a</string>
+				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
 					<key>BundlePath</key>
@@ -246,7 +246,7 @@
 				<key>name</key>
 				<string>Add VoodooPS2Controller [first to load]</string>
 				<key>types</key>
-				<string>s/a</string>
+				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
 					<key>BundlePath</key>
@@ -269,7 +269,7 @@
 				<key>name</key>
 				<string>Add VoodooPS2Keyboard [Load after VPS2C]</string>
 				<key>types</key>
-				<string>s/a</string>
+				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
 					<key>BundlePath</key>
@@ -292,7 +292,7 @@
 				<key>name</key>
 				<string>Add VoodooPS2Trackpad [Load after VPS2C]</string>
 				<key>types</key>
-				<string>s/a</string>
+				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
 					<key>BundlePath</key>
@@ -315,7 +315,7 @@
 				<key>name</key>
 				<string>Add AirportBrcmFixup kext</string>
 				<key>types</key>
-				<string>s/a</string>
+				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
 					<key>BundlePath</key>
@@ -338,7 +338,7 @@
 				<key>name</key>
 				<string>Add CPUFriend kext</string>
 				<key>types</key>
-				<string>s/a</string>
+				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
 					<key>BundlePath</key>
@@ -361,7 +361,7 @@
 				<key>name</key>
 				<string>Add CPUFriend DataProvider [load after CPUFriend]</string>
 				<key>types</key>
-				<string>s/a</string>
+				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
 					<key>BundlePath</key>
@@ -384,7 +384,7 @@
 				<key>name</key>
 				<string>VoodooI2C: Services [First to load]</string>
 				<key>types</key>
-				<string>s/a</string>
+				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
 					<key>BundlePath</key>
@@ -407,7 +407,7 @@
 				<key>name</key>
 				<string>VoodooI2C: GPIO [Second to load]</string>
 				<key>types</key>
-				<string>s/a</string>
+				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
 					<key>BundlePath</key>
@@ -430,7 +430,7 @@
 				<key>name</key>
 				<string>VoodooI2C: Main [Third to load]</string>
 				<key>types</key>
-				<string>s/a</string>
+				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
 					<key>BundlePath</key>
@@ -453,7 +453,7 @@
 				<key>name</key>
 				<string>VoodooI2C: HID [Last to load]</string>
 				<key>types</key>
-				<string>s/a</string>
+				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
 					<key>BundlePath</key>
@@ -476,7 +476,7 @@
 				<key>name</key>
 				<string>Add NoTouchID kext</string>
 				<key>types</key>
-				<string>s/a</string>
+				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
 					<key>BundlePath</key>
@@ -499,7 +499,7 @@
 				<key>name</key>
 				<string>Add BrcmFirmwareData kext</string>
 				<key>types</key>
-				<string>s/a</string>
+				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
 					<key>BundlePath</key>
@@ -522,7 +522,7 @@
 				<key>name</key>
 				<string>Add BrcmPatchRAM2 kext</string>
 				<key>types</key>
-				<string>s/a</string>
+				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
 					<key>BundlePath</key>
@@ -545,7 +545,7 @@
 				<key>name</key>
 				<string>Add SMCBatteryManager kext [Load after VSMC]</string>
 				<key>types</key>
-				<string>s/a</string>
+				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
 					<key>BundlePath</key>
@@ -568,7 +568,7 @@
 				<key>name</key>
 				<string>Add SMCProcessor kext [load after VSMC]</string>
 				<key>types</key>
-				<string>s/a</string>
+				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
 					<key>BundlePath</key>
@@ -588,13 +588,13 @@
 				</dict>
 			</dict>
 		</array>
-		<key>ACPI/Patch</key>
+		<key>Root/ACPI/Patch</key>
 		<array>
 			<dict>
 				<key>name</key>
 				<string>New Blank Entry</string>
 				<key>types</key>
-				<string>d/a</string>
+				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
 					<key>Comment</key>
