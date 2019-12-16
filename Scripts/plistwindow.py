@@ -1444,6 +1444,7 @@ class PlistWindow(tk.Toplevel):
             clip = self.clipboard_get()
         except:
             clip = ""
+        plist_data = None
         try:
             plist_data = plist.loads(clip,dict_type=dict if self.sort_dict else OrderedDict)
         except:
@@ -1456,7 +1457,7 @@ class PlistWindow(tk.Toplevel):
                 self.bell()
                 mb.showerror("An Error Occurred While Pasting", str(e),parent=self)
                 return 'break'
-        if not plist_data:
+        if plist_data == None:
             if len(clip):
                 # Check if we actually pasted something
                 self.bell()
