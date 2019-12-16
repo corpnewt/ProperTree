@@ -267,10 +267,7 @@ class PlistWindow(tk.Toplevel):
         self._tree.column("Drag",minwidth=40,width=40,stretch=False,anchor="center")
 
         # Set the close window and copy/paste bindings
-        if str(sys.platform) == "darwin":
-            key = "Command"
-        else:
-            key = "Control"
+        key = "Command" if str(sys.platform) == "darwin" else "Control"
         # Add the window bindings
         self.bind("<{}-w>".format(key), self.close_window)
         self.bind("<{}-f>".format(key), self.hide_show_find)
@@ -2052,6 +2049,13 @@ class PlistWindow(tk.Toplevel):
             else:
                 popup_menu.add_command(label="New sibling of '{}' (+)".format(self._tree.item(cell,"text")), command=lambda:self.new_row(cell))
                 popup_menu.add_command(label="Remove '{}' (-)".format(self._tree.item(cell,"text")), command=lambda:self.remove_row(cell))
+        # Add the copy and paste options
+        popup_menu.add_separator()
+        sign = "Command" if str(sys.platform) == "darwin" else "Ctrl"
+        c_state = "normal" if len(self._tree.selection()) else "disabled"
+        p_state = "normal" if len(self.root.clipboard_get()) else "disabled"
+        popup_menu.add_command(label="Copy ({}+C)".format(sign),command=self.copy_selection,state=c_state)
+        popup_menu.add_command(label="Paste ({}+V)".format(sign),command=self.paste_selection,state=p_state)
         
         # Walk through the menu data if it exists
         cell_path = self.get_cell_path(cell)
