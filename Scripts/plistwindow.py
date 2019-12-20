@@ -2054,7 +2054,8 @@ class PlistWindow(tk.Toplevel):
         popup_menu.add_separator()
         sign = "Command" if str(sys.platform) == "darwin" else "Ctrl"
         c_state = "normal" if len(self._tree.selection()) else "disabled"
-        p_state = "normal" if len(self.root.clipboard_get()) else "disabled"
+        try: p_state = "normal" if len(self.root.clipboard_get()) else "disabled"
+        except: p_state = "disabled" # Invalid clipboard content
         popup_menu.add_command(label="Copy ({}+C)".format(sign),command=self.copy_selection,state=c_state)
         popup_menu.add_command(label="Paste ({}+V)".format(sign),command=self.paste_selection,state=p_state)
         
