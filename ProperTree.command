@@ -94,28 +94,28 @@ class ProperTree:
         # Close initial window
         self.close_window(None,False)
 
-        # Setup the top level menu
-        file_menu = tk.Menu(self.tk)
-        main_menu = tk.Menu(self.tk)
-        main_menu.add_cascade(label="File", menu=file_menu)
-        file_menu.add_command(label="New ({}N)".format(sign), command=self.new_plist)
-        file_menu.add_command(label="Open ({}O)".format(sign), command=self.open_plist)
-        file_menu.add_command(label="Save ({}S)".format(sign), command=self.save_plist)
-        file_menu.add_command(label="Save As ({}Shift+S)".format(sign), command=self.save_plist_as)
-        file_menu.add_command(label="Duplicate ({}D)".format(sign), command=self.duplicate_plist)
-        file_menu.add_command(label="Reload From Disk ({}L)".format(sign), command=self.reload_from_disk)
-        file_menu.add_separator()
-        file_menu.add_command(label="OC Snapshot ({}R)".format(sign), command=self.oc_snapshot)
-        file_menu.add_separator()
-        file_menu.add_command(label="Convert Window ({}T)".format(sign), command=self.show_convert)
-        file_menu.add_command(label="Strip Comments ({}M)".format(sign), command=self.strip_comments)
-        file_menu.add_separator()
-        file_menu.add_command(label="View Data As Hex", command=lambda:self.change_data_display("hex"))
-        file_menu.add_command(label="View Data As Base64", command=lambda:self.change_data_display("base64"))
-        if not str(sys.platform) == "darwin":
+        if str(sys.platform) == "darwin":
+            # Setup the top level menu
+            file_menu = tk.Menu(self.tk)
+            main_menu = tk.Menu(self.tk)
+            main_menu.add_cascade(label="File", menu=file_menu)
+            file_menu.add_command(label="New ({}N)".format(sign), command=self.new_plist)
+            file_menu.add_command(label="Open ({}O)".format(sign), command=self.open_plist)
+            file_menu.add_command(label="Save ({}S)".format(sign), command=self.save_plist)
+            file_menu.add_command(label="Save As ({}Shift+S)".format(sign), command=self.save_plist_as)
+            file_menu.add_command(label="Duplicate ({}D)".format(sign), command=self.duplicate_plist)
+            file_menu.add_command(label="Reload From Disk ({}L)".format(sign), command=self.reload_from_disk)
+            file_menu.add_separator()
+            file_menu.add_command(label="OC Snapshot ({}R)".format(sign), command=self.oc_snapshot)
+            file_menu.add_separator()
+            file_menu.add_command(label="Convert Window ({}T)".format(sign), command=self.show_convert)
+            file_menu.add_command(label="Strip Comments ({}M)".format(sign), command=self.strip_comments)
+            file_menu.add_separator()
+            file_menu.add_command(label="View Data As Hex", command=lambda:self.change_data_display("hex"))
+            file_menu.add_command(label="View Data As Base64", command=lambda:self.change_data_display("base64"))
             file_menu.add_separator()
             file_menu.add_command(label="Quit ({}Q)".format(sign), command=self.quit)
-        self.tk.config(menu=main_menu)
+            self.tk.config(menu=main_menu)
 
         # Set bindings
         self.tk.bind("<{}-w>".format(key), self.close_window)
