@@ -11,6 +11,8 @@ except:
     import tkinter.ttk as ttk
     from tkinter import filedialog as fd
     from tkinter import messagebox as mb
+# Add this script's dir to the local PATH var - may improve import consistency
+sys.path.append(os.path.abspath(os.path.dirname(os.path.realpath(__file__))))
 from Scripts import *
 
 class ProperTree:
