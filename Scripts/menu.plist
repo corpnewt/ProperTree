@@ -78,7 +78,7 @@
 				<key>name</key>
 				<string>Drop DMAR</string>
 				<key>types</key>
-				<string>d/a</string>
+				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
 					<key>All</key>
