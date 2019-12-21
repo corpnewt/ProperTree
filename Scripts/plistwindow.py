@@ -1954,11 +1954,10 @@ class PlistWindow(tk.Toplevel):
                                 "values":self._tree.item(x,"values")
                             })
                             values = self.get_padded_values(x,3)
-                            if needed_type.lower == "dictionary":
-                                values[0] = self.menu_code + " Dictionary"
+                            values[0] = self.menu_code + " " + needed_type
+                            if needed_type.lower() == "dictionary":
                                 values[1] = "0 key/value pairs"
                             else:
-                                values[0] = self.menu_code + " Array"
                                 values[1] = "0 children"
                             self._tree.item(x, values=values)
                         else:
