@@ -68,7 +68,7 @@ class ProperTree:
 
         # Setup the menu-related keybinds - and change the app name if needed
         key="Control"
-        sign = "Ctr+"
+        sign = "Ctrl+"
         if str(sys.platform) == "darwin":
             # Remap the quit function to our own
             self.tk.createcommand('::tk::mac::Quit', self.quit)
