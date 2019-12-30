@@ -21,6 +21,13 @@ except:
 # Helper Methods #
 ###            ###
 
+try:
+    unicode
+    xrange
+except NameError:
+    unicode = str
+    xrange = range
+
 def _check_py3():
     return True if sys.version_info >= (3, 0) else False
 
@@ -32,10 +39,7 @@ def _is_binary(fp):
     return header[:8] == b'bplist00'
 
 def _get_inst():
-    if _check_py3():
-        return (str)
-    else:
-        return (str, unicode)
+    return (str, unicode)
 
 ###                             ###
 # Deprecated Functions - Remapped #
