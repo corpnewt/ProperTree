@@ -8,7 +8,7 @@ try:
     import tkFileDialog as fd
     import tkMessageBox as mb
     from itertools import izip_longest as izip
-except:
+except ImportError:
     # Python 3
     import tkinter as tk
     import tkinter.ttk as ttk
@@ -17,6 +17,14 @@ except:
     from itertools import zip_longest as izip
 sys.path.append(os.path.abspath(os.path.dirname(os.path.realpath(__file__))))
 import plist
+
+try:
+    long
+    unicode
+except NameError:  # Python 3
+    long = int
+    unicode = str
+
 
 class EntryPopup(tk.Entry):
     def __init__(self, parent, master, text, cell, column, **kw):
@@ -161,8 +169,7 @@ class EntryPopup(tk.Entry):
             self.parent.item(self.cell, text=self.get())
         else:
             # Need to walk the values and pad
-            values = self.parent.item(self.cell)["values"]
-            values = [] if values == "" else values
+            values = self.parent.item(self.cell)["values"] or []
             # Count up, padding as we need
             index = int(self.column.replace("#",""))
             values += [''] * (index - len(values))
@@ -1629,7 +1636,7 @@ class PlistWindow(tk.Toplevel):
         if isinstance(parent,list):
             parent.append(value)
         elif isinstance(parent,dict):
-            if sys.version_info < (3,0) and isinstance(name,unicode):
+            if isinstance(name,unicode):
                 parent[name] = value
             else:
                 parent[str(name)] = value
@@ -1646,9 +1653,9 @@ class PlistWindow(tk.Toplevel):
             return self.menu_code + " Data"
         elif isinstance(value, bool):
             return self.menu_code + " Boolean"
-        elif (sys.version_info >= (3, 0) and isinstance(value, (int,float))) or (sys.version_info < (3,0) and isinstance(value, (int,float,long))):
+        elif isinstance(value, (int,float,long)):
             return self.menu_code + " Number"
-        elif (sys.version_info >= (3, 0) and isinstance(value, str)) or (sys.version_info < (3,0) and isinstance(value, (str,unicode))):
+        elif isinstance(value, (str,unicode)):
             return self.menu_code + " String"
         else:
             return self.menu_code + str(type(value))
