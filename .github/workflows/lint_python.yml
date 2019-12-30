@@ -18,7 +18,6 @@ jobs:
                       --show-source --statistics
       - run: isort --check-only --profile black . || true
       - run: pip install -r requirements.txt || pip install --editable . || true
-
       - run: mkdir --parents --verbose .mypy_cache
       - run: mypy --ignore-missing-imports --install-types --non-interactive . || true
       - run: pytest . || true
