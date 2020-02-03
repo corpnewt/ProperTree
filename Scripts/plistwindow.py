@@ -331,6 +331,8 @@ class PlistWindow(tk.Toplevel):
             file_menu.add_separator()
             file_menu.add_command(label="View Data As Hex", command=lambda:self.change_data_display("hex"))
             file_menu.add_command(label="View Data As Base64", command=lambda:self.change_data_display("base64"))
+            file_menu.add_separator()
+            file_menu.add_command(label="Toggle Find/Replace Pane",command=self.hide_show_find)
             if not str(sys.platform) == "darwin":
                 file_menu.add_separator()
                 file_menu.add_command(label="Quit ({}Q)".format(sign), command=self.controller.quit)
