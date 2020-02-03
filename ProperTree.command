@@ -114,6 +114,8 @@ class ProperTree:
             file_menu.add_command(label="View Data As Hex", command=lambda:self.change_data_display("hex"))
             file_menu.add_command(label="View Data As Base64", command=lambda:self.change_data_display("base64"))
             file_menu.add_separator()
+            file_menu.add_command(label="Toggle Find/Replace Pane",command=self.hide_show_find)
+            file_menu.add_separator()
             file_menu.add_command(label="Quit ({}Q)".format(sign), command=self.quit)
             self.tk.config(menu=main_menu)
 
@@ -210,6 +212,16 @@ class ProperTree:
         if window == self.tk:
             return
         window.oc_snapshot(event)
+
+    def hide_show_find(self, event = None):
+        windows = self.stackorder(self.tk)
+        if not len(windows):
+            # Nothing to do
+            return
+        window = windows[-1] # Get the last item (most recent)
+        if window == self.tk:
+            return
+        window.hide_show_find(event)
 
     def close_window(self, event = None, check_close = True):
         # Remove the default window that comes from it
