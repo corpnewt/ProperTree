@@ -243,7 +243,8 @@ class PlistWindow(tk.Toplevel):
         self.edited = False
         self.dragging = False
         self.drag_start = None
-        self.show_find_replace = True # Set to the opposite at first so it's hidden when we call hide_show_find
+        self.show_find_replace = False
+        self.show_type = False
         self.type_menu = tk.Menu(self, tearoff=0)
         self.type_menu.add_command(label="Dictionary", command=lambda:self.change_type(self.menu_code + " Dictionary"))
         self.type_menu.add_command(label="Array", command=lambda:self.change_type(self.menu_code + " Array"))
@@ -278,6 +279,7 @@ class PlistWindow(tk.Toplevel):
         # Add the window bindings
         self.bind("<{}-w>".format(key), self.close_window)
         self.bind("<{}-f>".format(key), self.hide_show_find)
+        self.bind("<{}-p>".format(key), self.hide_show_type)
         # Add the treeview bindings
         self._tree.bind("<{}-c>".format(key), self.copy_selection)
         self._tree.bind("<{}-C>".format(key), self.copy_all)
@@ -332,7 +334,8 @@ class PlistWindow(tk.Toplevel):
             file_menu.add_command(label="View Data As Hex", command=lambda:self.change_data_display("hex"))
             file_menu.add_command(label="View Data As Base64", command=lambda:self.change_data_display("base64"))
             file_menu.add_separator()
-            file_menu.add_command(label="Toggle Find/Replace Pane",command=self.hide_show_find)
+            file_menu.add_command(label="Toggle Find/Replace Pane ({}F)".format(sign),command=self.hide_show_find)
+            file_menu.add_command(label="Toggle Plist/Data Type Pane ({}P)".format(sign),command=self.hide_show_type)
             if not str(sys.platform) == "darwin":
                 file_menu.add_separator()
                 file_menu.add_command(label="Quit ({}Q)".format(sign), command=self.controller.quit)
@@ -349,6 +352,23 @@ class PlistWindow(tk.Toplevel):
             except:
                 pass
         os.chdir(cwd)
+
+        # Create our type/data view
+        self.display_frame = tk.Frame(self,height=20)
+        self.display_frame.columnconfigure(2,weight=1)
+        self.display_frame.columnconfigure(4,weight=1)
+        pt_label = tk.Label(self.display_frame,text="Plist Type:")
+        dt_label = tk.Label(self.display_frame,text="Display Data as:")
+        self.plist_type_string = tk.StringVar(self.display_frame)
+        self.plist_type_menu = tk.OptionMenu(self.display_frame, self.plist_type_string, "XML","Binary", command=self.change_plist_type)
+        self.plist_type_string.set("XML")
+        self.data_type_string = tk.StringVar(self.display_frame)
+        self.data_type_menu = tk.OptionMenu(self.display_frame, self.data_type_string, "Hex","Base64", command=self.change_data_type)
+        self.data_type_string.set("Hex")
+        pt_label.grid(row=1,column=1,padx=10,pady=(0,5),sticky="w")
+        dt_label.grid(row=1,column=3,padx=10,pady=(0,5),sticky="w")
+        self.plist_type_menu.grid(row=1,column=2,padx=10,pady=(0,5),sticky="we")
+        self.data_type_menu.grid(row=1,column=4,padx=10,pady=(0,5),sticky="we")
         
         # Create our find/replace view
         self.find_frame = tk.Frame(self,height=20)
@@ -391,8 +411,16 @@ class PlistWindow(tk.Toplevel):
         # Add the scroll bars and show the treeview
         vsb.pack(side="right",fill="y")
         self._tree.pack(side="bottom",fill="both",expand=True)
-        self.hide_show_find()
+        self.draw_frames()
         self.entry_popup = None
+
+    def change_plist_type(self, value):
+        if not self.edited:
+            self.edited = True
+            self.title(self.title()+" - Edited")
+
+    def change_data_type(self, value):
+        self.change_data_display(value.lower())
 
     def change_find_type(self, value):
         self.find_type = value
@@ -452,20 +480,25 @@ class PlistWindow(tk.Toplevel):
             value = "True" if value.lower() == "true" else "False"
         return (True,value)
 
-    def hide_show_find(self, event=None):
-        # Let's find out if we're set to show
+    def draw_frames(self, event=None):
         self.find_frame.pack_forget()
+        self.display_frame.pack_forget()
         self._tree_frame.pack_forget()
         if self.show_find_replace:
-            # Need to hide it
-            self._tree_frame.pack(side="bottom",fill="both",expand=True)
-            self._tree.focus_force()
-        else:
-            # Need to show it
             self.find_frame.pack(side="top",fill="x",padx=10)
-            self._tree_frame.pack(side="bottom",fill="both",expand=True)
-            self.f_text.focus_force()
+        self._tree_frame.pack(fill="both",expand=True)
+        if self.show_type:
+            self.display_frame.pack(side="bottom",fill="x",padx=10)
+
+    def hide_show_find(self, event=None):
+        # Let's find out if we're set to show
         self.show_find_replace ^= True
+        self.draw_frames(event)
+
+    def hide_show_type(self, event=None):
+        # Let's find out if we're set to show
+        self.show_type ^= True
+        self.draw_frames(event)
 
     def do_replace(self, node, find, new_text):
         # We can assume that we have a legit match for whatever is passed
@@ -767,7 +800,7 @@ class PlistWindow(tk.Toplevel):
             mb.showerror("An Error Occurred While Opening {}".format(os.path.basename(self.current_plist)), str(e),parent=self)
             return
         # We should have the plist data now
-        self.open_plist(self.current_plist,plist_data)
+        self.open_plist(self.current_plist,plist_data, self.plist_type_string.get())
 
     def walk_kexts(self,path,parent=""):
         kexts = []
@@ -1020,6 +1053,7 @@ class PlistWindow(tk.Toplevel):
             self.clicked_drag = True
 
     def change_data_display(self, new_display = "hex"):
+        self.data_type_string.set(new_display[0].upper()+new_display[1:])
         # This will change how data is displayed - we do this by converting all our existing
         # data values to bytes, then reconverting and displaying appropriately
         if new_display == self.data_display:
@@ -1334,7 +1368,10 @@ class PlistWindow(tk.Toplevel):
         temp = tempfile.mkdtemp()
         temp_file = os.path.join(temp, os.path.basename(path))
         try:
-            if not self.xcode_data:
+            if self.plist_type_string.get().lower() == "binary":
+                with open(temp_file,"wb") as f:
+                    plist.dump(plist_data,f,sort_keys=self.sort_dict,fmt=plist.FMT_BINARY)
+            elif not self.xcode_data:
                 with open(temp_file,"wb") as f:
                     plist.dump(plist_data,f,sort_keys=self.sort_dict)
             else:
@@ -1396,8 +1433,9 @@ class PlistWindow(tk.Toplevel):
         self.edited = False
         return True
 
-    def open_plist(self, path, plist_data):
+    def open_plist(self, path, plist_data, plist_type = "XML"):
         # Opened it correctly - let's load it, and set our values
+        self.plist_type_string.set(plist_type)
         self._tree.delete(*self._tree.get_children())
         self.add_node(plist_data)
         self.current_plist = path
