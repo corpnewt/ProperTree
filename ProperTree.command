@@ -114,7 +114,8 @@ class ProperTree:
             file_menu.add_command(label="View Data As Hex", command=lambda:self.change_data_display("hex"))
             file_menu.add_command(label="View Data As Base64", command=lambda:self.change_data_display("base64"))
             file_menu.add_separator()
-            file_menu.add_command(label="Toggle Find/Replace Pane",command=self.hide_show_find)
+            file_menu.add_command(label="Toggle Find/Replace Pane ({}F)".format(sign),command=self.hide_show_find)
+            file_menu.add_command(label="Toggle Plist/Data Type Pane ({}P)".format(sign),command=self.hide_show_type)
             file_menu.add_separator()
             file_menu.add_command(label="Quit ({}Q)".format(sign), command=self.quit)
             self.tk.config(menu=main_menu)
@@ -222,6 +223,16 @@ class ProperTree:
         if window == self.tk:
             return
         window.hide_show_find(event)
+
+    def hide_show_type(self, event = None):
+        windows = self.stackorder(self.tk)
+        if not len(windows):
+            # Nothing to do
+            return
+        window = windows[-1] # Get the last item (most recent)
+        if window == self.tk:
+            return
+        window.hide_show_type(event)
 
     def close_window(self, event = None, check_close = True):
         # Remove the default window that comes from it
@@ -405,7 +416,7 @@ class ProperTree:
                 return
         self.open_plist_with_path(event,path,current_window)
 
-    def open_plist_with_path(self, event = None, path = None, current_window = None):
+    def open_plist_with_path(self, event = None, path = None, current_window = None, plist_type = "XML"):
         if path == None:
             # Uh... wut?
             return
@@ -413,6 +424,7 @@ class ProperTree:
         # Let's try to load the plist
         try:
             with open(path,"rb") as f:
+                plist_type = "Binary" if plist._is_binary(f) else "XML"
                 plist_data = plist.load(f,dict_type=dict if self.sort_dict else OrderedDict)
         except Exception as e:
             # Had an issue, throw up a display box
@@ -422,10 +434,10 @@ class ProperTree:
         else:
             # Opened it correctly - let's load it, and set our values
             if current_window:
-                current_window.open_plist(path,plist_data)
+                current_window.open_plist(path,plist_data,plist_type)
             else:
                 # Need to create one first
-                plistwindow.PlistWindow(self, self.tk).open_plist(path,plist_data)
+                plistwindow.PlistWindow(self, self.tk).open_plist(path,plist_data,plist_type)
             return True
 
     def stackorder(self, root):
