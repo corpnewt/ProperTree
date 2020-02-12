@@ -331,9 +331,6 @@ class PlistWindow(tk.Toplevel):
             file_menu.add_command(label="Convert Window ({}T)".format(sign), command=self.controller.show_convert)
             file_menu.add_command(label="Strip Comments ({}M)".format(sign), command=self.strip_comments)
             file_menu.add_separator()
-            file_menu.add_command(label="View Data As Hex", command=lambda:self.change_data_display("hex"))
-            file_menu.add_command(label="View Data As Base64", command=lambda:self.change_data_display("base64"))
-            file_menu.add_separator()
             file_menu.add_command(label="Toggle Find/Replace Pane ({}F)".format(sign),command=self.hide_show_find)
             file_menu.add_command(label="Toggle Plist/Data Type Pane ({}P)".format(sign),command=self.hide_show_type)
             if not str(sys.platform) == "darwin":
