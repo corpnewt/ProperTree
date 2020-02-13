@@ -891,7 +891,11 @@ class PlistWindow(tk.Toplevel):
         if not "Add" in tree_dict["ACPI"] or not isinstance(tree_dict["ACPI"]["Add"],list):
             tree_dict["ACPI"]["Add"] = []
         # Now we walk the existing add values
-        new_acpi = [x for x in os.listdir(oc_acpi) if x.lower().endswith(".aml") and not x.startswith(".")]
+        new_acpi = []
+        for path, subdirs, files in os.walk(oc_acpi):
+            for name in files:
+                if not name.startswith(".") and name.lower().endswith(".aml"):
+                    new_acpi.append(os.path.join(path,name)[len(oc_acpi):].replace("\\", "/").lstrip("/"))
         add = tree_dict["ACPI"]["Add"]
         for aml in new_acpi:
             if aml.lower() in [x.get("Path","").lower() for x in add if isinstance(x,dict)]:
@@ -900,7 +904,7 @@ class PlistWindow(tk.Toplevel):
             # Doesn't exist, add it
             add.append({
                 "Enabled":True,
-                "Comment":aml,
+                "Comment":os.path.basename(aml),
                 "Path":aml
             })
         new_add = []
