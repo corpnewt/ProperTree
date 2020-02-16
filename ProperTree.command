@@ -107,6 +107,7 @@ class ProperTree:
             file_menu.add_command(label="Reload From Disk ({}L)".format(sign), command=self.reload_from_disk)
             file_menu.add_separator()
             file_menu.add_command(label="OC Snapshot ({}R)".format(sign), command=self.oc_snapshot)
+            file_menu.add_command(label="OC Clean Snapshot ({}Shift+R)".format(sign), command=self.oc_clean_snapshot)
             file_menu.add_separator()
             file_menu.add_command(label="Convert Window ({}T)".format(sign), command=self.show_convert)
             file_menu.add_command(label="Strip Comments ({}M)".format(sign), command=self.strip_comments)
@@ -129,6 +130,7 @@ class ProperTree:
         self.tk.bind_all("<{}-Z>".format(key), self.redo)
         self.tk.bind_all("<{}-m>".format(key), self.strip_comments)
         self.tk.bind_all("<{}-r>".format(key), self.oc_snapshot)
+        self.tk.bind_all("<{}-R>".format(key), self.oc_clean_snapshot)
         self.tk.bind_all("<{}-l>".format(key), self.reload_from_disk)
         if not str(sys.platform) == "darwin":
             # Rewrite the default Command-Q command
@@ -201,7 +203,10 @@ class ProperTree:
             return
         window.change_data_display(new_data)
 
-    def oc_snapshot(self, event = None):
+    def oc_clean_snapshot(self, event = None):
+        self.oc_snapshot(event,True)
+
+    def oc_snapshot(self, event = None, clean = False):
         windows = self.stackorder(self.tk)
         if not len(windows):
             # Nothing to do
@@ -209,7 +214,7 @@ class ProperTree:
         window = windows[-1] # Get the last item (most recent)
         if window == self.tk:
             return
-        window.oc_snapshot(event)
+        window.oc_snapshot(event,clean)
 
     def hide_show_find(self, event = None):
         windows = self.stackorder(self.tk)
