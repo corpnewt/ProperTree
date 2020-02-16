@@ -364,8 +364,8 @@ class PlistWindow(tk.Toplevel):
         self.data_type_string.set("Hex")
         pt_label.grid(row=1,column=1,padx=10,pady=(0,5),sticky="w")
         dt_label.grid(row=1,column=3,padx=10,pady=(0,5),sticky="w")
-        self.plist_type_menu.grid(row=1,column=2,padx=10,pady=(0,5),sticky="we")
-        self.data_type_menu.grid(row=1,column=4,padx=10,pady=(0,5),sticky="we")
+        self.plist_type_menu.grid(row=1,column=2,padx=10,pady=10,sticky="we")
+        self.data_type_menu.grid(row=1,column=4,padx=10,pady=10,sticky="we")
         
         # Create our find/replace view
         self.find_frame = tk.Frame(self,height=20)
@@ -1358,15 +1358,12 @@ class PlistWindow(tk.Toplevel):
             path = fd.asksaveasfilename(
                 title="Please select a file name for saving:",
                 defaultextension=".plist",
-                filetypes=[("Plist files", "*.plist")],
                 initialfile=self.get_title(),
                 initialdir=self.get_dir()
                 )
             if not len(path):
                 # User cancelled - no changes
                 return None
-            if not path.lower().endswith(".plist"):
-                path+=".plist"
         # Should have the save path
         plist_data = self.nodes_to_values()
         # Create a temp folder and save there first
