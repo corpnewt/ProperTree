@@ -477,12 +477,16 @@ class PlistWindow(tk.Toplevel):
             value = "True" if value.lower() == "true" else "False"
         return (True,value)
 
-    def draw_frames(self, event=None):
+    def draw_frames(self, event=None, changed=None):
         self.find_frame.pack_forget()
         self.display_frame.pack_forget()
         self._tree_frame.pack_forget()
         if self.show_find_replace:
+            # Add the show_find pane, make the find pane active, and highlight any text
             self.find_frame.pack(side="top",fill="x",padx=10)
+            if changed == "hideshow":
+                self.f_text.focus()
+                self.f_text.selection_range(0, 'end')
         self._tree_frame.pack(fill="both",expand=True)
         if self.show_type:
             self.display_frame.pack(side="bottom",fill="x",padx=10)
@@ -490,12 +494,12 @@ class PlistWindow(tk.Toplevel):
     def hide_show_find(self, event=None):
         # Let's find out if we're set to show
         self.show_find_replace ^= True
-        self.draw_frames(event)
+        self.draw_frames(event,"hideshow")
 
     def hide_show_type(self, event=None):
         # Let's find out if we're set to show
         self.show_type ^= True
-        self.draw_frames(event)
+        self.draw_frames(event,"showtype")
 
     def do_replace(self, node, find, new_text):
         # We can assume that we have a legit match for whatever is passed
