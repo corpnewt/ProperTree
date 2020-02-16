@@ -327,6 +327,7 @@ class PlistWindow(tk.Toplevel):
             file_menu.add_command(label="Reload From Disk ({}L)".format(sign), command=self.reload_from_disk)
             file_menu.add_separator()
             file_menu.add_command(label="OC Snapshot ({}R)".format(sign), command=self.oc_snapshot)
+            file_menu.add_command(label="OC Snapshot ({}Shift+R)".format(sign), command=self.oc_clean_snapshot)
             file_menu.add_separator()
             file_menu.add_command(label="Convert Window ({}T)".format(sign), command=self.controller.show_convert)
             file_menu.add_command(label="Strip Comments ({}M)".format(sign), command=self.strip_comments)
@@ -845,7 +846,10 @@ class PlistWindow(tk.Toplevel):
                 kexts.extend(self.walk_kexts(pdir,(parent+"/"+x if len(parent) else x)+"/Contents/PlugIns"))
         return kexts
 
-    def oc_snapshot(self, event = None):
+    def oc_clean_snapshot(self, event = None):
+        self.oc_snapshot(event,True)
+
+    def oc_snapshot(self, event = None, clean = False):
         oc_folder = fd.askdirectory(title="Select OC Folder:")
         if not len(oc_folder):
             return
@@ -900,8 +904,8 @@ class PlistWindow(tk.Toplevel):
             for name in files:
                 if not name.startswith(".") and name.lower().endswith(".aml"):
                     new_acpi.append(os.path.join(path,name)[len(oc_acpi):].replace("\\", "/").lstrip("/"))
-        add = tree_dict["ACPI"]["Add"]
-        for aml in new_acpi:
+        add = [] if clean else tree_dict["ACPI"]["Add"]
+        for aml in sorted(new_acpi):
             if aml.lower() in [x.get("Path","").lower() for x in add if isinstance(x,dict)]:
                 # Found it - skip
                 continue
@@ -929,8 +933,8 @@ class PlistWindow(tk.Toplevel):
             tree_dict["UEFI"]["Drivers"] = []
         # Now we walk the existing values
         new_efi = [x for x in os.listdir(oc_drivers) if x.lower().endswith(".efi") and not x.startswith(".")]
-        add = tree_dict["UEFI"]["Drivers"]
-        for efi in new_efi:
+        add = [] if clean else tree_dict["UEFI"]["Drivers"]
+        for efi in sorted(new_efi):
             if efi.lower() in [x.lower() for x in add]:
                 # Found it - skip
                 continue
@@ -950,7 +954,7 @@ class PlistWindow(tk.Toplevel):
         if not "Add" in tree_dict["Kernel"] or not isinstance(tree_dict["Kernel"]["Add"],list):
             tree_dict["Kernel"]["Add"] = []
         kext_list = self.walk_kexts(oc_kexts)
-        kexts = tree_dict["Kernel"]["Add"]
+        kexts = [] if clean else tree_dict["Kernel"]["Add"]
         for kext in kext_list:
             if kext["BundlePath"].lower() in [x.get("BundlePath","").lower() for x in kexts if isinstance(x,dict)]:
                 # Already have it, skip
@@ -987,8 +991,8 @@ class PlistWindow(tk.Toplevel):
                             "Enabled":True,
                             "Path":os.path.join(path,name)[len(oc_tools):].replace("\\", "/").lstrip("/") # Strip the /Volumes/EFI/
                         })
-            tools = tree_dict["Misc"]["Tools"]
-            for tool in tools_list:
+            tools = [] if clean else tree_dict["Misc"]["Tools"]
+            for tool in sorted(tools_list):
                 if tool["Path"].lower() in [x.get("Path","").lower() for x in tool if isinstance(x,dict)]:
                     # Already have it, skip
                     continue
