@@ -49,7 +49,7 @@ class ProperTree:
         self.sort_dict_keys = tk.IntVar()
         self.expand_check = tk.Checkbutton(self.settings_window,text="Expand Children When Opening Plist",variable=self.expand_on_open,command=self.expand_command)
         self.xcode_check = tk.Checkbutton(self.settings_window,text="Use Xcode-Style <data> Tags (Inline) in XML Plists",variable=self.use_xcode_data,command=self.xcode_command)
-        self.sort_check = tk.Checkbutton(self.settings_window,text="Ignore Key and List Order",variable=self.sort_dict_keys,command=self.sort_command)
+        self.sort_check = tk.Checkbutton(self.settings_window,text="Ignore Dictionary Key Order",variable=self.sort_dict_keys,command=self.sort_command)
         self.expand_check.grid(row=0,column=0,columnspan=2,sticky="w",padx=10,pady=(10,0))
         self.xcode_check.grid(row=1,column=0,columnspan=2,sticky="w",padx=10)
         self.sort_check.grid(row=2,column=0,columnspan=2,sticky="w",padx=10)
