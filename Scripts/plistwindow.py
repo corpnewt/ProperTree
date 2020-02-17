@@ -220,23 +220,33 @@ class PlistWindow(tk.Toplevel):
         self.drag_undo = None
         self.clicked_drag = False
         self.data_display = "hex" # hex or base64
-        self.xcode_data = self.controller.xcode_data # keep <data>xxxx</data> in one line when true
-        self.sort_dict = self.controller.sort_dict # Preserve key ordering in dictionaries when loading/saving
+        # self.xcode_data = self.controller.xcode_data # keep <data>xxxx</data> in one line when true
+        # self.sort_dict = self.controller.sort_dict # Preserve key ordering in dictionaries when loading/saving
         self.menu_code = u"\u21D5"
         #self.drag_code = u"\u2630"
         self.drag_code = u"\u2261"
 
         # self = tk.Toplevel(self.root)
+        try:
+            w = int(self.controller.settings.get("last_window_width",640))
+            h = int(self.controller.settings.get("last_window_height",480))
+        except:
+            # wut - who be breakin dis?
+            w = 640
+            h = 480
+        # Save the previous states for comparison
+        self.previous_height = h
+        self.previous_width = w
         self.minsize(width=640,height=480)
         self.protocol("WM_DELETE_WINDOW", self.close_window)
-        w = 640
-        h = 480
         # Let's also center the window
         x = self.winfo_screenwidth() // 2 - w // 2
         y = self.winfo_screenheight() // 2 - h // 2
         self.geometry("{}x{}+{}+{}".format(w,h, x, y))
         # Set the title to "Untitled.plist"
         self.title("Untitled.plist")
+        # Let's track resize events
+        self.bind("<Configure>",lambda event,obj=self: self.window_resize(event,obj))
 
         # Set up the options
         self.current_plist = None # None = new
@@ -332,6 +342,8 @@ class PlistWindow(tk.Toplevel):
             file_menu.add_command(label="Convert Window ({}T)".format(sign), command=self.controller.show_convert)
             file_menu.add_command(label="Strip Comments ({}M)".format(sign), command=self.strip_comments)
             file_menu.add_separator()
+            file_menu.add_command(label="Settings ({},)".format(sign),command=self.controller.show_settings)
+            file_menu.add_separator()
             file_menu.add_command(label="Toggle Find/Replace Pane ({}F)".format(sign),command=self.hide_show_find)
             file_menu.add_command(label="Toggle Plist/Data Type Pane ({}P)".format(sign),command=self.hide_show_type)
             if not str(sys.platform) == "darwin":
@@ -411,6 +423,14 @@ class PlistWindow(tk.Toplevel):
         self._tree.pack(side="bottom",fill="both",expand=True)
         self.draw_frames()
         self.entry_popup = None
+
+    def window_resize(self, event=None, obj=None):
+        if not event or not obj: return
+        if self.winfo_height() == self.previous_height and self.winfo_width() == self.previous_width: return
+        self.previous_height = self.winfo_height()
+        self.previous_width = self.winfo_width()
+        self.controller.settings["last_window_width"] = self.previous_width
+        self.controller.settings["last_window_height"] = self.previous_height
 
     def change_plist_type(self, value):
         if not self.edited:
@@ -795,7 +815,7 @@ class PlistWindow(tk.Toplevel):
         # If we got here - we're okay with dumping changes (if any)
         try:
             with open(self.current_plist,"rb") as f:
-                plist_data = plist.load(f,dict_type=dict if self.sort_dict else OrderedDict)
+                plist_data = plist.load(f,dict_type=dict if self.controller.settings.get("sort_dict",True) else OrderedDict)
         except Exception as e:
             # Had an issue, throw up a display box
             self.bell()
@@ -1373,16 +1393,19 @@ class PlistWindow(tk.Toplevel):
         # Create a temp folder and save there first
         temp = tempfile.mkdtemp()
         temp_file = os.path.join(temp, os.path.basename(path))
+        print(self.controller.settings)
+        print(self.controller.settings.get("sort_dict",True))
         try:
             if self.plist_type_string.get().lower() == "binary":
                 with open(temp_file,"wb") as f:
-                    plist.dump(plist_data,f,sort_keys=self.sort_dict,fmt=plist.FMT_BINARY)
-            elif not self.xcode_data:
+                    plist.dump(plist_data,f,sort_keys=self.controller.settings.get("sort_dict",True),fmt=plist.FMT_BINARY)
+            # elif not self.xcode_data:
+            elif not self.controller.settings.get("xcode_data",True):
                 with open(temp_file,"wb") as f:
-                    plist.dump(plist_data,f,sort_keys=self.sort_dict)
+                    plist.dump(plist_data,f,sort_keys=self.controller.settings.get("sort_dict",True))
             else:
                 # Dump to a string first
-                plist_text = plist.dumps(plist_data,sort_keys=self.sort_dict)
+                plist_text = plist.dumps(plist_data,sort_keys=self.controller.settings.get("sort_dict",True))
                 new_plist = []
                 data_tag = ""
                 for x in plist_text.split("\n"):
@@ -1439,7 +1462,7 @@ class PlistWindow(tk.Toplevel):
         self.edited = False
         return True
 
-    def open_plist(self, path, plist_data, plist_type = "XML"):
+    def open_plist(self, path, plist_data, plist_type = "XML",auto_expand=True):
         # Opened it correctly - let's load it, and set our values
         self.plist_type_string.set(plist_type)
         self._tree.delete(*self._tree.get_children())
@@ -1453,6 +1476,11 @@ class PlistWindow(tk.Toplevel):
             self.edited = False
         self.undo_stack = []
         self.redo_stack = []
+        # Close if need be
+        if not auto_expand:
+            self.collapse_all()
+        # Ensure the root is expanded at least
+        self._tree.item(self.get_root_node(),open=True)
         self.alternate_colors()
 
     def close_window(self, event=None):
@@ -1464,7 +1492,7 @@ class PlistWindow(tk.Toplevel):
         windows = self.stackorder(self.root)
         if len(windows) == 1 and windows[0] == self:
             # Last and closing
-            self.root.quit()
+            self.controller.close_window(event,True)
         else:
             self.destroy()
         return True
@@ -1475,7 +1503,7 @@ class PlistWindow(tk.Toplevel):
             # Nothing to copy
             return
         try:
-            clipboard_string = plist.dumps(self.nodes_to_values(node,None),sort_keys=self.sort_dict)
+            clipboard_string = plist.dumps(self.nodes_to_values(node,None),sort_keys=self.controller.settings.get("sort_dict",True))
             # Get just the values
             self.clipboard_clear()
             self.clipboard_append(clipboard_string)
@@ -1484,7 +1512,7 @@ class PlistWindow(tk.Toplevel):
 
     def copy_all(self, event = None):
         try:
-            clipboard_string = plist.dumps(self.nodes_to_values(self.get_root_node(),None),sort_keys=self.sort_dict)
+            clipboard_string = plist.dumps(self.nodes_to_values(self.get_root_node(),None),sort_keys=self.controller.settings.get("sort_dict",True))
             # Get just the values
             self.clipboard_clear()
             self.clipboard_append(clipboard_string)
@@ -1499,12 +1527,12 @@ class PlistWindow(tk.Toplevel):
             clip = ""
         plist_data = None
         try:
-            plist_data = plist.loads(clip,dict_type=dict if self.sort_dict else OrderedDict)
+            plist_data = plist.loads(clip,dict_type=dict if self.controller.settings.get("sort_dict",True) else OrderedDict)
         except:
             # May need the header
             cb = self.plist_header + "\n" + clip + "\n" + self.plist_footer
             try:
-                plist_data = plist.loads(cb,dict_type=dict if self.sort_dict else OrderedDict)
+                plist_data = plist.loads(cb,dict_type=dict if self.controller.settings.get("sort_dict",True) else OrderedDict)
             except Exception as e:
                 # Let's throw an error
                 self.bell()
@@ -1526,7 +1554,7 @@ class PlistWindow(tk.Toplevel):
         t = self.get_check_type(node).lower()
         # Convert data to dict first
         if isinstance(plist_data,list): # Convert to a dict to add
-            new_plist = {} if self.sort_dict else OrderedDict()
+            new_plist = {} if self.controller.settings.get("sort_dict",True) else OrderedDict()
             for i,x in enumerate(plist_data):
                 new_plist[str(i)] = x
             plist_data = new_plist
@@ -1547,7 +1575,7 @@ class PlistWindow(tk.Toplevel):
                 # I guess we're not - let's force it into a dict to be savage
                 plist_data = {"New item":plist_data}
         if isinstance(plist_data,dict):
-            dict_list = list(plist_data.items()) if not self.sort_dict else sorted(list(plist_data.items()))
+            dict_list = list(plist_data.items()) if not self.controller.settings.get("sort_dict",True) else sorted(list(plist_data.items()))
             for (key,val) in dict_list:
                 if t == "dictionary":
                     # create a unique name
@@ -1604,7 +1632,7 @@ class PlistWindow(tk.Toplevel):
 
         if isinstance(value, dict):
             self._tree.item(i, open=True)
-            dict_list = list(value.items()) if not self.sort_dict else sorted(list(value.items()))
+            dict_list = list(value.items()) if not self.controller.settings.get("sort_dict",True) else sorted(list(value.items()))
             for (key,val) in dict_list:
                 self.add_node(val, i, key)
         elif isinstance(value, (list,tuple)):
@@ -1625,7 +1653,7 @@ class PlistWindow(tk.Toplevel):
         check_type = self.get_check_type(node).lower()
         # Iterate value types
         if check_type == "dictionary":
-            value = {} if self.sort_dict else OrderedDict()
+            value = {} if self.controller.settings.get("sort_dict",True) else OrderedDict()
         elif check_type == "array":
             value = []
         elif check_type == "boolean":
@@ -1673,7 +1701,7 @@ class PlistWindow(tk.Toplevel):
                 parent = self.get_root_type()
             else:
                 # Get the type based on our prefs
-                parent = [] if self.get_check_type(p).lower() == "array" else {} if self.sort_dict else OrderedDict()
+                parent = [] if self.get_check_type(p).lower() == "array" else {} if self.controller.settings.get("sort_dict",True) else OrderedDict()
         name = self._tree.item(node,"text")
         value = self.get_value_from_node(node)
         # At this point, we should have the name and value
@@ -2085,7 +2113,10 @@ class PlistWindow(tk.Toplevel):
             self._tree.focus(cell)
         # Build right click menu
         popup_menu = tk.Menu(self, tearoff=0)
-        # self.popup_menu.add_cascade(label="New", menu=new_menu)
+        if self.get_check_type(cell).lower() in ["array","dictionary"]:
+            popup_menu.add_command(label="Expand Children", command=self.expand_children)
+            popup_menu.add_command(label="Collapse Children", command=self.collapse_children)
+            popup_menu.add_separator()
         popup_menu.add_command(label="Expand All", command=self.expand_all)
         popup_menu.add_command(label="Collapse All", command=self.collapse_all)
         popup_menu.add_separator()
@@ -2160,6 +2191,24 @@ class PlistWindow(tk.Toplevel):
     def collapse_all(self):
         # Get all nodes
         nodes = self.iter_nodes(False)
+        for node in nodes:
+            self._tree.item(node,open=False)
+        self.alternate_colors()
+
+    def expand_children(self):
+        # Get all children of the selected node
+        cell = "" if not len(self._tree.selection()) else self._tree.selection()[0]
+        nodes = self.iter_nodes(False, cell)
+        nodes.append(cell)
+        for node in nodes:
+            self._tree.item(node,open=True)
+        self.alternate_colors()
+
+    def collapse_children(self):
+        # Get all children of the selected node
+        cell = "" if not len(self._tree.selection()) else self._tree.selection()[0]
+        nodes = self.iter_nodes(False, cell)
+        nodes.append(cell)
         for node in nodes:
             self._tree.item(node,open=False)
         self.alternate_colors()
@@ -2280,7 +2329,7 @@ class PlistWindow(tk.Toplevel):
         check_type = self.get_check_type(self.get_root_node()).lower()
         # Iterate value types
         if check_type == "dictionary":
-            return {} if self.sort_dict else OrderedDict()
+            return {} if self.controller.settings.get("sort_dict",True) else OrderedDict()
         elif check_type == "array":
             return []
         return None
