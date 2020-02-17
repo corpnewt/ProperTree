@@ -33,7 +33,7 @@ class ProperTree:
         # Create the settings window
         self.settings_window = tk.Toplevel(self.tk)
         self.settings_window.title("ProperTree Settings")
-        w = 350
+        w = 380
         h = 150
         self.settings_window.minsize(width=w,height=h)
         self.settings_window.resizable(True, False)
