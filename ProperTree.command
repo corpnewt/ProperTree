@@ -30,6 +30,37 @@ class ProperTree:
         t_label = tk.Label(self.tk, text="To:")
         t_label.grid(row=1,column=0)
 
+        # Create the settings window
+        self.settings_window = tk.Toplevel(self.tk)
+        self.settings_window.title("ProperTree Settings")
+        w = 350
+        h = 150
+        self.settings_window.minsize(width=w,height=h)
+        self.settings_window.resizable(True, False)
+        self.settings_window.columnconfigure(0,weight=1)
+        self.settings_window.columnconfigure(1,weight=1)
+        # Let's also center the window
+        x = self.settings_window.winfo_screenwidth() // 2 - w // 2
+        y = self.settings_window.winfo_screenheight() // 2 - h // 2
+        self.settings_window.geometry("{}x{}+{}+{}".format(w,h, x, y))
+        # Let's add some checkboxes and stuffs
+        self.expand_on_open = tk.IntVar()
+        self.use_xcode_data = tk.IntVar()
+        self.sort_dict_keys = tk.IntVar()
+        self.expand_check = tk.Checkbutton(self.settings_window,text="Expand Children When Opening Plist",variable=self.expand_on_open,command=self.expand_command)
+        self.xcode_check = tk.Checkbutton(self.settings_window,text="Use Xcode-Style <data> Tags (Inline) in XML Plists",variable=self.use_xcode_data,command=self.xcode_command)
+        self.sort_check = tk.Checkbutton(self.settings_window,text="Ignore Key and List Order",variable=self.sort_dict_keys,command=self.sort_command)
+        self.expand_check.grid(row=0,column=0,columnspan=2,sticky="w",padx=10,pady=(10,0))
+        self.xcode_check.grid(row=1,column=0,columnspan=2,sticky="w",padx=10)
+        self.sort_check.grid(row=2,column=0,columnspan=2,sticky="w",padx=10)
+        self.plist_type_string = tk.StringVar(self.settings_window)
+        self.plist_type_menu = tk.OptionMenu(self.settings_window, self.plist_type_string, "XML","Binary", command=self.change_plist_type)
+        plist_label = tk.Label(self.settings_window,text="Default New Plist Type:")
+        plist_label.grid(row=3,column=0,sticky="w",padx=10)
+        self.plist_type_menu.grid(row=3,column=1,sticky="we",padx=10)
+        reset_settings = tk.Button(self.settings_window,text="Reset To Defaults",command=self.reset_settings)
+        reset_settings.grid(row=4,column=1,sticky="e",padx=10,pady=(0,10))
+
         # Setup the from/to option menus
         f_title = tk.StringVar(self.tk)
         t_title = tk.StringVar(self.tk)
@@ -91,8 +122,12 @@ class ProperTree:
             sign=key+"+"
 
         self.tk.protocol("WM_DELETE_WINDOW", self.close_window)
-        # Close initial window
-        self.close_window(None,False)
+        self.settings_window.protocol("WM_DELETE_WINDOW", self.close_window)
+        # Close initial windows
+        self.tk.withdraw()
+        self.settings_window.withdraw()
+
+        self.default_windows = (self.tk,self.settings_window)
 
         if str(sys.platform) == "darwin":
             # Setup the top level menu
@@ -115,11 +150,14 @@ class ProperTree:
             file_menu.add_command(label="Toggle Find/Replace Pane ({}F)".format(sign),command=self.hide_show_find)
             file_menu.add_command(label="Toggle Plist/Data Type Pane ({}P)".format(sign),command=self.hide_show_type)
             file_menu.add_separator()
+            file_menu.add_command(label="Settings ({},)".format(sign),command=self.show_settings)
+            file_menu.add_separator()
             file_menu.add_command(label="Quit ({}Q)".format(sign), command=self.quit)
             self.tk.config(menu=main_menu)
 
         # Set bindings
         self.tk.bind("<{}-w>".format(key), self.close_window)
+        self.settings_window.bind("<{}-w>".format(key), self.close_window)
         self.tk.bind_all("<{}-n>".format(key), self.new_plist)
         self.tk.bind_all("<{}-o>".format(key), self.open_plist)
         self.tk.bind_all("<{}-s>".format(key), self.save_plist)
@@ -132,28 +170,65 @@ class ProperTree:
         self.tk.bind_all("<{}-r>".format(key), self.oc_snapshot)
         self.tk.bind_all("<{}-R>".format(key), self.oc_clean_snapshot)
         self.tk.bind_all("<{}-l>".format(key), self.reload_from_disk)
+        self.tk.bind_all("<{}-,>".format(key), self.show_settings)
         if not str(sys.platform) == "darwin":
             # Rewrite the default Command-Q command
             self.tk.bind_all("<{}-q>".format(key), self.quit)
         
         cwd = os.getcwd()
         os.chdir(os.path.dirname(os.path.realpath(__file__)))
-        settings = {}
+        #
+        # Load the settings - current available settings are:
+        # 
+        # last_window_width:         width value (default is 640)
+        # last_window_height:        height value (default is 480)
+        # expand_all_items_on_open:  bool
+        # sort_dict:                 bool, true = OrderedDict
+        # xcode_data:                bool, true = <data>XXXX</data>, false = different lines
+        # new_plist_default_type:    string, XML/Binary
+        #
+        self.settings = {}
         try:
             if os.path.exists("Scripts/settings.json"):
-                settings = json.load(open("Scripts/settings.json"))
+                self.settings = json.load(open("Scripts/settings.json"))
         except:
             pass
-        self.xcode_data = settings.get("xcode_data",True) # keep <data>xxxx</data> in one line when true
-        self.sort_dict = settings.get("sort_dict",False) # Preserve key ordering in dictionaries when loading/saving
         os.chdir(cwd)
 
+        # Setup the settings page to reflect our settings.json file
+
+        self.allowed_types = ("XML","Binary")
+        self.update_settings()
+        
         # Wait before opening a new document to see if we need to.
         # This was annoying to debug, but seems to work.
         self.tk.after(100, lambda:self.check_open(plists))
 
         # Start our run loop
         tk.mainloop()
+
+    def expand_command(self, event = None):
+        self.settings["expand_all_items_on_open"] = True if self.expand_on_open.get() else False
+
+    def xcode_command(self, event = None):
+        self.settings["xcode_data"] = True if self.use_xcode_data.get() else False
+
+    def sort_command(self, event = None):
+        self.settings["sort_dict"] = True if self.sort_dict_keys.get() else False
+
+    def change_plist_type(self, event = None):
+        self.settings["new_plist_default_type"] = self.plist_type_string.get()
+
+    def reset_settings(self, event = None):
+        self.settings = {}
+        self.update_settings()
+
+    def update_settings(self):
+        self.expand_on_open.set(self.settings.get("expand_all_items_on_open",True))
+        self.use_xcode_data.set(self.settings.get("xcode_data",True))
+        self.sort_dict_keys.set(self.settings.get("sort_dict",False))
+        def_type = self.settings.get("new_plist_default_type","XML")
+        self.plist_type_string.set(def_type if def_type in self.allowed_types else self.allowed_types[0])
 
     def check_open(self, plists = []):
         plists = [x for x in plists if not self.regexp.search(x)]
@@ -189,7 +264,7 @@ class ProperTree:
             # Nothing to do
             return
         window = windows[-1] # Get the last item (most recent)
-        if window == self.tk:
+        if window in self.default_windows:
             return
         window.reload_from_disk(event)
 
@@ -199,7 +274,7 @@ class ProperTree:
             # Nothing to do
             return
         window = windows[-1] # Get the last item (most recent)
-        if window == self.tk:
+        if window in self.default_windows:
             return
         window.change_data_display(new_data)
 
@@ -212,7 +287,7 @@ class ProperTree:
             # Nothing to do
             return
         window = windows[-1] # Get the last item (most recent)
-        if window == self.tk:
+        if window in self.default_windows:
             return
         window.oc_snapshot(event,clean)
 
@@ -222,7 +297,7 @@ class ProperTree:
             # Nothing to do
             return
         window = windows[-1] # Get the last item (most recent)
-        if window == self.tk:
+        if window in self.default_windows:
             return
         window.hide_show_find(event)
 
@@ -232,21 +307,19 @@ class ProperTree:
             # Nothing to do
             return
         window = windows[-1] # Get the last item (most recent)
-        if window == self.tk:
+        if window in self.default_windows:
             return
         window.hide_show_type(event)
 
     def close_window(self, event = None, check_close = True):
         # Remove the default window that comes from it
-        #if str(sys.platform) == "darwin":
-        #    self.tk.iconify()
-        #else:
-        self.tk.withdraw()
-        if check_close:
-            windows = self.stackorder(self.tk)
-            if not len(windows):
-                # Quit if all windows are closed
-                self.quit()
+        windows = self.stackorder(self.tk)
+        if len(windows):
+            windows[-1].withdraw()
+            windows = windows[:-1]
+        if check_close and not len(windows):
+            # Quit if all windows are closed
+            self.quit()
 
     def strip_comments(self, event = None):
         windows = self.stackorder(self.tk)
@@ -254,7 +327,7 @@ class ProperTree:
             # Nothing to do
             return
         window = windows[-1] # Get the last item (most recent)
-        if window == self.tk:
+        if window in self.default_windows:
             return
         window.strip_comments(event)
 
@@ -264,6 +337,9 @@ class ProperTree:
 
     def change_from_type(self, value):
         self.from_type = value
+
+    def show_settings(self, event = None):
+        self.settings_window.deiconify()
 
     def show_convert(self, event = None):
         self.tk.deiconify()
@@ -329,7 +405,7 @@ class ProperTree:
             # Nothing to do
             return
         window = windows[-1] # Get the last item (most recent)
-        if window == self.tk:
+        if window in self.default_windows:
             return
         plist_data = window.nodes_to_values()
         plistwindow.PlistWindow(self, self.tk).open_plist(None,plist_data)
@@ -340,7 +416,7 @@ class ProperTree:
             # Nothing to do
             return
         window = windows[-1] # Get the last item (most recent)
-        if window == self.tk:
+        if window in self.default_windows:
             return
         window.save_plist(event)
     
@@ -350,7 +426,7 @@ class ProperTree:
             # Nothing to do
             return
         window = windows[-1] # Get the last item (most recent)
-        if window == self.tk:
+        if window in self.default_windows:
             return
         window.save_plist_as(event)
 
@@ -360,7 +436,7 @@ class ProperTree:
             # Nothing to do
             return
         window = windows[-1] # Get the last item (most recent)
-        if window == self.tk:
+        if window in self.default_windows:
             return
         window.reundo(event)
 
@@ -370,7 +446,7 @@ class ProperTree:
             # Nothing to do
             return
         window = windows[-1] # Get the last item (most recent)
-        if window == self.tk:
+        if window in self.default_windows:
             return
         window.reundo(event,False)
     
@@ -389,6 +465,8 @@ class ProperTree:
         window = plistwindow.PlistWindow(self, self.tk)
         window.open_plist(final_title,{}) # Created an empty root
         window.current_plist = None # Ensure it's initialized as new
+        default_type = self.settings.get("new_plist_default_type","XML")
+        window.plist_type_string.set(default_type if default_type in self.allowed_types else self.allowed_types[0])
         window.focus_force()
         window.update()
         return window
@@ -407,7 +485,7 @@ class ProperTree:
             return None
         # Verify that no other window has that file selected already
         for window in windows:
-            if window == self.tk:
+            if window in self.default_windows:
                 continue
             if window.current_plist == path:
                 # found one - just make this focus instead
@@ -427,7 +505,7 @@ class ProperTree:
         try:
             with open(path,"rb") as f:
                 plist_type = "Binary" if plist._is_binary(f) else "XML"
-                plist_data = plist.load(f,dict_type=dict if self.sort_dict else OrderedDict)
+                plist_data = plist.load(f,dict_type=dict if self.settings.get("sort_dict",True) else OrderedDict)
         except Exception as e:
             # Had an issue, throw up a display box
             self.tk.bell()
@@ -436,10 +514,10 @@ class ProperTree:
         else:
             # Opened it correctly - let's load it, and set our values
             if current_window:
-                current_window.open_plist(path,plist_data,plist_type)
+                current_window.open_plist(path,plist_data,plist_type,self.settings.get("expand_all_items_on_open",True))
             else:
                 # Need to create one first
-                plistwindow.PlistWindow(self, self.tk).open_plist(path,plist_data,plist_type)
+                plistwindow.PlistWindow(self, self.tk).open_plist(path,plist_data,plist_type,self.settings.get("expand_all_items_on_open",True))
             return True
 
     def stackorder(self, root):
@@ -452,7 +530,7 @@ class ProperTree:
     def quit(self, event=None):
         # Check if we need to save first, then quit if we didn't cancel
         for window in self.stackorder(self.tk)[::-1]:
-            if window == self.tk:
+            if window in self.default_windows:
                 continue
             if window.check_save() == None:
                 # User cancelled or we failed to save, bail
@@ -460,6 +538,14 @@ class ProperTree:
             window.destroy()
         # Actually quit the tkinter session
         self.tk.destroy()
+        # Attempt to save the settings
+        cwd = os.getcwd()
+        os.chdir(os.path.dirname(os.path.realpath(__file__)))
+        try:
+            json.dump(self.settings,open("Scripts/settings.json","w"),indent=4)
+        except:
+            pass
+        os.chdir(cwd)
 
 if __name__ == '__main__':
     plists = []
