@@ -337,7 +337,7 @@ class PlistWindow(tk.Toplevel):
             file_menu.add_command(label="Reload From Disk ({}L)".format(sign), command=self.reload_from_disk)
             file_menu.add_separator()
             file_menu.add_command(label="OC Snapshot ({}R)".format(sign), command=self.oc_snapshot)
-            file_menu.add_command(label="OC Snapshot ({}Shift+R)".format(sign), command=self.oc_clean_snapshot)
+            file_menu.add_command(label="OC Clean Snapshot ({}Shift+R)".format(sign), command=self.oc_clean_snapshot)
             file_menu.add_separator()
             file_menu.add_command(label="Convert Window ({}T)".format(sign), command=self.controller.show_convert)
             file_menu.add_command(label="Strip Comments ({}M)".format(sign), command=self.strip_comments)
