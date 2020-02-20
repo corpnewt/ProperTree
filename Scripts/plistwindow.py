@@ -1006,6 +1006,7 @@ class PlistWindow(tk.Toplevel):
                         # Save it
                         tools_list.append({
                             "Arguments":"",
+                            "Auxiliary":False,
                             "Name":name,
                             "Comment":name,
                             "Enabled":True,
