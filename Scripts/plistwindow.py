@@ -161,7 +161,6 @@ class EntryPopup(tk.Entry):
                         self.bell()
                         if not mb.askyesno("Invalid Key Name","That key name already exists in that dict.\n\nWould you like to keep editing?",parent=self.parent):
                             self.destroy()
-                        # print("Key names must be unique!\a")
                     return
             # Add to undo stack
             self.master.add_undo({"type":"edit","cell":self.cell,"text":self.parent.item(self.cell,"text"),"values":self.parent.item(self.cell,"values")})
@@ -1394,8 +1393,6 @@ class PlistWindow(tk.Toplevel):
         # Create a temp folder and save there first
         temp = tempfile.mkdtemp()
         temp_file = os.path.join(temp, os.path.basename(path))
-        print(self.controller.settings)
-        print(self.controller.settings.get("sort_dict",True))
         try:
             if self.plist_type_string.get().lower() == "binary":
                 with open(temp_file,"wb") as f:
@@ -1565,7 +1562,6 @@ class PlistWindow(tk.Toplevel):
             if node == self.get_root_node() and self.get_root_type() == None:
                 # Update the cell to reflect what's going on
                 add_list.append({"type":"edit","cell":node,"text":self._tree.item(node,"text"),"values":self._tree.item(node,"values")})
-                print(add_list)
                 if self.is_data(plist_data):
                     self._tree.item(node, values=(self.get_type(plist_data),self.get_data(plist_data),"",))
                 elif isinstance(plist_data, datetime.datetime):
