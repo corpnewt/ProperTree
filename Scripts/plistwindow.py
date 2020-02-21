@@ -925,7 +925,7 @@ class PlistWindow(tk.Toplevel):
                 if not name.startswith(".") and name.lower().endswith(".aml"):
                     new_acpi.append(os.path.join(path,name)[len(oc_acpi):].replace("\\", "/").lstrip("/"))
         add = [] if clean else tree_dict["ACPI"]["Add"]
-        for aml in sorted(new_acpi):
+        for aml in sorted(new_acpi,key=lambda x:x.lower()):
             if aml.lower() in [x.get("Path","").lower() for x in add if isinstance(x,dict)]:
                 # Found it - skip
                 continue
@@ -954,7 +954,7 @@ class PlistWindow(tk.Toplevel):
         # Now we walk the existing values
         new_efi = [x for x in os.listdir(oc_drivers) if x.lower().endswith(".efi") and not x.startswith(".")]
         add = [] if clean else tree_dict["UEFI"]["Drivers"]
-        for efi in sorted(new_efi):
+        for efi in sorted(new_efi,key=lambda x:x.lower()):
             if efi.lower() in [x.lower() for x in add]:
                 # Found it - skip
                 continue
@@ -1013,7 +1013,7 @@ class PlistWindow(tk.Toplevel):
                             "Path":os.path.join(path,name)[len(oc_tools):].replace("\\", "/").lstrip("/") # Strip the /Volumes/EFI/
                         })
             tools = [] if clean else tree_dict["Misc"]["Tools"]
-            for tool in sorted(tools_list):
+            for tool in sorted(tools_list, key=lambda x: x.get("Path","").lower()):
                 if tool["Path"].lower() in [x.get("Path","").lower() for x in tool if isinstance(x,dict)]:
                     # Already have it, skip
                     continue
