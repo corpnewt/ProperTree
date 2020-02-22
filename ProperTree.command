@@ -170,7 +170,7 @@ class ProperTree:
         self.tk.bind_all("<{}-r>".format(key), self.oc_snapshot)
         self.tk.bind_all("<{}-R>".format(key), self.oc_clean_snapshot)
         self.tk.bind_all("<{}-l>".format(key), self.reload_from_disk)
-        self.tk.bind_all("<{}-,>".format(key), self.show_settings)
+        self.tk.bind_all("<{}-comma>".format(key), self.show_settings)
         if not str(sys.platform) == "darwin":
             # Rewrite the default Command-Q command
             self.tk.bind_all("<{}-q>".format(key), self.quit)
