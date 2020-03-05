@@ -183,7 +183,7 @@ class ProperTree:
         # last_window_width:         width value (default is 640)
         # last_window_height:        height value (default is 480)
         # expand_all_items_on_open:  bool
-        # sort_dict:                 bool, true = OrderedDict
+        # sort_dict:                 bool, false = OrderedDict
         # xcode_data:                bool, true = <data>XXXX</data>, false = different lines
         # new_plist_default_type:    string, XML/Binary
         #
@@ -505,7 +505,7 @@ class ProperTree:
         try:
             with open(path,"rb") as f:
                 plist_type = "Binary" if plist._is_binary(f) else "XML"
-                plist_data = plist.load(f,dict_type=dict if self.settings.get("sort_dict",True) else OrderedDict)
+                plist_data = plist.load(f,dict_type=dict if self.settings.get("sort_dict",False) else OrderedDict)
         except Exception as e:
             # Had an issue, throw up a display box
             self.tk.bell()
