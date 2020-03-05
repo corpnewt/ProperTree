@@ -814,7 +814,7 @@ class PlistWindow(tk.Toplevel):
         # If we got here - we're okay with dumping changes (if any)
         try:
             with open(self.current_plist,"rb") as f:
-                plist_data = plist.load(f,dict_type=dict if self.controller.settings.get("sort_dict",True) else OrderedDict)
+                plist_data = plist.load(f,dict_type=dict if self.controller.settings.get("sort_dict",False) else OrderedDict)
         except Exception as e:
             # Had an issue, throw up a display box
             self.bell()
@@ -1396,14 +1396,14 @@ class PlistWindow(tk.Toplevel):
         try:
             if self.plist_type_string.get().lower() == "binary":
                 with open(temp_file,"wb") as f:
-                    plist.dump(plist_data,f,sort_keys=self.controller.settings.get("sort_dict",True),fmt=plist.FMT_BINARY)
+                    plist.dump(plist_data,f,sort_keys=self.controller.settings.get("sort_dict",False),fmt=plist.FMT_BINARY)
             # elif not self.xcode_data:
             elif not self.controller.settings.get("xcode_data",True):
                 with open(temp_file,"wb") as f:
-                    plist.dump(plist_data,f,sort_keys=self.controller.settings.get("sort_dict",True))
+                    plist.dump(plist_data,f,sort_keys=self.controller.settings.get("sort_dict",False))
             else:
                 # Dump to a string first
-                plist_text = plist.dumps(plist_data,sort_keys=self.controller.settings.get("sort_dict",True))
+                plist_text = plist.dumps(plist_data,sort_keys=self.controller.settings.get("sort_dict",False))
                 new_plist = []
                 data_tag = ""
                 for x in plist_text.split("\n"):
@@ -1501,7 +1501,7 @@ class PlistWindow(tk.Toplevel):
             # Nothing to copy
             return
         try:
-            clipboard_string = plist.dumps(self.nodes_to_values(node,None),sort_keys=self.controller.settings.get("sort_dict",True))
+            clipboard_string = plist.dumps(self.nodes_to_values(node,None),sort_keys=self.controller.settings.get("sort_dict",False))
             # Get just the values
             self.clipboard_clear()
             self.clipboard_append(clipboard_string)
@@ -1510,7 +1510,7 @@ class PlistWindow(tk.Toplevel):
 
     def copy_all(self, event = None):
         try:
-            clipboard_string = plist.dumps(self.nodes_to_values(self.get_root_node(),None),sort_keys=self.controller.settings.get("sort_dict",True))
+            clipboard_string = plist.dumps(self.nodes_to_values(self.get_root_node(),None),sort_keys=self.controller.settings.get("sort_dict",False))
             # Get just the values
             self.clipboard_clear()
             self.clipboard_append(clipboard_string)
@@ -1525,12 +1525,12 @@ class PlistWindow(tk.Toplevel):
             clip = ""
         plist_data = None
         try:
-            plist_data = plist.loads(clip,dict_type=dict if self.controller.settings.get("sort_dict",True) else OrderedDict)
+            plist_data = plist.loads(clip,dict_type=dict if self.controller.settings.get("sort_dict",False) else OrderedDict)
         except:
             # May need the header
             cb = self.plist_header + "\n" + clip + "\n" + self.plist_footer
             try:
-                plist_data = plist.loads(cb,dict_type=dict if self.controller.settings.get("sort_dict",True) else OrderedDict)
+                plist_data = plist.loads(cb,dict_type=dict if self.controller.settings.get("sort_dict",False) else OrderedDict)
             except Exception as e:
                 # Let's throw an error
                 self.bell()
@@ -1552,7 +1552,7 @@ class PlistWindow(tk.Toplevel):
         t = self.get_check_type(node).lower()
         # Convert data to dict first
         if isinstance(plist_data,list): # Convert to a dict to add
-            new_plist = {} if self.controller.settings.get("sort_dict",True) else OrderedDict()
+            new_plist = {} if self.controller.settings.get("sort_dict",False) else OrderedDict()
             for i,x in enumerate(plist_data):
                 new_plist[str(i)] = x
             plist_data = new_plist
@@ -1572,7 +1572,7 @@ class PlistWindow(tk.Toplevel):
                 # I guess we're not - let's force it into a dict to be savage
                 plist_data = {"New item":plist_data}
         if isinstance(plist_data,dict):
-            dict_list = list(plist_data.items()) if not self.controller.settings.get("sort_dict",True) else sorted(list(plist_data.items()))
+            dict_list = list(plist_data.items()) if not self.controller.settings.get("sort_dict",False) else sorted(list(plist_data.items()))
             for (key,val) in dict_list:
                 if t == "dictionary":
                     # create a unique name
@@ -1629,7 +1629,7 @@ class PlistWindow(tk.Toplevel):
 
         if isinstance(value, dict):
             self._tree.item(i, open=True)
-            dict_list = list(value.items()) if not self.controller.settings.get("sort_dict",True) else sorted(list(value.items()))
+            dict_list = list(value.items()) if not self.controller.settings.get("sort_dict",False) else sorted(list(value.items()))
             for (key,val) in dict_list:
                 self.add_node(val, i, key)
         elif isinstance(value, (list,tuple)):
@@ -1650,7 +1650,7 @@ class PlistWindow(tk.Toplevel):
         check_type = self.get_check_type(node).lower()
         # Iterate value types
         if check_type == "dictionary":
-            value = {} if self.controller.settings.get("sort_dict",True) else OrderedDict()
+            value = {} if self.controller.settings.get("sort_dict",False) else OrderedDict()
         elif check_type == "array":
             value = []
         elif check_type == "boolean":
@@ -1698,7 +1698,7 @@ class PlistWindow(tk.Toplevel):
                 parent = self.get_root_type()
             else:
                 # Get the type based on our prefs
-                parent = [] if self.get_check_type(p).lower() == "array" else {} if self.controller.settings.get("sort_dict",True) else OrderedDict()
+                parent = [] if self.get_check_type(p).lower() == "array" else {} if self.controller.settings.get("sort_dict",False) else OrderedDict()
         name = self._tree.item(node,"text")
         value = self.get_value_from_node(node)
         # At this point, we should have the name and value
@@ -2326,7 +2326,7 @@ class PlistWindow(tk.Toplevel):
         check_type = self.get_check_type(self.get_root_node()).lower()
         # Iterate value types
         if check_type == "dictionary":
-            return {} if self.controller.settings.get("sort_dict",True) else OrderedDict()
+            return {} if self.controller.settings.get("sort_dict",False) else OrderedDict()
         elif check_type == "array":
             return []
         return None
