@@ -316,6 +316,7 @@ class PlistWindow(tk.Toplevel):
         self._tree.bind("=", self.new_row)
         self._tree.bind("+", self.new_row)
         self._tree.bind("-", self.remove_row)
+        self._tree.bind("<Delete>", self.remove_row)
         self._tree.bind("<Return>", self.start_editing)
         self._tree.bind("<KP_Enter>", self.start_editing)
         self._tree.bind("<Escape>", self.deselect)
