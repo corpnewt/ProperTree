@@ -26,15 +26,17 @@ cd ..\
 set "path=%cd%"
 popd
 echo Checking if ProperTree.bat exists in registry...
-reg query "HKCR\Applications\ProperTree.bat" > nul 2>&1
-if not "%errorlevel%"=="0" (
+reg query "HKCR\Applications\ProperTree.bat" 2> nul
+if "%errorlevel%"=="0" (
     echo  - Already exists.  Removing...
-    reg delete "HKCR\Applications\ProperTree.bat" /f > nul 2>&1
-    reg delete "HKCR\.plist_auto_file" /f > nul 2>&1
-    reg delete "HKCR\.plist" /f > nul 2>&1
-    reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\ApplicationAssociationToasts" /v "Applications\ProperTree.bat_.plist" /f > nul 2>&1
+    echo.
+    reg delete "HKCR\Applications\ProperTree.bat" /f 2> nul
+    reg delete "HKCR\.plist_auto_file" /f 2> nul
+    reg delete "HKCR\.plist" /f 2> nul
+    reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\ApplicationAssociationToasts" /v "Applications\ProperTree.bat_.plist" /f 2> nul
 )
 set arg=\"%path%\ProperTree.bat\" \"%%1\"
+echo.
 echo Adding registry values...
 echo.
 reg add "HKCR\Applications\ProperTree.bat\shell\Open" /t REG_SZ /d "Open with ProperTree" /f
