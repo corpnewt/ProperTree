@@ -846,6 +846,7 @@ class PlistWindow(tk.Toplevel):
                 "BundlePath":parent+"/"+x if len(parent) else x,
                 "ExecutablePath":""
             }
+            kinfo = {}
             # Should be valid-ish - let's check for a binary
             binpath = os.path.join(kdir,"Contents","MacOS",os.path.splitext(x)[0])
             if os.path.exists(binpath):
@@ -853,13 +854,19 @@ class PlistWindow(tk.Toplevel):
             # Get the Info.plist
             if os.path.exists(os.path.join(kdir,"Contents","Info.plist")):
                 kdict["PlistPath"] = "Contents/Info.plist"
+                try:
+                    with open(os.path.join(kdir,"Contents","Info.plist"),"rb") as f:
+                        info_plist = plist.load(f)
+                    kinfo["CFBundleIdentifier"] = info_plist.get("CFBundleIdentifier",None)
+                    kinfo["OSBundleLibraries"] = info_plist.get("OSBundleLibraries",[])
+                except: pass
             elif os.path.exists(os.path.join(kdir,"Info.plist")):
                 kdict["PlistPath"] = "Info.plist"
             if not kdict.get("PlistPath"):
                 # We have at least an Info.plist
                 continue
             # Should have something here
-            kexts.append(kdict)
+            kexts.append((kdict,kinfo))
             # Check if we have a PlugIns folder
             pdir = kdir+"/Contents/PlugIns"
             if os.path.exists(pdir) and os.path.isdir(pdir):
@@ -975,7 +982,8 @@ class PlistWindow(tk.Toplevel):
             tree_dict["Kernel"]["Add"] = []
         kext_list = self.walk_kexts(oc_kexts)
         kexts = [] if clean else tree_dict["Kernel"]["Add"]
-        for kext in kext_list:
+        original_kexts = [x for x in kexts] # get the original load order for comparison purposes
+        for kext,info in kext_list:
             if kext["BundlePath"].lower() in [x.get("BundlePath","").lower() for x in kexts if isinstance(x,dict)]:
                 # Already have it, skip
                 continue
@@ -986,11 +994,47 @@ class PlistWindow(tk.Toplevel):
             if not isinstance(kext,dict):
                 # Not a dict - skip it
                 continue
-            if not kext.get("BundlePath","").lower() in [x["BundlePath"].lower() for x in kext_list]:
+            if not kext.get("BundlePath","").lower() in [x[0]["BundlePath"].lower() for x in kext_list]:
                 # Not there, skip it
                 continue
             new_kexts.append(kext)
-        tree_dict["Kernel"]["Add"] = new_kexts
+        # Let's check inheritance via the info
+        # We need to ensure that no 2 kexts consider each other as parents
+        unordered_kexts = []
+        for x in new_kexts:
+            x = next((y for y in kext_list if y[0].get("BundlePath","") == x.get("BundlePath","")),None)
+            if not x: continue
+            parents = [next((z for z in new_kexts if z.get("BundlePath","") == y[0].get("BundlePath","")),[]) for y in kext_list if y[1].get("CFBundleIdentifier",None) in x[1].get("OSBundleLibraries",[])]
+            children = [next((z for z in new_kexts if z.get("BundlePath","") == y[0].get("BundlePath","")),[]) for y in kext_list if x[1].get("CFBundleIdentifier",None) in y[1].get("OSBundleLibraries",[])]
+            parents = [y for y in parents if not y in children and not y.get("BundlePath","") == x[0].get("BundlePath","")]
+            unordered_kexts.append({
+                "kext":x[0],
+                "parents":parents
+            })
+        ordered_kexts = []
+        while len(unordered_kexts): # This could be dangerous if things aren't properly prepared above
+            kext = unordered_kexts.pop(0)
+            if len(kext["parents"]) and not all(x in ordered_kexts for x in kext["parents"]):
+                unordered_kexts.append(kext)
+                continue
+            ordered_kexts.append(next(x for x in new_kexts if x.get("BundlePath","") == kext["kext"].get("BundlePath","")))
+        # Let's compare against the original load order - to prevent mis-prompting
+        missing_kexts = [x for x in ordered_kexts if not x in original_kexts]
+        original_kexts.extend(missing_kexts)
+        # Let's walk both lists and gather all kexts that are in different spots
+        rearranged = []
+        while True:
+            check1 = [x.get("BundlePath","") for x in ordered_kexts if not x.get("BundlePath","") in rearranged]
+            check2 = [x.get("BundlePath","") for x in original_kexts if not x.get("BundlePath","") in rearranged]
+            out_of_place = next((x for x in range(len(check1)) if check1[x] != check2[x]),None)
+            if out_of_place == None: break
+            rearranged.append(check2[out_of_place])
+        # Verify if the load order changed - and prompt the user if need be
+        if len(rearranged):
+            if not mb.askyesno("Incorrect Kext Load Order","Correct the following kext load inheritance issues?\n\n{}".format("\n".join(rearranged)),parent=self):
+                ordered_kexts = original_kexts # We didn't want to update it
+
+        tree_dict["Kernel"]["Add"] = ordered_kexts
 
         # Let's walk the Tools folder if it exists
         if not "Misc" in tree_dict or not isinstance(tree_dict["Misc"],dict):
