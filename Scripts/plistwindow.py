@@ -981,8 +981,9 @@ class PlistWindow(tk.Toplevel):
         if not "Add" in tree_dict["Kernel"] or not isinstance(tree_dict["Kernel"]["Add"],list):
             tree_dict["Kernel"]["Add"] = []
         kext_list = self.walk_kexts(oc_kexts)
+        bundle_list = [x[0].get("BundlePath","") for x in kext_list]
         kexts = [] if clean else tree_dict["Kernel"]["Add"]
-        original_kexts = [x for x in kexts] # get the original load order for comparison purposes
+        original_kexts = [x for x in kexts if x.get("BundlePath","") in bundle_list] # get the original load order for comparison purposes - but omit any that no longer exist
         for kext,info in kext_list:
             if kext["BundlePath"].lower() in [x.get("BundlePath","").lower() for x in kexts if isinstance(x,dict)]:
                 # Already have it, skip
