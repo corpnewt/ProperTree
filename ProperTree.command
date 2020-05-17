@@ -483,6 +483,7 @@ class ProperTree:
         if not len(path):
             # User cancelled - bail
             return None
+        path = os.path.realpath(os.path.expanduser(path))
         # Verify that no other window has that file selected already
         for window in windows:
             if window in self.default_windows:
@@ -511,14 +512,16 @@ class ProperTree:
             self.tk.bell()
             mb.showerror("An Error Occurred While Opening {}".format(os.path.basename(path)), str(e),parent=current_window)
             return None
+        # Opened it correctly - let's load it, and set our values
+        if current_window:
+            current_window.open_plist(path,plist_data,plist_type,self.settings.get("expand_all_items_on_open",True))
         else:
-            # Opened it correctly - let's load it, and set our values
-            if current_window:
-                current_window.open_plist(path,plist_data,plist_type,self.settings.get("expand_all_items_on_open",True))
-            else:
-                # Need to create one first
-                plistwindow.PlistWindow(self, self.tk).open_plist(path,plist_data,plist_type,self.settings.get("expand_all_items_on_open",True))
-            return True
+            # Need to create one first
+            current_window = plistwindow.PlistWindow(self, self.tk)
+            current_window.open_plist(path,plist_data,plist_type,self.settings.get("expand_all_items_on_open",True))
+        current_window.focus_force()
+        current_window.update()
+        return True
 
     def stackorder(self, root):
         """return a list of root and toplevel windows in stacking order (topmost is last)"""
