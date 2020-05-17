@@ -1554,6 +1554,25 @@ class PlistWindow(tk.Toplevel):
         except:
             pass
 
+    def copy_children(self, event = None):
+        node = self._tree.focus()
+        if node == "":
+            # Nothing to copy
+            return
+        try:
+            plist_data = self.nodes_to_values(node,None)
+            if isinstance(plist_data,dict) and len(plist_data):
+                # Set it to the first key's value
+                plist_data = plist_data[list(plist_data)[0]]
+            elif isinstance(plist_data,list) and len(plist_data):
+                # Set it to the first item of the array
+                plist_data = plist_data[0]
+            clipboard_string = plist.dumps(plist_data,sort_keys=self.controller.settings.get("sort_dict",False))
+            self.clipboard_clear()
+            self.clipboard_append(clipboard_string)
+        except:
+            pass
+
     def copy_all(self, event = None):
         try:
             clipboard_string = plist.dumps(self.nodes_to_values(self.get_root_node(),None),sort_keys=self.controller.settings.get("sort_dict",False))
@@ -2157,6 +2176,9 @@ class PlistWindow(tk.Toplevel):
         # Build right click menu
         popup_menu = tk.Menu(self, tearoff=0)
         if self.get_check_type(cell).lower() in ["array","dictionary"]:
+            popup_menu.add_command(label="Expand Node", command=self.expand_node)
+            popup_menu.add_command(label="Collapse Node", command=self.collapse_node)
+            popup_menu.add_separator()
             popup_menu.add_command(label="Expand Children", command=self.expand_children)
             popup_menu.add_command(label="Collapse Children", command=self.collapse_children)
             popup_menu.add_separator()
@@ -2183,6 +2205,8 @@ class PlistWindow(tk.Toplevel):
         try: p_state = "normal" if len(self.root.clipboard_get()) else "disabled"
         except: p_state = "disabled" # Invalid clipboard content
         popup_menu.add_command(label="Copy ({}+C)".format(sign),command=self.copy_selection,state=c_state)
+        if not cell in ("",self.get_root_node()) and self.get_check_type(cell).lower() in ["array","dictionary"]:
+            popup_menu.add_command(label="Copy Children", command=self.copy_children,state=c_state)
         popup_menu.add_command(label="Paste ({}+V)".format(sign),command=self.paste_selection,state=p_state)
         
         # Walk through the menu data if it exists
@@ -2224,6 +2248,16 @@ class PlistWindow(tk.Toplevel):
         finally:
             popup_menu.grab_release()
 
+    def expand_node(self):
+        # Get selected node
+        cell = "" if not len(self._tree.selection()) else self._tree.selection()[0]
+        self._tree.item(cell,open=True)
+
+    def collapse_node(self):
+        # Get selected node
+        cell = "" if not len(self._tree.selection()) else self._tree.selection()[0]
+        self._tree.item(cell,open=False)
+
     def expand_all(self):
         # Get all nodes
         nodes = self.iter_nodes(False)
@@ -2251,7 +2285,7 @@ class PlistWindow(tk.Toplevel):
         # Get all children of the selected node
         cell = "" if not len(self._tree.selection()) else self._tree.selection()[0]
         nodes = self.iter_nodes(False, cell)
-        nodes.append(cell)
+        # nodes.append(cell)
         for node in nodes:
             self._tree.item(node,open=False)
         self.alternate_colors()
