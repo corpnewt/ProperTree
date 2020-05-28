@@ -26,9 +26,9 @@ class ProperTree:
         self.tk.columnconfigure(3,weight=1)
         # Build the Hex <--> Base64 converter
         f_label = tk.Label(self.tk, text="From:")
-        f_label.grid(row=0,column=0)
+        f_label.grid(row=0,column=0,padx=10,pady=10)
         t_label = tk.Label(self.tk, text="To:")
-        t_label.grid(row=1,column=0)
+        t_label.grid(row=1,column=0,padx=10,pady=10)
 
         # Create the settings window
         self.settings_window = tk.Toplevel(self.tk)
