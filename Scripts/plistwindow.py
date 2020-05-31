@@ -1043,7 +1043,7 @@ class PlistWindow(tk.Toplevel):
         # Let's walk the Tools folder if it exists
         if not "Misc" in tree_dict or not isinstance(tree_dict["Misc"],dict):
             tree_dict["Misc"] = {"Tools":[]}
-        if not "Drivers" in tree_dict["Misc"] or not isinstance(tree_dict["Misc"]["Tools"],list):
+        if not "Tools" in tree_dict["Misc"] or not isinstance(tree_dict["Misc"]["Tools"],list):
             tree_dict["Misc"]["Tools"] = []
         if os.path.exists(oc_tools) and os.path.isdir(oc_tools):
             tools_list = []
@@ -1062,7 +1062,7 @@ class PlistWindow(tk.Toplevel):
                         })
             tools = [] if clean else tree_dict["Misc"]["Tools"]
             for tool in sorted(tools_list, key=lambda x: x.get("Path","").lower()):
-                if tool["Path"].lower() in [x.get("Path","").lower() for x in tool if isinstance(x,dict)]:
+                if tool["Path"].lower() in [x.get("Path","").lower() for x in tools if isinstance(x,dict)]:
                     # Already have it, skip
                     continue
                 # We need it, it seems
