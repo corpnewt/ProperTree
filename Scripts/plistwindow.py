@@ -847,24 +847,27 @@ class PlistWindow(tk.Toplevel):
                 "ExecutablePath":""
             }
             kinfo = {}
-            # Should be valid-ish - let's check for a binary
-            binpath = os.path.join(kdir,"Contents","MacOS",os.path.splitext(x)[0])
-            if os.path.exists(binpath):
-                kdict["ExecutablePath"] = "Contents/MacOS/"+os.path.splitext(x)[0]
             # Get the Info.plist
+            plist_rel_path = plist_full_path = None
             if os.path.exists(os.path.join(kdir,"Contents","Info.plist")):
-                kdict["PlistPath"] = "Contents/Info.plist"
-                try:
-                    with open(os.path.join(kdir,"Contents","Info.plist"),"rb") as f:
-                        info_plist = plist.load(f)
-                    kinfo["CFBundleIdentifier"] = info_plist.get("CFBundleIdentifier",None)
-                    kinfo["OSBundleLibraries"] = info_plist.get("OSBundleLibraries",[])
-                except: pass
+                plist_rel_path  = "Contents/Info.plist"
+                plist_full_path = os.path.join(kdir,"Contents","Info.plist")
             elif os.path.exists(os.path.join(kdir,"Info.plist")):
-                kdict["PlistPath"] = "Info.plist"
-            if not kdict.get("PlistPath"):
-                # We have at least an Info.plist
-                continue
+                plist_rel_path  = "Info.plist"
+                plist_full_path = os.path.join(kdir,"Info.plist")
+            if plist_rel_path == None: continue # Needs *at least* a valid Info.plist
+            kdict["PlistPath"] = plist_rel_path
+            # Let's load the plist and check for other info
+            try:
+                with open(plist_full_path,"rb") as f:
+                    info_plist = plist.load(f)
+                kinfo["CFBundleIdentifier"] = info_plist.get("CFBundleIdentifier",None)
+                kinfo["OSBundleLibraries"] = info_plist.get("OSBundleLibraries",[])
+                if info_plist.get("CFBundleExecutable",None):
+                    if not os.path.exists(os.path.join(kdir,"Contents","MacOS",info_plist["CFBundleExecutable"])):
+                        continue # Requires an executable that doesn't exist - bail
+                    kdict["ExecutablePath"] = "Contents/MacOS/"+info_plist["CFBundleExecutable"]
+            except: continue # Something else broke here - bail
             # Should have something here
             kexts.append((kdict,kinfo))
             # Check if we have a PlugIns folder
