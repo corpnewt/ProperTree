@@ -102,3 +102,8 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# py2app/py2exe
+dist
+build
+ProperTree.py
