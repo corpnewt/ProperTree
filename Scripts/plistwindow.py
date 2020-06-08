@@ -2441,5 +2441,11 @@ class PlistWindow(tk.Toplevel):
                 pass
             tags.append("odd" if x % 2 else "even")
             self._tree.item(item, tags=tags)
-        self._tree.tag_configure('odd', background='#E8E8E8')
-        self._tree.tag_configure('even', background='#DFDFDF')
+
+        try:
+            # MacOS colors which change value when Dark Mode is enabled
+            self._tree.tag_configure('odd', background='systemWindowBackgroundColor')
+            self._tree.tag_configure('even', background='systemWindowBackgroundColor1')
+        except:
+            self._tree.tag_configure('odd', background='#E8E8E8')
+            self._tree.tag_configure('even', background='#505050')
