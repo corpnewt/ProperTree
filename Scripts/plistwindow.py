@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys, os, plistlib, base64, binascii, datetime, tempfile, shutil, re, itertools, math
+import sys, os, plistlib, base64, binascii, datetime, tempfile, shutil, re, itertools, math, json
 from collections import OrderedDict
 try:
     # Python 2
@@ -24,6 +24,15 @@ try:
 except NameError:  # Python 3
     long = int
     unicode = str
+
+
+# serializer:
+from json import JSONEncoder
+class MyEncoder(JSONEncoder):
+    def default(self, o):
+        if(isinstance(o,plistlib.Data)):
+            return o.data.encode('hex')
+        return self.default(o)
 
 
 class EntryPopup(tk.Entry):
@@ -1689,7 +1698,8 @@ class PlistWindow(tk.Toplevel):
             children = "1 child" if len(value) == 1 else "{} children".format(len(value))
             values = (self.get_type(value),children,"" if parentNode == "" else self.drag_code)
         elif isinstance(value,dict):
-            children = "1 key/value pair" if len(value) == 1 else "{} key/value pairs".format(len(value))
+        
+            children =  json.dumps(value,cls=MyEncoder)
             values = (self.get_type(value),children,"" if parentNode == "" else self.drag_code)
         else:
             values = (self.get_type(value),value,"" if parentNode == "" else self.drag_code)
