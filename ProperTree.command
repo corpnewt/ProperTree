@@ -356,7 +356,7 @@ class ProperTree:
             from_value = from_value.replace(" ","").replace("<","").replace(">","")
             if [x for x in from_value if x.lower() not in "0123456789abcdef"]:
                 self.tk.bell()
-                mb.showerror("Invalid Hex Data","Invalid character in passed hex data.",parent=self.tk)
+                mb.showerror("Invalid Hex Data","Invalid character in passed hex data.") # ,parent=self.tk)
                 return
         try:
             if self.from_type.lower() == "decimal":
@@ -393,7 +393,7 @@ class ProperTree:
             self.t_text.configure(state='readonly')
         except Exception as e:
             self.tk.bell()
-            mb.showerror("Conversion Error",str(e),parent=self.tk)
+            mb.showerror("Conversion Error",str(e)) # ,parent=self.tk)
 
     ###                       ###
     # Save/Load Plist Functions #
@@ -479,7 +479,7 @@ class ProperTree:
         if len(windows) == 1 and windows[0] == self.start_window and windows[0].edited == False and windows[0].current_plist == None:
             # Fresh window - replace the contents
             current_window = windows[0]
-        path = fd.askopenfilename(title = "Select plist file") #,parent=current_window) # Apparently parent here breaks on 10.15?
+        path = fd.askopenfilename(title = "Select plist file") # ,parent=current_window) # Apparently parent here breaks on 10.15?
         if not len(path):
             # User cancelled - bail
             return None
@@ -493,7 +493,7 @@ class ProperTree:
                 window.focus_force()
                 window.update()
                 window.bell()
-                mb.showerror("File Already Open", "{} is already open here.".format(path), parent=window)
+                mb.showerror("File Already Open", "{} is already open here.".format(path)) # , parent=window)
                 return
         self.open_plist_with_path(event,path,current_window)
 
@@ -510,7 +510,7 @@ class ProperTree:
         except Exception as e:
             # Had an issue, throw up a display box
             self.tk.bell()
-            mb.showerror("An Error Occurred While Opening {}".format(os.path.basename(path)), str(e),parent=current_window)
+            mb.showerror("An Error Occurred While Opening {}".format(os.path.basename(path)), str(e)) # ,parent=current_window)
             return None
         # Opened it correctly - let's load it, and set our values
         if current_window:
