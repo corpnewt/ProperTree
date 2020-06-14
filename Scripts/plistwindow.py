@@ -847,24 +847,27 @@ class PlistWindow(tk.Toplevel):
                 "ExecutablePath":""
             }
             kinfo = {}
-            # Should be valid-ish - let's check for a binary
-            binpath = os.path.join(kdir,"Contents","MacOS",os.path.splitext(x)[0])
-            if os.path.exists(binpath):
-                kdict["ExecutablePath"] = "Contents/MacOS/"+os.path.splitext(x)[0]
             # Get the Info.plist
+            plist_rel_path = plist_full_path = None
             if os.path.exists(os.path.join(kdir,"Contents","Info.plist")):
-                kdict["PlistPath"] = "Contents/Info.plist"
-                try:
-                    with open(os.path.join(kdir,"Contents","Info.plist"),"rb") as f:
-                        info_plist = plist.load(f)
-                    kinfo["CFBundleIdentifier"] = info_plist.get("CFBundleIdentifier",None)
-                    kinfo["OSBundleLibraries"] = info_plist.get("OSBundleLibraries",[])
-                except: pass
+                plist_rel_path  = "Contents/Info.plist"
+                plist_full_path = os.path.join(kdir,"Contents","Info.plist")
             elif os.path.exists(os.path.join(kdir,"Info.plist")):
-                kdict["PlistPath"] = "Info.plist"
-            if not kdict.get("PlistPath"):
-                # We have at least an Info.plist
-                continue
+                plist_rel_path  = "Info.plist"
+                plist_full_path = os.path.join(kdir,"Info.plist")
+            if plist_rel_path == None: continue # Needs *at least* a valid Info.plist
+            kdict["PlistPath"] = plist_rel_path
+            # Let's load the plist and check for other info
+            try:
+                with open(plist_full_path,"rb") as f:
+                    info_plist = plist.load(f)
+                kinfo["CFBundleIdentifier"] = info_plist.get("CFBundleIdentifier",None)
+                kinfo["OSBundleLibraries"] = info_plist.get("OSBundleLibraries",[])
+                if info_plist.get("CFBundleExecutable",None):
+                    if not os.path.exists(os.path.join(kdir,"Contents","MacOS",info_plist["CFBundleExecutable"])):
+                        continue # Requires an executable that doesn't exist - bail
+                    kdict["ExecutablePath"] = "Contents/MacOS/"+info_plist["CFBundleExecutable"]
+            except: continue # Something else broke here - bail
             # Should have something here
             kexts.append((kdict,kinfo))
             # Check if we have a PlugIns folder
@@ -981,8 +984,9 @@ class PlistWindow(tk.Toplevel):
         if not "Add" in tree_dict["Kernel"] or not isinstance(tree_dict["Kernel"]["Add"],list):
             tree_dict["Kernel"]["Add"] = []
         kext_list = self.walk_kexts(oc_kexts)
+        bundle_list = [x[0].get("BundlePath","") for x in kext_list]
         kexts = [] if clean else tree_dict["Kernel"]["Add"]
-        original_kexts = [x for x in kexts] # get the original load order for comparison purposes
+        original_kexts = [x for x in kexts if x.get("BundlePath","") in bundle_list] # get the original load order for comparison purposes - but omit any that no longer exist
         for kext,info in kext_list:
             if kext["BundlePath"].lower() in [x.get("BundlePath","").lower() for x in kexts if isinstance(x,dict)]:
                 # Already have it, skip
@@ -1039,7 +1043,7 @@ class PlistWindow(tk.Toplevel):
         # Let's walk the Tools folder if it exists
         if not "Misc" in tree_dict or not isinstance(tree_dict["Misc"],dict):
             tree_dict["Misc"] = {"Tools":[]}
-        if not "Drivers" in tree_dict["Misc"] or not isinstance(tree_dict["Misc"]["Tools"],list):
+        if not "Tools" in tree_dict["Misc"] or not isinstance(tree_dict["Misc"]["Tools"],list):
             tree_dict["Misc"]["Tools"] = []
         if os.path.exists(oc_tools) and os.path.isdir(oc_tools):
             tools_list = []
@@ -1050,7 +1054,7 @@ class PlistWindow(tk.Toplevel):
                         # Save it
                         tools_list.append({
                             "Arguments":"",
-                            "Auxiliary":False,
+                            "Auxiliary":True,
                             "Name":name,
                             "Comment":name,
                             "Enabled":True,
@@ -1058,7 +1062,7 @@ class PlistWindow(tk.Toplevel):
                         })
             tools = [] if clean else tree_dict["Misc"]["Tools"]
             for tool in sorted(tools_list, key=lambda x: x.get("Path","").lower()):
-                if tool["Path"].lower() in [x.get("Path","").lower() for x in tool if isinstance(x,dict)]:
+                if tool["Path"].lower() in [x.get("Path","").lower() for x in tools if isinstance(x,dict)]:
                     # Already have it, skip
                     continue
                 # We need it, it seems
@@ -1548,6 +1552,25 @@ class PlistWindow(tk.Toplevel):
         try:
             clipboard_string = plist.dumps(self.nodes_to_values(node,None),sort_keys=self.controller.settings.get("sort_dict",False))
             # Get just the values
+            self.clipboard_clear()
+            self.clipboard_append(clipboard_string)
+        except:
+            pass
+
+    def copy_children(self, event = None):
+        node = self._tree.focus()
+        if node == "":
+            # Nothing to copy
+            return
+        try:
+            plist_data = self.nodes_to_values(node,None)
+            if isinstance(plist_data,dict) and len(plist_data):
+                # Set it to the first key's value
+                plist_data = plist_data[list(plist_data)[0]]
+            elif isinstance(plist_data,list) and len(plist_data):
+                # Set it to the first item of the array
+                plist_data = plist_data[0]
+            clipboard_string = plist.dumps(plist_data,sort_keys=self.controller.settings.get("sort_dict",False))
             self.clipboard_clear()
             self.clipboard_append(clipboard_string)
         except:
@@ -2156,6 +2179,9 @@ class PlistWindow(tk.Toplevel):
         # Build right click menu
         popup_menu = tk.Menu(self, tearoff=0)
         if self.get_check_type(cell).lower() in ["array","dictionary"]:
+            popup_menu.add_command(label="Expand Node", command=self.expand_node)
+            popup_menu.add_command(label="Collapse Node", command=self.collapse_node)
+            popup_menu.add_separator()
             popup_menu.add_command(label="Expand Children", command=self.expand_children)
             popup_menu.add_command(label="Collapse Children", command=self.collapse_children)
             popup_menu.add_separator()
@@ -2182,6 +2208,8 @@ class PlistWindow(tk.Toplevel):
         try: p_state = "normal" if len(self.root.clipboard_get()) else "disabled"
         except: p_state = "disabled" # Invalid clipboard content
         popup_menu.add_command(label="Copy ({}+C)".format(sign),command=self.copy_selection,state=c_state)
+        if not cell in ("",self.get_root_node()) and self.get_check_type(cell).lower() in ["array","dictionary"]:
+            popup_menu.add_command(label="Copy Children", command=self.copy_children,state=c_state)
         popup_menu.add_command(label="Paste ({}+V)".format(sign),command=self.paste_selection,state=p_state)
         
         # Walk through the menu data if it exists
@@ -2223,6 +2251,16 @@ class PlistWindow(tk.Toplevel):
         finally:
             popup_menu.grab_release()
 
+    def expand_node(self):
+        # Get selected node
+        cell = "" if not len(self._tree.selection()) else self._tree.selection()[0]
+        self._tree.item(cell,open=True)
+
+    def collapse_node(self):
+        # Get selected node
+        cell = "" if not len(self._tree.selection()) else self._tree.selection()[0]
+        self._tree.item(cell,open=False)
+
     def expand_all(self):
         # Get all nodes
         nodes = self.iter_nodes(False)
@@ -2250,7 +2288,7 @@ class PlistWindow(tk.Toplevel):
         # Get all children of the selected node
         cell = "" if not len(self._tree.selection()) else self._tree.selection()[0]
         nodes = self.iter_nodes(False, cell)
-        nodes.append(cell)
+        # nodes.append(cell)
         for node in nodes:
             self._tree.item(node,open=False)
         self.alternate_colors()

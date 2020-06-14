@@ -45,7 +45,7 @@
 				</dict>
 			</dict>
 		</array>
-		<key>Root/ACPI/Block</key>
+		<key>Root/ACPI/Delete</key>
 		<array>
 			<dict>
 				<key>name</key>
@@ -520,7 +520,7 @@
 			</dict>
 			<dict>
 				<key>name</key>
-				<string>Add BrcmPatchRAM2 kext</string>
+				<string>Add BrcmPatchRAM2 kext (10.11.x-10.14.x)</string>
 				<key>types</key>
 				<string>d/d/a</string>
 				<key>value</key>
@@ -535,6 +535,29 @@
 					<string>Contents/MacOS/BrcmPatchRAM2</string>
 					<key>MinKernel</key>
 					<string></string>
+					<key>MaxKernel</key>
+					<string>18.99.99</string>
+					<key>PlistPath</key>
+					<string>Contents/Info.plist</string>
+				</dict>
+			</dict>
+			<dict>
+				<key>name</key>
+				<string>Add BrcmPatchRAM3 kext (10.15+)</string>
+				<key>types</key>
+				<string>d/d/a</string>
+				<key>value</key>
+				<dict>
+					<key>BundlePath</key>
+					<string>BrcmPatchRAM3.kext</string>
+					<key>Comment</key>
+					<string></string>
+					<key>Enabled</key>
+					<true/>
+					<key>ExecutablePath</key>
+					<string>Contents/MacOS/BrcmPatchRAM3</string>
+					<key>MinKernel</key>
+					<string>19.0.0</string>
 					<key>MaxKernel</key>
 					<string></string>
 					<key>PlistPath</key>
