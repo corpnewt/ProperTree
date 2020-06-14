@@ -45,10 +45,6 @@ git clone https://github.com/corpnewt/ProperTree
 
 ***
 
-# 
-
-***
-
 ## FAQ
 
 * **How can I have ProperTree open when I double-click a .plist file?**
