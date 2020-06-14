@@ -1,5 +1,5 @@
 # ProperTree
-A cross-platform plist editor written in Python3
+A cross-platform plist editor written in Python *(compatible with both 2.x and 3.x)*
 
 ## Get Started
 
@@ -7,7 +7,7 @@ On *nix systems:
 
 ```
 git clone https://github.com/corpnewt/ProperTree
-python3 ./ProperTree/ProperTree.command
+python ./ProperTree/ProperTree.command
 ```
 On Windows:
 
