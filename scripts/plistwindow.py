@@ -31,7 +31,7 @@ class EntryPopup(tk.Entry):
         tk.Entry.__init__(self, parent, **kw)
 
         self.insert(0, text)
-        self.select_all() 
+        self.select_all()
         self['state'] = 'normal'
         self['readonlybackground'] = 'white'
         self['selectbackground'] = '#1BA1E2'
@@ -43,7 +43,7 @@ class EntryPopup(tk.Entry):
         self.master = master
 
         self.focus_force()
-        
+
         if str(sys.platform) == "darwin":
             self.bind("<Command-a>", self.select_all)
             self.bind("<Command-c>", self.copy)
@@ -268,7 +268,7 @@ class PlistWindow(tk.Toplevel):
         self.root_type_menu = tk.Menu(self, tearoff=0)
         self.root_type_menu.add_command(label="Dictionary", command=lambda:self.change_type(self.menu_code + " Dictionary"))
         self.root_type_menu.add_command(label="Array", command=lambda:self.change_type(self.menu_code + " Array"))
-        
+
         # Set up the boolean selection menu
         self.bool_menu = tk.Menu(self, tearoff=0)
         self.bool_menu.add_command(label="True", command=lambda:self.set_bool("True"))
@@ -379,7 +379,7 @@ class PlistWindow(tk.Toplevel):
         dt_label.grid(row=1,column=3,padx=10,pady=(0,5),sticky="w")
         self.plist_type_menu.grid(row=1,column=2,padx=10,pady=10,sticky="we")
         self.data_type_menu.grid(row=1,column=4,padx=10,pady=10,sticky="we")
-        
+
         # Create our find/replace view
         self.find_frame = tk.Frame(self,height=20)
         self.find_frame.columnconfigure(2,weight=1)
@@ -675,7 +675,7 @@ class PlistWindow(tk.Toplevel):
         return False
 
     def find_all(self, text=""):
-        # Builds a list of tuples that list the node, the index of the found entry, and 
+        # Builds a list of tuples that list the node, the index of the found entry, and
         # where it found it name/value (name == 0, value == 1 respectively)
         if text == None or not len(text):
             return []
@@ -789,7 +789,7 @@ class PlistWindow(tk.Toplevel):
             x,y,width,height = self._tree.bbox(node, edit_col)
         except ValueError:
             # Couldn't unpack - bail
-            return    
+            return
         # Create an event
         e = tk.Event
         e.x = x+5
@@ -897,7 +897,7 @@ class PlistWindow(tk.Toplevel):
         #  | +- SomeTool.efi
         #  | +- SomeFolder
         #  | | +- SomeOtherTool.efi
-        
+
         oc_acpi    = os.path.join(oc_folder,"ACPI")
         oc_drivers = os.path.join(oc_folder,"Drivers")
         oc_kexts   = os.path.join(oc_folder,"Kexts")
@@ -2028,7 +2028,7 @@ class PlistWindow(tk.Toplevel):
                 state = 0
         result.append(token)
         return result
-    
+
     def get_cell_path(self, cell = None):
         # Returns the path to the given cell
         # Will clear out array indexes - as those should be ignored
@@ -2046,7 +2046,7 @@ class PlistWindow(tk.Toplevel):
                 path.append(self._tree.item(current_cell,"text").replace("/","\/"))
             else:
                 path.append("*")
-            current_cell = cell            
+            current_cell = cell
         return "/".join(path[::-1])
 
     def merge_menu_preset(self, val = None):
@@ -2211,7 +2211,7 @@ class PlistWindow(tk.Toplevel):
         if not cell in ("",self.get_root_node()) and self.get_check_type(cell).lower() in ["array","dictionary"]:
             popup_menu.add_command(label="Copy Children", command=self.copy_children,state=c_state)
         popup_menu.add_command(label="Paste ({}+V)".format(sign),command=self.paste_selection,state=p_state)
-        
+
         # Walk through the menu data if it exists
         cell_path = self.get_cell_path(cell)
         first_key = True
@@ -2243,7 +2243,7 @@ class PlistWindow(tk.Toplevel):
                 parts = self.split(item)
                 option_menu.add_cascade(label=" -> ".join(parts[1 if parts[0].lower() == "root" and len(parts) > 1 else 0:]),menu=item_menu)
             popup_menu.add_cascade(label=key,menu=option_menu)
-            
+
         try:
             popup_menu.tk_popup(event.x_root, event.y_root, 0)
         except:

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+
 import sys, os, binascii, base64, json, re
 from collections import OrderedDict
 try:
@@ -11,9 +12,15 @@ except:
     import tkinter.ttk as ttk
     from tkinter import filedialog as fd
     from tkinter import messagebox as mb
+
+# This is to make cython happy
+if not hasattr(sys.modules[__name__], '__file__'):
+    __file__ = os.path.dirname(sys.executable)
+
 # Add this script's dir to the local PATH var - may improve import consistency
 sys.path.append(os.path.abspath(os.path.dirname(os.path.realpath(__file__))))
-from Scripts import *
+
+from scripts import *
 
 class ProperTree:
     def __init__(self, plists = []):
@@ -174,12 +181,12 @@ class ProperTree:
         if not str(sys.platform) == "darwin":
             # Rewrite the default Command-Q command
             self.tk.bind_all("<{}-q>".format(key), self.quit)
-        
+
         cwd = os.getcwd()
         os.chdir(os.path.dirname(os.path.realpath(__file__)))
         #
         # Load the settings - current available settings are:
-        # 
+        #
         # last_window_width:         width value (default is 640)
         # last_window_height:        height value (default is 480)
         # expand_all_items_on_open:  bool
@@ -199,7 +206,7 @@ class ProperTree:
 
         self.allowed_types = ("XML","Binary")
         self.update_settings()
-        
+
         # Wait before opening a new document to see if we need to.
         # This was annoying to debug, but seems to work.
         self.tk.after(100, lambda:self.check_open(plists))
@@ -419,7 +426,7 @@ class ProperTree:
         if window in self.default_windows:
             return
         window.save_plist(event)
-    
+
     def save_plist_as(self, event = None):
         windows = self.stackorder(self.tk)
         if not len(windows):
@@ -449,7 +456,7 @@ class ProperTree:
         if window in self.default_windows:
             return
         window.reundo(event,False)
-    
+
     def new_plist(self, event = None):
         # Creates a new plistwindow object
         # Let's try to create a unique name (if Untitled.plist is used, add a number)

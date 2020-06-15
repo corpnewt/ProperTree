@@ -41,31 +41,31 @@ class Utils:
                 os.execv(c, [ sys.executable, 'python'] + sys.argv)
             except:
                 exit(1)
-                
+
     def compare_versions(self, vers1, vers2, **kwargs):
         # Helper method to compare ##.## strings
         #
         # vers1 < vers2 = True
         # vers1 = vers2 = None
         # vers1 > vers2 = False
-        
+
         # Sanitize the pads
         pad = str(kwargs.get("pad", ""))
         sep = str(kwargs.get("separator", "."))
 
         ignore_case = kwargs.get("ignore_case", True)
-        
+
         # Cast as strings
         vers1 = str(vers1)
         vers2 = str(vers2)
-        
+
         if ignore_case:
             vers1 = vers1.lower()
             vers2 = vers2.lower()
 
         # Split and pad lists
         v1_parts, v2_parts = self.pad_length(vers1.split(sep), vers2.split(sep))
-        
+
         # Iterate and compare
         for i in range(len(v1_parts)):
             # Remove non-numeric
@@ -98,7 +98,7 @@ class Utils:
             else:
                 var2 = "{}{}".format((pad*(len(var1)-len(var2))), var2)
         return (var1, var2)
-        
+
     def check_path(self, path):
         # Let's loop until we either get a working path, or no changes
         test_path = path
@@ -170,7 +170,7 @@ class Utils:
             return default
 
     def cls(self):
-    	os.system('cls' if os.name=='nt' else 'clear')
+        os.system('cls' if os.name=='nt' else 'clear')
 
     def cprint(self, message, **kwargs):
         strip_colors = kwargs.get("strip_colors", False)

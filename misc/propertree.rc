@@ -1,0 +1,38 @@
+IDI_ICON1 ICON DISCARDABLE "icons/AppIcon.ico"
+IDI_ICON2 ICON DISCARDABLE "icons/thin/AppIcon.ico"
+
+#include <windows.h>             // needed for VERSIONINFO
+
+#define VER_PRODUCTVERSION     0.1.2
+#define VER_PRODUCTVERSION_STR "0.1.2"
+#define VER_FILEVERSION        VER_PRODUCTVERSION
+#define VER_FILEVERSION_STR    VER_PRODUCTVERSION_STR
+#define COPYRIGHT_STR          "2019-" STRINGIZE(COPYRIGHT_YEAR) " CorpNewt and ProperTree Contributors"
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION     VER_FILEVERSION
+PRODUCTVERSION  VER_PRODUCTVERSION
+FILEOS          VOS_NT_WINDOWS32
+FILETYPE        VFT_APP
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904E4" // U.S. English - multilingual (hex)
+        BEGIN
+            VALUE "CompanyName",        "The ProperTree Developers"
+            VALUE "FileDescription",    "ProperTree: A cross-platform GUI plist editor written using Python and Tkinter"
+            VALUE "FileVersion",        VER_FILEVERSION_STR
+            VALUE "InternalName",       "propertree"
+            VALUE "LegalCopyright",     COPYRIGHT_STR
+            VALUE "LegalTrademarks1",   "Copyright (c) 2020, CorpNewt and the ProperTree contributors. Subject to the BSD Three-Clause License."
+            VALUE "OriginalFilename",   "propertree.exe"
+            VALUE "ProductName",        "propertree"
+            VALUE "ProductVersion",     VER_PRODUCTVERSION_STR
+        END
+    END
+
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0, 1252 // language neutral - multilingual (decimal)
+    END
+END
