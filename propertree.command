@@ -13,7 +13,7 @@ except:
     from tkinter import filedialog as fd
     from tkinter import messagebox as mb
 
-# This is to make cython happy
+# This is to allow the script to run as executable
 if not hasattr(sys.modules[__name__], '__file__'):
     __file__ = os.path.dirname(sys.executable)
 

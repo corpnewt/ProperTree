@@ -17,6 +17,10 @@ except ImportError:
     from tkinter import messagebox as mb
     from itertools import zip_longest as izip
 
+# This is to allow the script to run as executable
+if not hasattr(sys.modules[__name__], '__file__'):
+    __file__ = os.path.dirname(sys.executable)
+
 sys.path.append(os.path.abspath(os.path.dirname(os.path.realpath(__file__))))
 
 from . import plist

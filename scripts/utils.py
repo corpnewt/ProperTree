@@ -7,6 +7,10 @@ else:
     # Not Windows \o/
     import select
 
+# This is to allow the script to run as executable
+if not hasattr(sys.modules[__name__], '__file__'):
+    __file__ = os.path.dirname(sys.executable)
+
 class Utils:
 
     def __init__(self, name = "Python Script"):

@@ -1,0 +1,67 @@
+name: release-darwin
+
+on:
+  push:
+    tags:
+      - 'v*'
+      - 'darwin*'
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        python-version: [3.7, 3.8]
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8 pytest cython nuitka
+    #- name: Lint with flake8
+    #  run: |
+    #    flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+    #    flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+    #- name: Test with pytest
+    #  run: |
+    #    pytest
+    - name: Setup tcl8.6 and tk8.6 (darwin)
+      run: |
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
+        brew update
+        brew install tcl-tk
+        export TCL_LIBRARY="/usr/local/opt/tcl-tk/lib/tcl8.6"
+        export TK_LIBRARY="/usr/local/opt/tcl-tk/lib/tk8.6"
+    - name: Trigger Nuitka dynamic-binary build process
+      run: |
+        ./misc/nuitka_darwin.sh
+    - name: Set up environment for disk image creation
+      uses: actions/setup-node@v1
+      with:
+        node-version: '10.x'
+    - name: Create ProperTree disk image
+      run: |
+        npm install -g create-dmg
+        create-dmg --dmg-title="ProperTree" ./misc/darwin/ProperTree.app release 2>&1 || true
+        mv release/*.dmg release/ProperTree.dmg
+        shasum release/*.dmg >> release/CHECKSUM_SHA256.txt
+    - name: Upload disk image as release asset
+      uses: svenstaro/upload-release-action@v1-release
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: release/ProperTree.dmg
+        asset_name: ProperTree.dmg
+        tag: ${{ github.ref }}
+        overwrite: true
+    - name: Upload checksum as release asset
+      uses: svenstaro/upload-release-action@v1-release
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: release/CHECKSUM_SHA256.txt
+        asset_name: CHECKSUM_SHA256.txt
+        tag: ${{ github.ref }}
+        overwrite: true

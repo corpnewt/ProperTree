@@ -29,7 +29,7 @@
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.productivity</string>
 	<key>LSMinimumSystemVersion</key>
-	<string>10.12</string>
+	<string>10.13</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>© 2019-2020 The ProperTree Developers. All rights reserved.</string>
 	<key>NSPrincipalClass</key>
@@ -38,5 +38,20 @@
 	<true/>
 	<key>NSUserNotificationAlertStyle</key>
 	<string>banner</string>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>plist</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>plist</string>
+			<key>CFBundleTypeName</key>
+			<string>Property List</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+		</dict>
+	</array>
 </dict>
 </plist>

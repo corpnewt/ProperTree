@@ -2,21 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>CFBundleDocumentTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleTypeExtensions</key>
-			<array>
-				<string>plist</string>
-			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>plist</string>
-			<key>CFBundleTypeName</key>
-			<string>Property List</string>
-			<key>CFBundleTypeRole</key>
-			<string>Viewer</string>
-		</dict>
-	</array>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleExecutable</key>
@@ -24,7 +9,7 @@
 	<key>CFBundleGetInfoString</key>
 	<string>0.1.2 Copyright (c) 2019-2020 The ProperTree Developers</string>
 	<key>CFBundleIconFile</key>
-	<string>AppIcon</string>
+	<string>AppIcon.icns</string>
 	<key>CFBundleIconName</key>
 	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
@@ -44,7 +29,7 @@
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.productivity</string>
 	<key>LSMinimumSystemVersion</key>
-	<string>10.12</string>
+	<string>10.13</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>© 2019-2020 The ProperTree Developers. All rights reserved.</string>
 	<key>NSPrincipalClass</key>
@@ -53,5 +38,20 @@
 	<true/>
 	<key>NSUserNotificationAlertStyle</key>
 	<string>banner</string>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>plist</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>plist</string>
+			<key>CFBundleTypeName</key>
+			<string>Property List</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+		</dict>
+	</array>
 </dict>
 </plist>
