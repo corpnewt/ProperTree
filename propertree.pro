@@ -1,10 +1,8 @@
-# This file is used to compile the output from Cython
-# To generate that output, run cython propertree.py --embed --cplus --warning-extra
 TEMPLATE = app
 
 CONFIG += \
           console \
-          c++11 \
+#          c++11 \
           sdk_no_version_check
 
 CONFIG -= \
@@ -12,11 +10,14 @@ CONFIG -= \
          qt
 
 SOURCES += \
-        propertree.cpp \
-        scripts/plist.cpp \
-        scripts/plistwindow.cpp \
-        scripts/run.cpp \
-        scripts/utils.cpp
+    propertree.build/static_src/MetaPathBasedLoader.c \
+    propertree.build/static_src/CompiledCellType.c \
+    propertree.build/static_src/CompiledCodeHelpers.c \
+    propertree.build/static_src/CompiledFrameType.c \
+    propertree.build/static_src/CompiledFunctionType.c \
+    propertree.build/static_src/CompiledGeneratorType.c \
+    propertree.build/static_src/InspectPatcher.c \
+    propertree.build/static_src/MainProgram.c
 
 VERSION = 0.1.2
 
@@ -28,7 +29,19 @@ macx:TARGET = "ProperTree.app"
     LIBS += -Wl,-Bstatic -Wl,-z,relro -Wl,-z,now
 }
 
+# This is to emulate the behaviour of SingleExe.scons
+QMAKE_CFLAGS *=   -D_NUITKA_SYSFLAG_PY3K_WARNING=0 \
+                  -D_NUITKA_SYSFLAG_DIVISION_WARNING=0 \
+                  -D_NUITKA_SYSFLAG_UNICODE=0 \
+                  -D_NUITKA_SYSFLAG_OPTIMIZE=0 \
+                  -D_NUITKA_SYSFLAG_NO_SITE=0 \
+                  -D_NUITKA_SYSFLAG_VERBOSE=0 \
+                  -D_NUITKA_SYSFLAG_BYTES_WARNING=0 \
+                  -D_NUITKA_SYSFLAG_NO_SITE=0
+
+QMAKE_CFLAGS *= -D_FORTIFY_SOURCE=2 -O2 -fPIE -fstack-protector-all
 QMAKE_CXXFLAGS *= -D_FORTIFY_SOURCE=2 -O2 -fPIE -fstack-protector-all
+
 QMAKE_LFLAGS *= -fstack-protector-all
 win32:QMAKE_LFLAGS *= -Wl,--dynamicbase -Wl,--nxcompat
 win32:QMAKE_LFLAGS *= -Wl,--large-address-aware
@@ -38,12 +51,17 @@ isEmpty( PYTHON_VERSION ) {
   unix:PYTHON_VERSION=2.7
 }
 
+QMAKE_CFLAGS_WARN_ON = -fdiagnostics-show-option -Wall -Wextra -Wformat -Wformat-security -Wno-unused-parameter -Wstack-protector
 QMAKE_CXXFLAGS_WARN_ON = -fdiagnostics-show-option -Wall -Wextra -Wformat -Wformat-security -Wno-unused-parameter -Wstack-protector
 
 PYTHON_VERSION=$$(PYTHON_VERSION)
 
 macx {
+  INCLUDEPATH += $$PWD/propertree.build
   INCLUDEPATH += /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/Python.framework/Headers/
+  # TODO: Replace this with something less jank
+  INCLUDEPATH += /usr/local/lib/python3.7/site-packages/nuitka/build/include/
+  INCLUDEPATH += /usr/local/lib/python3.7/site-packages/nuitka/build/static_src/
   LIBS += -F/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks -framework Python
 } else:win32 {
   CONFIG(debug, debug|release) {

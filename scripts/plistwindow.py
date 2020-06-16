@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+
 import sys, os, plistlib, base64, binascii, datetime, tempfile, shutil, re, itertools, math
 from collections import OrderedDict
 try:
@@ -15,8 +16,10 @@ except ImportError:
     from tkinter import filedialog as fd
     from tkinter import messagebox as mb
     from itertools import zip_longest as izip
+
 sys.path.append(os.path.abspath(os.path.dirname(os.path.realpath(__file__))))
-import plist
+
+from . import plist
 
 try:
     long

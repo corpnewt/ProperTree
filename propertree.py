@@ -20,7 +20,7 @@ if not hasattr(sys.modules[__name__], '__file__'):
 # Add this script's dir to the local PATH var - may improve import consistency
 sys.path.append(os.path.abspath(os.path.dirname(os.path.realpath(__file__))))
 
-from scripts import *
+from scripts import plist, plistwindow, run, utils
 
 class ProperTree:
     def __init__(self, plists = []):
