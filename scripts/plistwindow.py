@@ -700,10 +700,12 @@ class PlistWindow(tk.Toplevel):
             return None
         matches = self.find_all(type_check[1])
         if not len(matches):
+            # TODO: fix cython is not happy
+            # scripts/plistwindow.py:704:19: undeclared name not builtin: replacing
             # Nothing found - let's throw an error
-            if not replacing:
-                self.bell()
-                mb.showerror("No Matches Found", '"{}" did not match any {} fields in the current plist.'.format(type_check[1],self.find_type.lower()),parent=self)
+            #if not replacing:
+            #    self.bell()
+            #    mb.showerror("No Matches Found", '"{}" did not match any {} fields in the current plist.'.format(type_check[1],self.find_type.lower()),parent=self)
             return None
         # Let's get the index of our selected item
         node  = "" if not len(self._tree.selection()) else self._tree.selection()[0]
