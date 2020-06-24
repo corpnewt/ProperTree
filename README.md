@@ -63,10 +63,6 @@ git clone https://github.com/corpnewt/ProperTree
 
   This shouldn't happen and it is recommended that you download only from the official ProperTree repository, but if you are confident about your source, then running `chmod +x ProperTree.command` should sort it out
 
-* **I'm on an Arch-based distro with python 3 and I get `TypeError: expected bytes, str found` when trying to copy or save**
-
-  This is a known issue with `libplist` on Arch-based distros (discussed [here](https://github.com/corpnewt/ProperTree/issues/19)).  Current solutions are to use python 2, or to remove `libplist`.
-  
 * **I use an international keyboard layout on macOS and some keys crash ProperTree with `NSRangeException', reason: '-[__NSCFConstantString characterAtIndex:]: Range or index out of bounds`**
 
   This is a bug in the Cocoa implementation of Tcl/Tk on macOS (discussed [here](https://bugs.python.org/issue22566)).  The latest python 2 installer from [python.org](https://www.python.org/downloads/release/python-2718/) ships with, and uses Tcl/Tk 8.6.8 which has this issue fixed.  Given that the shebang in `ProperTree.command` leverages `#!/usr/bin/env python` - the first python 2 binary found should be used.
