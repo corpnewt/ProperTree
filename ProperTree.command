@@ -24,6 +24,7 @@ class ProperTree:
         self.convert_frame.pack(fill="both",expand=True)
         self.tk.title("Convert Values")
         self.tk.minsize(width=640,height=130)
+        self.tk.maxsize(width=10000,height=130)
         self.tk.resizable(True, False)
         self.tk.columnconfigure(2,weight=1)
         self.tk.columnconfigure(3,weight=1)

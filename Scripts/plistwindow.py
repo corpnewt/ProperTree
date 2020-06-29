@@ -249,7 +249,9 @@ class PlistWindow(tk.Toplevel):
         # Set up the options
         self.current_plist = None # None = new
         self.edited = False
-        self.wm_attributes("-modified", 0)
+
+        if str(sys.platform) == "darwin":
+            self.wm_attributes("-modified", 0)
         self.dragging = False
         self.drag_start = None
         self.show_find_replace = False
@@ -437,7 +439,8 @@ class PlistWindow(tk.Toplevel):
         if not self.edited:
             self.edited = True
             self.title(self.title()+" - Edited")
-            self.wm_attributes("-modified", 1)
+            if str(sys.platform) == "darwin":
+                self.wm_attributes("-modified", 1)
 
     def change_data_type(self, value):
         self.change_data_display(value.lower())
@@ -634,7 +637,8 @@ class PlistWindow(tk.Toplevel):
         if not self.edited:
             self.edited = True
             self.title(self.title()+" - Edited")
-            self.wm_attributes("-modified", 1)
+            if str(sys.platform) == "darwin":
+                self.wm_attributes("-modified", 1)
         # Let's try to find the next
         self.find_next(replacing=True)
 
@@ -1107,7 +1111,8 @@ class PlistWindow(tk.Toplevel):
         if not self.edited:
             self.edited = True
             self.title(self.title()+" - Edited")
-            self.wm_attributes("-modified", 1)
+            if str(sys.platform) == "darwin":
+                self.wm_attributes("-modified", 1)
         self.update_all_children()
         self.alternate_colors()
 
@@ -1254,7 +1259,8 @@ class PlistWindow(tk.Toplevel):
         if not self.edited:
             self.edited = True
             self.title(self.title()+" - Edited")
-            self.wm_attributes("-modified", 1)
+            if str(sys.platform) == "darwin":
+                self.wm_attributes("-modified", 1)
         self.update_all_children()
         self.alternate_colors()
 
@@ -1328,7 +1334,8 @@ class PlistWindow(tk.Toplevel):
             if not self.edited:
                 self.edited = True
                 self.title(self.title()+" - Edited")
-                self.wm_attributes("-modified", 1)
+                if str(sys.platform) == "darwin":
+                    self.wm_attributes("-modified", 1)
             self.dragging = True
 
     def confirm_drag(self, event):
@@ -1404,7 +1411,8 @@ class PlistWindow(tk.Toplevel):
         if not self.edited:
             self.edited = True
             self.title(self.title()+" - Edited")
-            self.wm_attributes("-modified", 1)
+            if str(sys.platform) == "darwin":
+                self.wm_attributes("-modified", 1)
         self.update_all_children()
         self.alternate_colors()
 
@@ -1526,7 +1534,8 @@ class PlistWindow(tk.Toplevel):
         if path == None:
             self.title("Untitled.plist - Edited")
             self.edited = True
-            self.wm_attributes("-modified", 1)
+            if str(sys.platform) == "darwin":
+                self.wm_attributes("-modified", 1)
         else:
             self.title(path)
             self.edited = False
@@ -1678,7 +1687,8 @@ class PlistWindow(tk.Toplevel):
         if not self.edited:
             self.edited = True
             self.title(self.title()+" - Edited")
-            self.wm_attributes("-modified", 1)
+            if str(sys.platform) == "darwin":
+                self.wm_attributes("-modified", 1)
         self.update_all_children()
         self.alternate_colors()
 
@@ -1868,7 +1878,8 @@ class PlistWindow(tk.Toplevel):
         if not self.edited:
             self.edited = True
             self.title(self.title()+" - Edited")
-            self.wm_attributes("-modified", 1)
+            if str(sys.platform) == "darwin":
+                self.wm_attributes("-modified", 1)
         self.add_undo({"type":"add","cell":new_cell})
         if target == "":
             # Top level, nothing to do here but edit the new row
@@ -1900,7 +1911,8 @@ class PlistWindow(tk.Toplevel):
         if not self.edited:
             self.edited = True
             self.title(self.title()+" - Edited")
-            self.wm_attributes("-modified", 1)
+            if str(sys.platform) == "darwin":
+                self.wm_attributes("-modified", 1)
         # Check if the parent was an array/dict, and update counts
         if parent == "":
             return
@@ -2001,7 +2013,8 @@ class PlistWindow(tk.Toplevel):
         if not self.edited:
             self.edited = True
             self.title(self.title()+" - Edited")
-            self.wm_attributes("-modified", 1)
+            if str(sys.platform) == "darwin":
+                self.wm_attributes("-modified", 1)
 
     ###             ###
     # Click Functions #
@@ -2023,7 +2036,8 @@ class PlistWindow(tk.Toplevel):
         if not self.edited:
             self.edited = True
             self.title(self.title()+" - Edited")
-            self.wm_attributes("-modified", 1)
+            if str(sys.platform) == "darwin":
+                self.wm_attributes("-modified", 1)
 
     def split(self, a, escape = '\\', separator = '/'):
         result = []
@@ -2182,7 +2196,8 @@ class PlistWindow(tk.Toplevel):
         if not self.edited:
             self.edited = True
             self.title(self.title()+" - Edited")
-            self.wm_attributes("-modified", 1)
+            if str(sys.platform) == "darwin":
+                self.wm_attributes("-modified", 1)
         self.update_all_children()
         self.alternate_colors()
 
@@ -2386,7 +2401,8 @@ class PlistWindow(tk.Toplevel):
         if not self.edited:
             self.edited = True
             self.title(self.title()+" - Edited")
-            self.wm_attributes("-modified", 1)
+            if str(sys.platform) == "darwin":
+                self.wm_attributes("-modified", 1)
         return 'break'
 
     ###                   ###
