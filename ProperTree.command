@@ -19,26 +19,31 @@ class ProperTree:
     def __init__(self, plists = []):
         # Create the new tk object
         self.tk = tk.Tk()
+        self.convert_frame = ttk.Frame(self.tk)
+        self.convert_frame.grid()
+        self.convert_frame.pack(fill="both",expand=True)
         self.tk.title("Convert Values")
         self.tk.minsize(width=640,height=130)
         self.tk.resizable(True, False)
         self.tk.columnconfigure(2,weight=1)
         self.tk.columnconfigure(3,weight=1)
         # Build the Hex <--> Base64 converter
-        f_label = tk.Label(self.tk, text="From:")
+        f_label = ttk.Label(self.convert_frame, text="From:")
         f_label.grid(row=0,column=0,padx=10,pady=10)
-        t_label = tk.Label(self.tk, text="To:")
+        t_label = ttk.Label(self.convert_frame, text="To:")
         t_label.grid(row=1,column=0,padx=10,pady=10)
 
         # Create the settings window
         self.settings_window = tk.Toplevel(self.tk)
+        self.settings_frame = ttk.Frame(self.settings_window)
+        self.settings_frame.pack(fill="both",expand=True)
         self.settings_window.title("ProperTree Settings")
         w = 380
         h = 150
         self.settings_window.minsize(width=w,height=h)
-        self.settings_window.resizable(True, False)
-        self.settings_window.columnconfigure(0,weight=1)
-        self.settings_window.columnconfigure(1,weight=1)
+        self.settings_window.resizable(False, False)
+        self.settings_frame.columnconfigure(0,weight=1)
+        self.settings_frame.columnconfigure(1,weight=1)
         # Let's also center the window
         x = self.settings_window.winfo_screenwidth() // 2 - w // 2
         y = self.settings_window.winfo_screenheight() // 2 - h // 2
@@ -47,18 +52,18 @@ class ProperTree:
         self.expand_on_open = tk.IntVar()
         self.use_xcode_data = tk.IntVar()
         self.sort_dict_keys = tk.IntVar()
-        self.expand_check = tk.Checkbutton(self.settings_window,text="Expand Children When Opening Plist",variable=self.expand_on_open,command=self.expand_command)
-        self.xcode_check = tk.Checkbutton(self.settings_window,text="Use Xcode-Style <data> Tags (Inline) in XML Plists",variable=self.use_xcode_data,command=self.xcode_command)
-        self.sort_check = tk.Checkbutton(self.settings_window,text="Ignore Dictionary Key Order",variable=self.sort_dict_keys,command=self.sort_command)
+        self.expand_check = ttk.Checkbutton(self.settings_frame,text="Expand Children When Opening Plist",variable=self.expand_on_open,command=self.expand_command)
+        self.xcode_check = ttk.Checkbutton(self.settings_frame,text="Use Xcode-Style <data> Tags (Inline) in XML Plists",variable=self.use_xcode_data,command=self.xcode_command)
+        self.sort_check = ttk.Checkbutton(self.settings_frame,text="Ignore Dictionary Key Order",variable=self.sort_dict_keys,command=self.sort_command)
         self.expand_check.grid(row=0,column=0,columnspan=2,sticky="w",padx=10,pady=(10,0))
         self.xcode_check.grid(row=1,column=0,columnspan=2,sticky="w",padx=10)
         self.sort_check.grid(row=2,column=0,columnspan=2,sticky="w",padx=10)
-        self.plist_type_string = tk.StringVar(self.settings_window)
-        self.plist_type_menu = tk.OptionMenu(self.settings_window, self.plist_type_string, "XML","Binary", command=self.change_plist_type)
-        plist_label = tk.Label(self.settings_window,text="Default New Plist Type:")
+        self.plist_type_string = tk.StringVar(self.settings_frame)
+        self.plist_type_menu = ttk.OptionMenu(self.settings_frame, self.plist_type_string, "XML","Binary", command=self.change_plist_type)
+        plist_label = ttk.Label(self.settings_frame,text="Default New Plist Type:")
         plist_label.grid(row=3,column=0,sticky="w",padx=10)
         self.plist_type_menu.grid(row=3,column=1,sticky="we",padx=10)
-        reset_settings = tk.Button(self.settings_window,text="Reset To Defaults",command=self.reset_settings)
+        reset_settings = ttk.Button(self.settings_frame,text="Reset To Defaults",command=self.reset_settings)
         reset_settings.grid(row=4,column=1,sticky="e",padx=10,pady=(0,10))
 
         # Setup the from/to option menus
@@ -66,30 +71,32 @@ class ProperTree:
         t_title = tk.StringVar(self.tk)
         f_title.set("Base64")
         t_title.set("Hex")
-        f_option = tk.OptionMenu(self.tk, f_title, "Ascii", "Base64", "Decimal", "Hex", command=self.change_from_type)
-        t_option = tk.OptionMenu(self.tk, t_title, "Ascii", "Base64", "Decimal", "Hex", command=self.change_to_type)
+        f_option = ttk.OptionMenu(self.convert_frame, f_title, "Base64", "Ascii", "Base64", "Decimal", "Hex", command=self.change_from_type)
+        t_option = ttk.OptionMenu(self.convert_frame, t_title, "Hex", "Ascii", "Base64", "Decimal", "Hex", command=self.change_to_type)
         self.from_type = "Base64"
         self.to_type   = "Hex"
         f_option.grid(row=0,column=1,sticky="we")
         t_option.grid(row=1,column=1,sticky="we")
 
-        self.f_text = tk.Entry(self.tk)
+        self.f_text = ttk.Entry(self.convert_frame)
         self.f_text.delete(0,tk.END)
         self.f_text.insert(0,"")
         self.f_text.grid(row=0,column=2,columnspan=2,sticky="we",padx=10,pady=10)
 
-        self.t_text = tk.Entry(self.tk)
+        self.t_text = ttk.Entry(self.convert_frame)
         self.t_text.configure(state='normal')
         self.t_text.delete(0,tk.END)
         self.t_text.insert(0,"")
         self.t_text.configure(state='readonly')
         self.t_text.grid(row=1,column=2,columnspan=2,sticky="we",padx=10,pady=10)
 
-        self.c_button = tk.Button(self.tk, text="Convert", command=self.convert_values)
+        self.c_button = ttk.Button(self.convert_frame, text="Convert", command=self.convert_values)
         self.c_button.grid(row=2,column=3,sticky="e",padx=10,pady=10)
 
         self.f_text.bind("<Return>", self.convert_values)
         self.f_text.bind("<KP_Enter>", self.convert_values)
+
+        self.convert_frame.columnconfigure(2, weight=1)
 
         self.start_window = None
 
@@ -105,6 +112,7 @@ class ProperTree:
             self.tk.createcommand('::tk::mac::Quit', self.quit)
             self.tk.createcommand("::tk::mac::OpenDocument", self.open_plist_from_app)
             self.tk.createcommand("::tk::mac::ReopenApplication", self.open_plist_from_app)
+            self.tk.createcommand("::tk::mac::ShowPreferences", self.show_settings)
             # Import the needed modules to change the bundle name and force focus
             try:
                 from Foundation import NSBundle
@@ -134,25 +142,21 @@ class ProperTree:
             file_menu = tk.Menu(self.tk)
             main_menu = tk.Menu(self.tk)
             main_menu.add_cascade(label="File", menu=file_menu)
-            file_menu.add_command(label="New ({}N)".format(sign), command=self.new_plist)
-            file_menu.add_command(label="Open ({}O)".format(sign), command=self.open_plist)
-            file_menu.add_command(label="Save ({}S)".format(sign), command=self.save_plist)
-            file_menu.add_command(label="Save As ({}Shift+S)".format(sign), command=self.save_plist_as)
-            file_menu.add_command(label="Duplicate ({}D)".format(sign), command=self.duplicate_plist)
-            file_menu.add_command(label="Reload From Disk ({}L)".format(sign), command=self.reload_from_disk)
+            file_menu.add_command(label="New", command=self.new_plist, accelerator="Cmd+N")
+            file_menu.add_command(label="Open", command=self.open_plist, accelerator="Cmd+O")
+            file_menu.add_command(label="Save", command=self.save_plist, accelerator="Cmd+S")
+            file_menu.add_command(label="Save As...", command=self.save_plist_as, accelerator="Cmd+Shift+S")
+            file_menu.add_command(label="Duplicate", command=self.duplicate_plist, accelerator="Cmd+D")
+            file_menu.add_command(label="Reload From Disk", command=self.reload_from_disk, accelerator="Cmd+L")
             file_menu.add_separator()
-            file_menu.add_command(label="OC Snapshot ({}R)".format(sign), command=self.oc_snapshot)
-            file_menu.add_command(label="OC Clean Snapshot ({}Shift+R)".format(sign), command=self.oc_clean_snapshot)
+            file_menu.add_command(label="OC Snapshot", command=self.oc_snapshot, accelerator="Cmd+R")
+            file_menu.add_command(label="OC Clean Snapshot", command=self.oc_clean_snapshot, accelerator="Cmd+Shift+R")
             file_menu.add_separator()
-            file_menu.add_command(label="Convert Window ({}T)".format(sign), command=self.show_convert)
-            file_menu.add_command(label="Strip Comments ({}M)".format(sign), command=self.strip_comments)
+            file_menu.add_command(label="Convert Window", command=self.show_convert, accelerator="Cmd+T")
+            file_menu.add_command(label="Strip Comments", command=self.strip_comments, accelerator="Cmd+M")
             file_menu.add_separator()
-            file_menu.add_command(label="Toggle Find/Replace Pane ({}F)".format(sign),command=self.hide_show_find)
-            file_menu.add_command(label="Toggle Plist/Data Type Pane ({}P)".format(sign),command=self.hide_show_type)
-            file_menu.add_separator()
-            file_menu.add_command(label="Settings ({},)".format(sign),command=self.show_settings)
-            file_menu.add_separator()
-            file_menu.add_command(label="Quit ({}Q)".format(sign), command=self.quit)
+            file_menu.add_command(label="Toggle Find/Replace Pane",command=self.hide_show_find, accelerator="Cmd+F")
+            file_menu.add_command(label="Toggle Plist/Data Type Pane",command=self.hide_show_type, accelerator="Cmd+P")
             self.tk.config(menu=main_menu)
 
         # Set bindings

@@ -249,6 +249,7 @@ class PlistWindow(tk.Toplevel):
         # Set up the options
         self.current_plist = None # None = new
         self.edited = False
+        self.wm_attributes("-modified", 0)
         self.dragging = False
         self.drag_start = None
         self.show_find_replace = False
@@ -274,8 +275,10 @@ class PlistWindow(tk.Toplevel):
         self.bool_menu.add_command(label="False", command=lambda:self.set_bool("False"))
 
         # Create the treeview
-        self._tree_frame = tk.Frame(self)
-        self._tree = ttk.Treeview(self._tree_frame, columns=("Type","Value","Drag"), selectmode="browse")
+        style = ttk.Style()
+        style.configure("BW.TLabel", foreground="black", background="white")
+        self._tree_frame = ttk.Frame(self)
+        self._tree = ttk.Treeview(self._tree_frame, columns=("Type","Value","Drag"), selectmode="browse", style="BW.TLabel")
         self._tree.heading("#0", text="Key")
         self._tree.heading("#1", text="Type")
         self._tree.heading("#2", text="Value")
@@ -325,30 +328,28 @@ class PlistWindow(tk.Toplevel):
         # Setup menu bar (hopefully per-window) - only happens on non-mac systems
         if not str(sys.platform) == "darwin":
             key="Control"
-            sign = "Ctrl+"
             main_menu = tk.Menu(self)
             file_menu = tk.Menu(self, tearoff=0)
             main_menu.add_cascade(label="File", menu=file_menu)
-            file_menu.add_command(label="New ({}N)".format(sign), command=self.controller.new_plist)
-            file_menu.add_command(label="Open ({}O)".format(sign), command=self.controller.open_plist)
-            file_menu.add_command(label="Save ({}S)".format(sign), command=self.controller.save_plist)
-            file_menu.add_command(label="Save As ({}Shift+S)".format(sign), command=self.controller.save_plist_as)
-            file_menu.add_command(label="Duplicate ({}D)".format(sign), command=self.controller.duplicate_plist)
-            file_menu.add_command(label="Reload From Disk ({}L)".format(sign), command=self.reload_from_disk)
+            file_menu.add_command(label="New", command=self.controller.new_plist, accelerator="Ctrl+N")
+            file_menu.add_command(label="Open", command=self.controller.open_plist, accelerator="Ctrl+O")
+            file_menu.add_command(label="Save", command=self.controller.save_plist, accelerator="Ctrl+S")
+            file_menu.add_command(label="Save As...", command=self.controller.save_plist_as, accelerator="Ctrl+Shift+S")
+            file_menu.add_command(label="Duplicate", command=self.controller.duplicate_plist, accelerator="Ctrl+D")
+            file_menu.add_command(label="Reload From Disk", command=self.reload_from_disk, accelerator="Ctrl+L")
             file_menu.add_separator()
-            file_menu.add_command(label="OC Snapshot ({}R)".format(sign), command=self.oc_snapshot)
-            file_menu.add_command(label="OC Clean Snapshot ({}Shift+R)".format(sign), command=self.oc_clean_snapshot)
+            file_menu.add_command(label="OC Snapshot", command=self.oc_snapshot, accelerator="Ctrl+R")
+            file_menu.add_command(label="OC Clean Snapshot", command=self.oc_clean_snapshot, accelerator="Ctrl+Shift+R")
             file_menu.add_separator()
-            file_menu.add_command(label="Convert Window ({}T)".format(sign), command=self.controller.show_convert)
-            file_menu.add_command(label="Strip Comments ({}M)".format(sign), command=self.strip_comments)
+            file_menu.add_command(label="Convert Window", command=self.controller.show_convert, accelerator="Ctrl+T")
+            file_menu.add_command(label="Strip Comments", command=self.strip_comments, accelerator="Ctrl+M")
             file_menu.add_separator()
-            file_menu.add_command(label="Settings ({},)".format(sign),command=self.controller.show_settings)
+            file_menu.add_command(label="Settings",command=self.controller.show_settings, accelerator="Ctrl+,")
             file_menu.add_separator()
-            file_menu.add_command(label="Toggle Find/Replace Pane ({}F)".format(sign),command=self.hide_show_find)
-            file_menu.add_command(label="Toggle Plist/Data Type Pane ({}P)".format(sign),command=self.hide_show_type)
-            if not str(sys.platform) == "darwin":
-                file_menu.add_separator()
-                file_menu.add_command(label="Quit ({}Q)".format(sign), command=self.controller.quit)
+            file_menu.add_command(label="Toggle Find/Replace Pane",command=self.hide_show_find, accelerator="Ctrl+F")
+            file_menu.add_command(label="Toggle Plist/Data Type Pane",command=self.hide_show_type, accelerator="Ctrl+P")
+            file_menu.add_separator()
+            file_menu.add_command(label="Quit", command=self.controller.quit, accelerator="Ctrl+Q")
             self.config(menu=main_menu)
 
         # Get the right click menu options
@@ -364,37 +365,37 @@ class PlistWindow(tk.Toplevel):
         os.chdir(cwd)
 
         # Create our type/data view
-        self.display_frame = tk.Frame(self,height=20)
+        self.display_frame = ttk.Frame(self,height=20)
         self.display_frame.columnconfigure(2,weight=1)
         self.display_frame.columnconfigure(4,weight=1)
-        pt_label = tk.Label(self.display_frame,text="Plist Type:")
-        dt_label = tk.Label(self.display_frame,text="Display Data as:")
+        pt_label = ttk.Label(self.display_frame,text="Plist Type:")
+        dt_label = ttk.Label(self.display_frame,text="Display Data as:")
         self.plist_type_string = tk.StringVar(self.display_frame)
-        self.plist_type_menu = tk.OptionMenu(self.display_frame, self.plist_type_string, "XML","Binary", command=self.change_plist_type)
-        self.plist_type_string.set("XML")
+        self.plist_type_menu = ttk.OptionMenu(self.display_frame, self.plist_type_string, "XML", "XML","Binary", command=self.change_plist_type)
+        #self.plist_type_string.set("XML")
         self.data_type_string = tk.StringVar(self.display_frame)
-        self.data_type_menu = tk.OptionMenu(self.display_frame, self.data_type_string, "Hex","Base64", command=self.change_data_type)
-        self.data_type_string.set("Hex")
-        pt_label.grid(row=1,column=1,padx=10,pady=(0,5),sticky="w")
-        dt_label.grid(row=1,column=3,padx=10,pady=(0,5),sticky="w")
+        self.data_type_menu = ttk.OptionMenu(self.display_frame, self.data_type_string, "Hex", "Hex","Base64", command=self.change_data_type)
+        #self.data_type_string.set("Hex")
+        pt_label.grid(row=1,column=1,padx=10,sticky="w")
+        dt_label.grid(row=1,column=3,padx=10,sticky="w")
         self.plist_type_menu.grid(row=1,column=2,padx=10,pady=10,sticky="we")
         self.data_type_menu.grid(row=1,column=4,padx=10,pady=10,sticky="we")
         
         # Create our find/replace view
-        self.find_frame = tk.Frame(self,height=20)
+        self.find_frame = ttk.Frame(self,height=20)
         self.find_frame.columnconfigure(2,weight=1)
-        f_label = tk.Label(self.find_frame, text="Find:")
-        f_label.grid(row=0,column=0,sticky="e")
-        r_label = tk.Label(self.find_frame, text="Replace:")
-        r_label.grid(row=1,column=0,sticky="e")
+        f_label = ttk.Label(self.find_frame, text="Find:")
+        f_label.grid(row=0,column=0,sticky="e", padx=10)
+        r_label = ttk.Label(self.find_frame, text="Replace:")
+        r_label.grid(row=1,column=0,sticky="e", padx=10)
         self.find_type = "Key"
-        self.f_text = tk.Entry(self.find_frame)
+        self.f_text = ttk.Entry(self.find_frame)
         self.f_text.bind("<Return>", self.find_next)
         self.f_text.bind("<KP_Enter>", self.find_next)
         self.f_text.delete(0,tk.END)
         self.f_text.insert(0,"")
         self.f_text.grid(row=0,column=2,sticky="we",padx=10,pady=10)
-        self.r_text = tk.Entry(self.find_frame)
+        self.r_text = ttk.Entry(self.find_frame)
         self.r_text.bind("<Return>", self.replace)
         self.r_text.bind("<KP_Enter>", self.replace)
         self.r_text.delete(0,tk.END)
@@ -402,21 +403,21 @@ class PlistWindow(tk.Toplevel):
         self.r_text.grid(row=1,column=2,columnspan=1,sticky="we",padx=10,pady=10)
         f_title = tk.StringVar(self.find_frame)
         f_title.set("Key")
-        f_option = tk.OptionMenu(self.find_frame, f_title, "Key", "Boolean", "Data", "Date", "Number", "String", command=self.change_find_type)
+        f_option = ttk.OptionMenu(self.find_frame, f_title, "Key", "Key", "Boolean", "Data", "Date", "Number", "String", command=self.change_find_type)
         f_option['menu'].insert_separator(1)
         f_option.grid(row=0,column=1)
-        self.fp_button = tk.Button(self.find_frame,text="< Prev",width=8,command=self.find_prev)
+        self.fp_button = ttk.Button(self.find_frame,text="< Prev",width=8,command=self.find_prev)
         self.fp_button.grid(row=0,column=3,sticky="e",padx=0,pady=10)
-        self.fn_button = tk.Button(self.find_frame,text="Next >",width=8,command=self.find_next)
+        self.fn_button = ttk.Button(self.find_frame,text="Next >",width=8,command=self.find_next)
         self.fn_button.grid(row=0,column=4,sticky="w",padx=0,pady=10)
-        self.r_button = tk.Button(self.find_frame,text="Replace",command=self.replace)
-        self.r_button.grid(row=1,column=4,sticky="we",padx=10,pady=10)
+        self.r_button = ttk.Button(self.find_frame,text="Replace",command=self.replace)
+        self.r_button.grid(row=1,column=3,columnspan=2,sticky="we",padx=0,pady=10)
         self.r_all_var = tk.IntVar()
-        self.r_all = tk.Checkbutton(self.find_frame,text="Replace All",variable=self.r_all_var)
-        self.r_all.grid(row=1,column=5,sticky="w")
+        self.r_all = ttk.Checkbutton(self.find_frame,text="Replace All",variable=self.r_all_var)
+        self.r_all.grid(row=1,column=5,sticky="w",padx=10)
         self.f_case_var = tk.IntVar()
-        self.f_case = tk.Checkbutton(self.find_frame,text="Case-Sensitive",variable=self.f_case_var)
-        self.f_case.grid(row=0,column=5,sticky="w")
+        self.f_case = ttk.Checkbutton(self.find_frame,text="Case-Sensitive",variable=self.f_case_var)
+        self.f_case.grid(row=0,column=5,sticky="w",padx=10)
 
         # Add the scroll bars and show the treeview
         vsb.pack(side="right",fill="y")
@@ -436,6 +437,7 @@ class PlistWindow(tk.Toplevel):
         if not self.edited:
             self.edited = True
             self.title(self.title()+" - Edited")
+            self.wm_attributes("-modified", 1)
 
     def change_data_type(self, value):
         self.change_data_display(value.lower())
@@ -504,13 +506,13 @@ class PlistWindow(tk.Toplevel):
         self._tree_frame.pack_forget()
         if self.show_find_replace:
             # Add the show_find pane, make the find pane active, and highlight any text
-            self.find_frame.pack(side="top",fill="x",padx=10)
+            self.find_frame.pack(side="top",fill="x")
             if changed == "hideshow":
                 self.f_text.focus()
                 self.f_text.selection_range(0, 'end')
         self._tree_frame.pack(fill="both",expand=True)
         if self.show_type:
-            self.display_frame.pack(side="bottom",fill="x",padx=10)
+            self.display_frame.pack(side="bottom",fill="x")
 
     def hide_show_find(self, event=None):
         # Let's find out if we're set to show
@@ -632,6 +634,7 @@ class PlistWindow(tk.Toplevel):
         if not self.edited:
             self.edited = True
             self.title(self.title()+" - Edited")
+            self.wm_attributes("-modified", 1)
         # Let's try to find the next
         self.find_next(replacing=True)
 
@@ -1104,6 +1107,7 @@ class PlistWindow(tk.Toplevel):
         if not self.edited:
             self.edited = True
             self.title(self.title()+" - Edited")
+            self.wm_attributes("-modified", 1)
         self.update_all_children()
         self.alternate_colors()
 
@@ -1250,6 +1254,7 @@ class PlistWindow(tk.Toplevel):
         if not self.edited:
             self.edited = True
             self.title(self.title()+" - Edited")
+            self.wm_attributes("-modified", 1)
         self.update_all_children()
         self.alternate_colors()
 
@@ -1323,6 +1328,7 @@ class PlistWindow(tk.Toplevel):
             if not self.edited:
                 self.edited = True
                 self.title(self.title()+" - Edited")
+                self.wm_attributes("-modified", 1)
             self.dragging = True
 
     def confirm_drag(self, event):
@@ -1398,6 +1404,7 @@ class PlistWindow(tk.Toplevel):
         if not self.edited:
             self.edited = True
             self.title(self.title()+" - Edited")
+            self.wm_attributes("-modified", 1)
         self.update_all_children()
         self.alternate_colors()
 
@@ -1507,6 +1514,7 @@ class PlistWindow(tk.Toplevel):
         self.title(path)
         # No changes - so we'll reset that
         self.edited = False
+        self.wm_attributes("-modified", 0)
         return True
 
     def open_plist(self, path, plist_data, plist_type = "XML",auto_expand=True):
@@ -1518,9 +1526,11 @@ class PlistWindow(tk.Toplevel):
         if path == None:
             self.title("Untitled.plist - Edited")
             self.edited = True
+            self.wm_attributes("-modified", 1)
         else:
             self.title(path)
             self.edited = False
+            self.wm_attributes("-modified", 0)
         self.undo_stack = []
         self.redo_stack = []
         # Close if need be
@@ -1668,6 +1678,7 @@ class PlistWindow(tk.Toplevel):
         if not self.edited:
             self.edited = True
             self.title(self.title()+" - Edited")
+            self.wm_attributes("-modified", 1)
         self.update_all_children()
         self.alternate_colors()
 
@@ -1857,6 +1868,7 @@ class PlistWindow(tk.Toplevel):
         if not self.edited:
             self.edited = True
             self.title(self.title()+" - Edited")
+            self.wm_attributes("-modified", 1)
         self.add_undo({"type":"add","cell":new_cell})
         if target == "":
             # Top level, nothing to do here but edit the new row
@@ -1888,6 +1900,7 @@ class PlistWindow(tk.Toplevel):
         if not self.edited:
             self.edited = True
             self.title(self.title()+" - Edited")
+            self.wm_attributes("-modified", 1)
         # Check if the parent was an array/dict, and update counts
         if parent == "":
             return
@@ -1988,6 +2001,7 @@ class PlistWindow(tk.Toplevel):
         if not self.edited:
             self.edited = True
             self.title(self.title()+" - Edited")
+            self.wm_attributes("-modified", 1)
 
     ###             ###
     # Click Functions #
@@ -2009,6 +2023,7 @@ class PlistWindow(tk.Toplevel):
         if not self.edited:
             self.edited = True
             self.title(self.title()+" - Edited")
+            self.wm_attributes("-modified", 1)
 
     def split(self, a, escape = '\\', separator = '/'):
         result = []
@@ -2167,6 +2182,7 @@ class PlistWindow(tk.Toplevel):
         if not self.edited:
             self.edited = True
             self.title(self.title()+" - Edited")
+            self.wm_attributes("-modified", 1)
         self.update_all_children()
         self.alternate_colors()
 
@@ -2192,25 +2208,25 @@ class PlistWindow(tk.Toplevel):
         if cell in ("",self.get_root_node()):
             # Top level - get the Root
             if self.get_check_type(self.get_root_node()).lower() in ("array","dictionary"):
-                popup_menu.add_command(label="New top level entry (+)".format(self._tree.item(cell,"text")), command=lambda:self.new_row(self.get_root_node()))
+                popup_menu.add_command(label="New top level entry".format(self._tree.item(cell,"text")), command=lambda:self.new_row(self.get_root_node()), accelerator="+")
         else:
             if self.get_check_type(cell).lower() in ["array","dictionary"] and (self._tree.item(cell,"open") or not len(self._tree.get_children(cell))):
-                popup_menu.add_command(label="New child under '{}' (+)".format(self._tree.item(cell,"text")), command=lambda:self.new_row(cell))
+                popup_menu.add_command(label="New child under '{}'".format(self._tree.item(cell,"text")), command=lambda:self.new_row(cell), accelerator="+")
                 popup_menu.add_command(label="New sibling of '{}'".format(self._tree.item(cell,"text")), command=lambda:self.new_row(cell,True))
-                popup_menu.add_command(label="Remove '{}' and any children (-)".format(self._tree.item(cell,"text")), command=lambda:self.remove_row(cell))
+                popup_menu.add_command(label="Remove '{}' and any children".format(self._tree.item(cell,"text")), command=lambda:self.remove_row(cell), accelerator="-")
             else:
-                popup_menu.add_command(label="New sibling of '{}' (+)".format(self._tree.item(cell,"text")), command=lambda:self.new_row(cell))
-                popup_menu.add_command(label="Remove '{}' (-)".format(self._tree.item(cell,"text")), command=lambda:self.remove_row(cell))
+                popup_menu.add_command(label="New sibling of '{}'".format(self._tree.item(cell,"text")), command=lambda:self.new_row(cell), accelerator="+")
+                popup_menu.add_command(label="Remove '{}'".format(self._tree.item(cell,"text")), command=lambda:self.remove_row(cell), accelerator="-")
         # Add the copy and paste options
         popup_menu.add_separator()
         sign = "Command" if str(sys.platform) == "darwin" else "Ctrl"
         c_state = "normal" if len(self._tree.selection()) else "disabled"
         try: p_state = "normal" if len(self.root.clipboard_get()) else "disabled"
         except: p_state = "disabled" # Invalid clipboard content
-        popup_menu.add_command(label="Copy ({}+C)".format(sign),command=self.copy_selection,state=c_state)
+        popup_menu.add_command(label="Copy",command=self.copy_selection,state=c_state, accelerator="({}+C)".format(sign))
         if not cell in ("",self.get_root_node()) and self.get_check_type(cell).lower() in ["array","dictionary"]:
             popup_menu.add_command(label="Copy Children", command=self.copy_children,state=c_state)
-        popup_menu.add_command(label="Paste ({}+V)".format(sign),command=self.paste_selection,state=p_state)
+        popup_menu.add_command(label="Paste",command=self.paste_selection,state=p_state, accelerator="({}+V)".format(sign))
         
         # Walk through the menu data if it exists
         cell_path = self.get_cell_path(cell)
@@ -2370,6 +2386,7 @@ class PlistWindow(tk.Toplevel):
         if not self.edited:
             self.edited = True
             self.title(self.title()+" - Edited")
+            self.wm_attributes("-modified", 1)
         return 'break'
 
     ###                   ###
