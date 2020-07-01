@@ -277,9 +277,20 @@ class PlistWindow(tk.Toplevel):
 
         # Create the treeview
         style = ttk.Style()
-        style.configure("BW.TLabel", foreground="black", background="white")
+        style.configure("BW.Treeview", foreground="black", background="white")
+        style.configure("BW.Treeview.Heading", background="white", relief="flat", justify="left", borderwidth=7)
+        style.layout("BW.Treeview", [('Treeview.padding', {'sticky': 'nswe', 'children': [('Treeview.treearea', {'sticky': 'nswe'})]})])
+        style.layout("BW.Treeview.Heading", [('BW.Treeheading.border', {
+                                                    'sticky': 'nswe', 'children': [('BW.Treeheading.padding', {
+                                                        'sticky': 'nswe', 'children': [('BW.Treeheading.image', {
+                                                            'side': 'right', 'sticky': ''
+                                                        }), ('BW.Treeheading.text', {
+                                                            'sticky': 'w'
+                                                        })]
+                                                    })]
+                                                })])
         self._tree_frame = ttk.Frame(self)
-        self._tree = ttk.Treeview(self._tree_frame, columns=("Type","Value","Drag"), selectmode="browse", style="BW.TLabel")
+        self._tree = ttk.Treeview(self._tree_frame, columns=("Type","Value","Drag"), selectmode="browse", style="BW.Treeview")
         self._tree.heading("#0", text="Key")
         self._tree.heading("#1", text="Type")
         self._tree.heading("#2", text="Value")
@@ -2318,13 +2329,13 @@ class PlistWindow(tk.Toplevel):
 
         # index 2 is the separator so we leave it out
         type_dict = {
-            "⇕ Dictionary": 0,
-            "⇕ Array": 1,
-            "⇕ Boolean": 3,
-            "⇕ Data": 4,
-            "⇕ Date": 5,
-            "⇕ Number": 6,
-            "⇕ String": 7
+            "Dictionary": 0,
+            "Array": 1,
+            "Boolean": 3,
+            "Data": 4,
+            "Date": 5,
+            "Number": 6,
+            "String": 7
             }
 
         if index == 1:
@@ -2332,7 +2343,7 @@ class PlistWindow(tk.Toplevel):
             type_menu = self.root_type_menu if parent == "" else self.type_menu
             try:
                 row_array = self.get_padded_values(rowid, 3)
-                y_offset = type_menu.yposition(type_dict[row_array[0]])
+                y_offset = type_menu.yposition(type_dict[row_array[0].split()[1]])
                 type_menu.tk_popup(event.x_root, event.y_root - y_offset, 0)
             finally:
                 type_menu.grab_release()
@@ -2437,4 +2448,4 @@ class PlistWindow(tk.Toplevel):
             self._tree.item(item, tags=tags)
         self._tree.tag_configure('odd', background='#E8E8E8')
         self._tree.tag_configure('even', background='#DFDFDF')
-        self._tree.tag_configure("selected", foreground="white",background="dodgerblue")
+        #self._tree.tag_configure("selected", foreground="white",background="dodgerblue")
