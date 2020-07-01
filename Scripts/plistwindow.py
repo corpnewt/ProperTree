@@ -277,9 +277,11 @@ class PlistWindow(tk.Toplevel):
 
         # Create the treeview
         style = ttk.Style()
-        style.configure("BW.Treeview", foreground="black", background="white")
-        style.configure("BW.Treeview.Heading", background="white", relief="flat", justify="left", borderwidth=7, font=("TkDefaultFont", 11, "bold"))
-        style.layout("BW.Treeview", [('Treeview.padding', {'sticky': 'nswe', 'children': [('Treeview.treearea', {'sticky': 'nswe'})]})])
+        style.element_create("BW.Treeheading.cell", "from", "default")
+        style.element_create("BW.Treeheading.border", "from", "default")
+        style.configure("BW.Treeview", foreground="black")
+        style.configure("BW.Treeview.Heading", relief="flat", justify="left", borderwidth=7)
+        style.layout("BW.Treeview",  [('Treeview.treearea', {'sticky': 'nswe'})])
         style.layout("BW.Treeview.Heading", [('BW.Treeheading.border', {
                                                     'sticky': 'nswe', 'children': [('BW.Treeheading.padding', {
                                                         'sticky': 'nswe', 'children': [('BW.Treeheading.image', {

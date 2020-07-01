@@ -60,7 +60,7 @@ class ProperTree:
         self.xcode_check.grid(row=1,column=0,columnspan=2,sticky="w",padx=10)
         self.sort_check.grid(row=2,column=0,columnspan=2,sticky="w",padx=10)
         self.plist_type_string = tk.StringVar(self.settings_frame)
-        self.plist_type_menu = ttk.OptionMenu(self.settings_frame, self.plist_type_string, "XML","Binary", command=self.change_plist_type)
+        self.plist_type_menu = ttk.OptionMenu(self.settings_frame, self.plist_type_string, "XML", "XML","Binary", command=self.change_plist_type)
         plist_label = ttk.Label(self.settings_frame,text="Default New Plist Type:")
         plist_label.grid(row=3,column=0,sticky="w",padx=10)
         self.plist_type_menu.grid(row=3,column=1,sticky="we",padx=10)
