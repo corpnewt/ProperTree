@@ -278,7 +278,7 @@ class PlistWindow(tk.Toplevel):
         # Create the treeview
         style = ttk.Style()
         style.configure("BW.Treeview", foreground="black", background="white")
-        style.configure("BW.Treeview.Heading", background="white", relief="flat", justify="left", borderwidth=7)
+        style.configure("BW.Treeview.Heading", background="white", relief="flat", justify="left", borderwidth=7, font=("TkDefaultFont", 11, "bold"))
         style.layout("BW.Treeview", [('Treeview.padding', {'sticky': 'nswe', 'children': [('Treeview.treearea', {'sticky': 'nswe'})]})])
         style.layout("BW.Treeview.Heading", [('BW.Treeheading.border', {
                                                     'sticky': 'nswe', 'children': [('BW.Treeheading.padding', {
@@ -2446,6 +2446,6 @@ class PlistWindow(tk.Toplevel):
             else:
                 tags.append("odd" if x % 2 else "even")
             self._tree.item(item, tags=tags)
-        self._tree.tag_configure('odd', background='#E8E8E8')
-        self._tree.tag_configure('even', background='#DFDFDF')
+        self._tree.tag_configure('odd', background='#F4F4F4')
+        self._tree.tag_configure('even', background='#FFFFFF')
         #self._tree.tag_configure("selected", foreground="white",background="dodgerblue")
