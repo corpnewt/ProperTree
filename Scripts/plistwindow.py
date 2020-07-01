@@ -250,8 +250,7 @@ class PlistWindow(tk.Toplevel):
         self.current_plist = None # None = new
         self.edited = False
 
-        if str(sys.platform) == "darwin":
-            self.wm_attributes("-modified", 0)
+        if str(sys.platform) == "darwin": self.wm_attributes("-modified", 0)
         self.dragging = False
         self.drag_start = None
         self.show_find_replace = False
@@ -427,6 +426,12 @@ class PlistWindow(tk.Toplevel):
         self.draw_frames()
         self.entry_popup = None
 
+    def ensure_edited(self):
+        if not self.edited:
+            self.edited = True
+            self.title(self.title()+" - Edited")
+            if str(sys.platform) == "darwin": self.wm_attributes("-modified", 1)
+
     def window_resize(self, event=None, obj=None):
         if not event or not obj: return
         if self.winfo_height() == self.previous_height and self.winfo_width() == self.previous_width: return
@@ -436,11 +441,7 @@ class PlistWindow(tk.Toplevel):
         self.controller.settings["last_window_height"] = self.previous_height
 
     def change_plist_type(self, value):
-        if not self.edited:
-            self.edited = True
-            self.title(self.title()+" - Edited")
-            if str(sys.platform) == "darwin":
-                self.wm_attributes("-modified", 1)
+        self.ensure_edited()
 
     def change_data_type(self, value):
         self.change_data_display(value.lower())
@@ -634,11 +635,7 @@ class PlistWindow(tk.Toplevel):
         self.alternate_colors()
         self.add_undo(replacements)
         # Ensure we're edited
-        if not self.edited:
-            self.edited = True
-            self.title(self.title()+" - Edited")
-            if str(sys.platform) == "darwin":
-                self.wm_attributes("-modified", 1)
+        self.ensure_edited()
         # Let's try to find the next
         self.find_next(replacing=True)
 
@@ -1108,11 +1105,7 @@ class PlistWindow(tk.Toplevel):
             })
         self.add_undo(undo_list)
         # Ensure we're edited
-        if not self.edited:
-            self.edited = True
-            self.title(self.title()+" - Edited")
-            if str(sys.platform) == "darwin":
-                self.wm_attributes("-modified", 1)
+        self.ensure_edited()
         self.update_all_children()
         self.alternate_colors()
 
@@ -1256,11 +1249,7 @@ class PlistWindow(tk.Toplevel):
         if len(r_task_list) and single_undo == None:
             r.append(r_task_list)
         # Ensure we're edited
-        if not self.edited:
-            self.edited = True
-            self.title(self.title()+" - Edited")
-            if str(sys.platform) == "darwin":
-                self.wm_attributes("-modified", 1)
+        self.ensure_edited()
         self.update_all_children()
         self.alternate_colors()
 
@@ -1331,11 +1320,7 @@ class PlistWindow(tk.Toplevel):
             pass
         else:
             self._tree.item(target,open=False)
-            if not self.edited:
-                self.edited = True
-                self.title(self.title()+" - Edited")
-                if str(sys.platform) == "darwin":
-                    self.wm_attributes("-modified", 1)
+            self.ensure_edited()
             self.dragging = True
 
     def confirm_drag(self, event):
@@ -1408,11 +1393,7 @@ class PlistWindow(tk.Toplevel):
         # We removed some, flush the changes, update the view,
         # post the undo, and make sure we're edited
         self.add_undo(removedlist)
-        if not self.edited:
-            self.edited = True
-            self.title(self.title()+" - Edited")
-            if str(sys.platform) == "darwin":
-                self.wm_attributes("-modified", 1)
+        self.ensure_edited()
         self.update_all_children()
         self.alternate_colors()
 
@@ -1522,7 +1503,7 @@ class PlistWindow(tk.Toplevel):
         self.title(path)
         # No changes - so we'll reset that
         self.edited = False
-        self.wm_attributes("-modified", 0)
+        if str(sys.platform) == "darwin": self.wm_attributes("-modified", 0)
         return True
 
     def open_plist(self, path, plist_data, plist_type = "XML",auto_expand=True):
@@ -1532,14 +1513,11 @@ class PlistWindow(tk.Toplevel):
         self.add_node(plist_data)
         self.current_plist = path
         if path == None:
-            self.title("Untitled.plist - Edited")
-            self.edited = True
-            if str(sys.platform) == "darwin":
-                self.wm_attributes("-modified", 1)
+            self.ensure_edited()
         else:
             self.title(path)
             self.edited = False
-            self.wm_attributes("-modified", 0)
+            if str(sys.platform) == "darwin": self.wm_attributes("-modified", 0)
         self.undo_stack = []
         self.redo_stack = []
         # Close if need be
@@ -1684,11 +1662,7 @@ class PlistWindow(tk.Toplevel):
         self._tree.selection_set(first)
         self._tree.see(first)
         self._tree.update()
-        if not self.edited:
-            self.edited = True
-            self.title(self.title()+" - Edited")
-            if str(sys.platform) == "darwin":
-                self.wm_attributes("-modified", 1)
+        self.ensure_edited()
         self.update_all_children()
         self.alternate_colors()
 
@@ -1875,11 +1849,7 @@ class PlistWindow(tk.Toplevel):
         self._tree.focus(new_cell)
         self._tree.selection_set(new_cell)
         self._tree.see(new_cell)
-        if not self.edited:
-            self.edited = True
-            self.title(self.title()+" - Edited")
-            if str(sys.platform) == "darwin":
-                self.wm_attributes("-modified", 1)
+        self.ensure_edited()
         self.add_undo({"type":"add","cell":new_cell})
         if target == "":
             # Top level, nothing to do here but edit the new row
@@ -1908,11 +1878,7 @@ class PlistWindow(tk.Toplevel):
         self._tree.detach(target)
         # self._tree.delete(target) # Removes completely
         # Might include an undo function for removals, at least - tbd
-        if not self.edited:
-            self.edited = True
-            self.title(self.title()+" - Edited")
-            if str(sys.platform) == "darwin":
-                self.wm_attributes("-modified", 1)
+        self.ensure_edited()
         # Check if the parent was an array/dict, and update counts
         if parent == "":
             return
@@ -2010,11 +1976,7 @@ class PlistWindow(tk.Toplevel):
             values[1] = ""
         # Set the values
         self._tree.item(cell, values=values)
-        if not self.edited:
-            self.edited = True
-            self.title(self.title()+" - Edited")
-            if str(sys.platform) == "darwin":
-                self.wm_attributes("-modified", 1)
+        self.ensure_edited()
 
     ###             ###
     # Click Functions #
@@ -2033,11 +1995,7 @@ class PlistWindow(tk.Toplevel):
         values[1] = value
         # Set the values
         self._tree.item("" if not len(self._tree.selection()) else self._tree.selection()[0], values=values)
-        if not self.edited:
-            self.edited = True
-            self.title(self.title()+" - Edited")
-            if str(sys.platform) == "darwin":
-                self.wm_attributes("-modified", 1)
+        self.ensure_edited()
 
     def split(self, a, escape = '\\', separator = '/'):
         result = []
@@ -2193,11 +2151,7 @@ class PlistWindow(tk.Toplevel):
                 "cell":last_cell
             })
         self.add_undo(undo_list)
-        if not self.edited:
-            self.edited = True
-            self.title(self.title()+" - Edited")
-            if str(sys.platform) == "darwin":
-                self.wm_attributes("-modified", 1)
+        self.ensure_edited()
         self.update_all_children()
         self.alternate_colors()
 
@@ -2327,6 +2281,7 @@ class PlistWindow(tk.Toplevel):
     def tree_click_event(self, event):
         # close previous popups
         self.destroy_popups()
+        self.alternate_colors()
 
     def on_single_click(self, event):
         # close previous popups
@@ -2360,11 +2315,25 @@ class PlistWindow(tk.Toplevel):
             pt = self.get_check_type(self._tree.parent(tv_item))
         except:
             pt = ""
+
+        # index 2 is the separator so we leave it out
+        type_dict = {
+            "⇕ Dictionary": 0,
+            "⇕ Array": 1,
+            "⇕ Boolean": 3,
+            "⇕ Data": 4,
+            "⇕ Date": 5,
+            "⇕ Number": 6,
+            "⇕ String": 7
+            }
+
         if index == 1:
             # Type change - let's show our menu
             type_menu = self.root_type_menu if parent == "" else self.type_menu
             try:
-                type_menu.tk_popup(event.x_root, event.y_root, 0)
+                row_array = self.get_padded_values(rowid, 3)
+                y_offset = type_menu.yposition(type_dict[row_array[0]])
+                type_menu.tk_popup(event.x_root, event.y_root - y_offset, 0)
             finally:
                 type_menu.grab_release()
             return 'break'
@@ -2398,11 +2367,7 @@ class PlistWindow(tk.Toplevel):
         # place Entry popup properly
         self.entry_popup = EntryPopup(self._tree, self, text, tv_item, column)
         self.entry_popup.place( x=x, y=y+pady, anchor="w", width=width)
-        if not self.edited:
-            self.edited = True
-            self.title(self.title()+" - Edited")
-            if str(sys.platform) == "darwin":
-                self.wm_attributes("-modified", 1)
+        self.ensure_edited()
         return 'break'
 
     ###                   ###
@@ -2463,16 +2428,13 @@ class PlistWindow(tk.Toplevel):
             tags = self._tree.item(item,"tags")
             if not isinstance(tags,list):
                 tags = []
-            # Remove odd or even
-            try:
-                tags.remove("odd")
-            except:
-                pass
-            try:
-                tags.remove("even")
-            except:
-                pass
-            tags.append("odd" if x % 2 else "even")
+            # Strip out odd/even/selected
+            tags = [x for x in tags if not x in ("odd","even","selected")]
+            if item == self._tree.focus():
+                tags.append("selected")
+            else:
+                tags.append("odd" if x % 2 else "even")
             self._tree.item(item, tags=tags)
         self._tree.tag_configure('odd', background='#E8E8E8')
         self._tree.tag_configure('even', background='#DFDFDF')
+        self._tree.tag_configure("selected", foreground="white",background="dodgerblue")
