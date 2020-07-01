@@ -347,7 +347,10 @@ class ProperTree:
         self.settings_window.deiconify()
 
     def show_convert(self, event = None):
-        self.tk.deiconify()
+        if self.tk.state() == "normal":
+            self.tk.withdraw()
+        else:
+            self.tk.deiconify()
 
     def convert_values(self, event = None):
         from_value = self.f_text.get()
