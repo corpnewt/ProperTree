@@ -1016,11 +1016,14 @@ class PlistWindow(tk.Toplevel):
                 "parents":parents
             })
         ordered_kexts = []
+        disabled_parents = []
         while len(unordered_kexts): # This could be dangerous if things aren't properly prepared above
             kext = unordered_kexts.pop(0)
-            if len(kext["parents"]) and not all(x in ordered_kexts for x in kext["parents"]):
-                unordered_kexts.append(kext)
-                continue
+            if len(kext["parents"]):
+                disabled_parents.extend([x.get("BundlePath","") for x in kext["parents"] if x.get("Enabled",True) == False and not x in disabled_parents])
+                if not all(x in ordered_kexts for x in kext["parents"]):
+                    unordered_kexts.append(kext)
+                    continue
             ordered_kexts.append(next(x for x in new_kexts if x.get("BundlePath","") == kext["kext"].get("BundlePath","")))
         # Let's compare against the original load order - to prevent mis-prompting
         missing_kexts = [x for x in ordered_kexts if not x in original_kexts]
@@ -1037,6 +1040,12 @@ class PlistWindow(tk.Toplevel):
         if len(rearranged):
             if not mb.askyesno("Incorrect Kext Load Order","Correct the following kext load inheritance issues?\n\n{}".format("\n".join(rearranged)),parent=self):
                 ordered_kexts = original_kexts # We didn't want to update it
+        # Convert disabled_parents to a set to avoid duplicates
+        disabled_parents = set(disabled_parents)
+        if len(disabled_parents):
+            if mb.askyesno("Disabled Parent Kexts","Enable the following disabled parent kexts?\n\n{}".format("\n".join(disabled_parents)),parent=self):
+                for x in ordered_kexts: # Walk our kexts and enable the parents
+                    if x.get("BundlePath","") in disabled_parents: x["Enabled"] = True
 
         tree_dict["Kernel"]["Add"] = ordered_kexts
 
