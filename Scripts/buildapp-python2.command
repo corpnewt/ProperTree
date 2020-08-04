@@ -16,7 +16,7 @@ def main():
     c = p.communicate()
     pypath = _decode(c[0]).split("\n")[0]
     if not len(pypath):
-        print(" - Python 3 not found in PATH!  Aborting...")
+        print(" - Python not found in PATH!  Aborting...")
         exit(1)
     print(" - {} ".format(pypath))
     print("Checking for existing ProperTree.app...")
