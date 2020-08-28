@@ -839,11 +839,12 @@ class PlistWindow(tk.Toplevel):
             if not os.path.isdir(kdir):
                 continue
             kdict = {
+                "Arch":"x86_64",
+                "BundlePath":parent+"/"+x if len(parent) else x,
                 "Comment":"",
                 "Enabled":True,
                 "MaxKernel":"",
                 "MinKernel":"",
-                "BundlePath":parent+"/"+x if len(parent) else x,
                 "ExecutablePath":""
             }
             kinfo = {}
