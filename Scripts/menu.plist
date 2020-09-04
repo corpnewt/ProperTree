@@ -107,6 +107,8 @@
 				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
+					<key>Arch</key>
+					<string>Any</string>
 					<key>BundlePath</key>
 					<string></string>
 					<key>Comment</key>
@@ -134,6 +136,8 @@
 				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
+					<key>Arch</key>
+					<string>Any</string>
 					<key>BundlePath</key>
 					<string>Lilu.kext</string>
 					<key>Comment</key>
@@ -157,6 +161,8 @@
 				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
+					<key>Arch</key>
+					<string>Any</string>
 					<key>BundlePath</key>
 					<string>VirtualSMC.kext</string>
 					<key>Comment</key>
@@ -180,6 +186,8 @@
 				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
+					<key>Arch</key>
+					<string>Any</string>
 					<key>BundlePath</key>
 					<string>WhateverGreen.kext</string>
 					<key>Comment</key>
@@ -203,6 +211,8 @@
 				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
+					<key>Arch</key>
+					<string>Any</string>
 					<key>BundlePath</key>
 					<string>AppleALC.kext</string>
 					<key>Comment</key>
@@ -226,6 +236,8 @@
 				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
+					<key>Arch</key>
+					<string>Any</string>
 					<key>BundlePath</key>
 					<string>USBInjectAll.kext</string>
 					<key>Comment</key>
@@ -249,6 +261,8 @@
 				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
+					<key>Arch</key>
+					<string>Any</string>
 					<key>BundlePath</key>
 					<string>VoodooPS2Controller.kext</string>
 					<key>Comment</key>
@@ -272,6 +286,8 @@
 				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
+					<key>Arch</key>
+					<string>Any</string>
 					<key>BundlePath</key>
 					<string>VoodooPS2Controller.kext/Contents/PlugIns/VoodooPS2Keyboard.kext</string>
 					<key>Comment</key>
@@ -295,6 +311,8 @@
 				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
+					<key>Arch</key>
+					<string>Any</string>
 					<key>BundlePath</key>
 					<string>VoodooPS2Controller.kext/Contents/PlugIns/VoodooPS2Trackpad.kext</string>
 					<key>Comment</key>
@@ -318,6 +336,8 @@
 				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
+					<key>Arch</key>
+					<string>Any</string>
 					<key>BundlePath</key>
 					<string>AirportBrcmFixup.kext</string>
 					<key>Comment</key>
@@ -341,6 +361,8 @@
 				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
+					<key>Arch</key>
+					<string>Any</string>
 					<key>BundlePath</key>
 					<string>CPUFriend.kext</string>
 					<key>Comment</key>
@@ -364,6 +386,8 @@
 				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
+					<key>Arch</key>
+					<string>Any</string>
 					<key>BundlePath</key>
 					<string>CPUFriendDataProvider.kext</string>
 					<key>Comment</key>
@@ -387,6 +411,8 @@
 				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
+					<key>Arch</key>
+					<string>Any</string>
 					<key>BundlePath</key>
 					<string>VoodooI2C.kext/Contents/PlugIns/VoodooI2CServices.kext</string>
 					<key>Comment</key>
@@ -410,6 +436,8 @@
 				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
+					<key>Arch</key>
+					<string>Any</string>
 					<key>BundlePath</key>
 					<string>VoodooI2C.kext/Contents/PlugIns/VoodooGPIO.kext</string>
 					<key>Comment</key>
@@ -433,6 +461,8 @@
 				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
+					<key>Arch</key>
+					<string>Any</string>
 					<key>BundlePath</key>
 					<string>VoodooI2C.kext</string>
 					<key>Comment</key>
@@ -456,6 +486,8 @@
 				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
+					<key>Arch</key>
+					<string>Any</string>
 					<key>BundlePath</key>
 					<string>VoodooI2CHID.kext</string>
 					<key>Comment</key>
@@ -479,6 +511,8 @@
 				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
+					<key>Arch</key>
+					<string>Any</string>
 					<key>BundlePath</key>
 					<string>NoTouchID.kext</string>
 					<key>Comment</key>
@@ -502,6 +536,8 @@
 				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
+					<key>Arch</key>
+					<string>Any</string>
 					<key>BundlePath</key>
 					<string>BrcmFirmwareData.kext</string>
 					<key>Comment</key>
@@ -525,6 +561,8 @@
 				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
+					<key>Arch</key>
+					<string>Any</string>
 					<key>BundlePath</key>
 					<string>BrcmPatchRAM2.kext</string>
 					<key>Comment</key>
@@ -548,6 +586,8 @@
 				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
+					<key>Arch</key>
+					<string>Any</string>
 					<key>BundlePath</key>
 					<string>BrcmPatchRAM3.kext</string>
 					<key>Comment</key>
@@ -571,6 +611,8 @@
 				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
+					<key>Arch</key>
+					<string>Any</string>
 					<key>BundlePath</key>
 					<string>SMCBatteryManager.kext</string>
 					<key>Comment</key>
@@ -594,6 +636,8 @@
 				<string>d/d/a</string>
 				<key>value</key>
 				<dict>
+					<key>Arch</key>
+					<string>Any</string>
 					<key>BundlePath</key>
 					<string>SMCProcessor.kext</string>
 					<key>Comment</key>
