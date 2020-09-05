@@ -325,30 +325,28 @@ class PlistWindow(tk.Toplevel):
         # Setup menu bar (hopefully per-window) - only happens on non-mac systems
         if not str(sys.platform) == "darwin":
             key="Control"
-            sign = "Ctrl+"
             main_menu = tk.Menu(self)
             file_menu = tk.Menu(self, tearoff=0)
             main_menu.add_cascade(label="File", menu=file_menu)
-            file_menu.add_command(label="New ({}N)".format(sign), command=self.controller.new_plist)
-            file_menu.add_command(label="Open ({}O)".format(sign), command=self.controller.open_plist)
-            file_menu.add_command(label="Save ({}S)".format(sign), command=self.controller.save_plist)
-            file_menu.add_command(label="Save As ({}Shift+S)".format(sign), command=self.controller.save_plist_as)
-            file_menu.add_command(label="Duplicate ({}D)".format(sign), command=self.controller.duplicate_plist)
-            file_menu.add_command(label="Reload From Disk ({}L)".format(sign), command=self.reload_from_disk)
+            file_menu.add_command(label="New", command=self.controller.new_plist, accelerator="Ctrl+N")
+            file_menu.add_command(label="Open", command=self.controller.open_plist, accelerator="Ctrl+O")
+            file_menu.add_command(label="Save", command=self.controller.save_plist, accelerator="Ctrl+S")
+            file_menu.add_command(label="Save As...", command=self.controller.save_plist_as, accelerator="Ctrl+Shift+S")
+            file_menu.add_command(label="Duplicate", command=self.controller.duplicate_plist, accelerator="Ctrl+D")
+            file_menu.add_command(label="Reload From Disk", command=self.reload_from_disk, accelerator="Ctrl+L")
             file_menu.add_separator()
-            file_menu.add_command(label="OC Snapshot ({}R)".format(sign), command=self.oc_snapshot)
-            file_menu.add_command(label="OC Clean Snapshot ({}Shift+R)".format(sign), command=self.oc_clean_snapshot)
+            file_menu.add_command(label="OC Snapshot", command=self.oc_snapshot, accelerator="Ctrl+R")
+            file_menu.add_command(label="OC Clean Snapshot", command=self.oc_clean_snapshot, accelerator="Ctrl+Shift+R")
             file_menu.add_separator()
-            file_menu.add_command(label="Convert Window ({}T)".format(sign), command=self.controller.show_convert)
-            file_menu.add_command(label="Strip Comments ({}M)".format(sign), command=self.strip_comments)
+            file_menu.add_command(label="Convert Window", command=self.controller.show_convert, accelerator="Ctrl+T")
+            file_menu.add_command(label="Strip Comments", command=self.strip_comments, accelerator="Ctrl+M")
             file_menu.add_separator()
-            file_menu.add_command(label="Settings ({},)".format(sign),command=self.controller.show_settings)
+            file_menu.add_command(label="Settings",command=self.controller.show_settings, accelerator="Ctrl+,")
             file_menu.add_separator()
-            file_menu.add_command(label="Toggle Find/Replace Pane ({}F)".format(sign),command=self.hide_show_find)
-            file_menu.add_command(label="Toggle Plist/Data Type Pane ({}P)".format(sign),command=self.hide_show_type)
-            if not str(sys.platform) == "darwin":
-                file_menu.add_separator()
-                file_menu.add_command(label="Quit ({}Q)".format(sign), command=self.controller.quit)
+            file_menu.add_command(label="Toggle Find/Replace Pane",command=self.hide_show_find, accelerator="Ctrl+F")
+            file_menu.add_command(label="Toggle Plist/Data Type Pane",command=self.hide_show_type, accelerator="Ctrl+P")
+            file_menu.add_separator()
+            file_menu.add_command(label="Quit", command=self.controller.quit, accelerator="Ctrl+Q")
             self.config(menu=main_menu)
 
         # Get the right click menu options
@@ -2200,25 +2198,25 @@ class PlistWindow(tk.Toplevel):
         if cell in ("",self.get_root_node()):
             # Top level - get the Root
             if self.get_check_type(self.get_root_node()).lower() in ("array","dictionary"):
-                popup_menu.add_command(label="New top level entry (+)".format(self._tree.item(cell,"text")), command=lambda:self.new_row(self.get_root_node()))
+                popup_menu.add_command(label="New top level entry".format(self._tree.item(cell,"text")), command=lambda:self.new_row(self.get_root_node()),accelerator="(+)")
         else:
             if self.get_check_type(cell).lower() in ["array","dictionary"] and (self._tree.item(cell,"open") or not len(self._tree.get_children(cell))):
-                popup_menu.add_command(label="New child under '{}' (+)".format(self._tree.item(cell,"text")), command=lambda:self.new_row(cell))
+                popup_menu.add_command(label="New child under '{}'".format(self._tree.item(cell,"text")), command=lambda:self.new_row(cell),accelerator="(+)")
                 popup_menu.add_command(label="New sibling of '{}'".format(self._tree.item(cell,"text")), command=lambda:self.new_row(cell,True))
-                popup_menu.add_command(label="Remove '{}' and any children (-)".format(self._tree.item(cell,"text")), command=lambda:self.remove_row(cell))
+                popup_menu.add_command(label="Remove '{}' and any children".format(self._tree.item(cell,"text")), command=lambda:self.remove_row(cell),accelerator="(-)")
             else:
-                popup_menu.add_command(label="New sibling of '{}' (+)".format(self._tree.item(cell,"text")), command=lambda:self.new_row(cell))
-                popup_menu.add_command(label="Remove '{}' (-)".format(self._tree.item(cell,"text")), command=lambda:self.remove_row(cell))
+                popup_menu.add_command(label="New sibling of '{}'".format(self._tree.item(cell,"text")), command=lambda:self.new_row(cell),accelerator="(+)")
+                popup_menu.add_command(label="Remove '{}'".format(self._tree.item(cell,"text")), command=lambda:self.remove_row(cell),accelerator="(-)")
         # Add the copy and paste options
         popup_menu.add_separator()
         sign = "Command" if str(sys.platform) == "darwin" else "Ctrl"
         c_state = "normal" if len(self._tree.selection()) else "disabled"
         try: p_state = "normal" if len(self.root.clipboard_get()) else "disabled"
         except: p_state = "disabled" # Invalid clipboard content
-        popup_menu.add_command(label="Copy ({}+C)".format(sign),command=self.copy_selection,state=c_state)
+        popup_menu.add_command(label="Copy",command=self.copy_selection,state=c_state,accelerator="({}+C)".format(sign))
         if not cell in ("",self.get_root_node()) and self.get_check_type(cell).lower() in ["array","dictionary"]:
             popup_menu.add_command(label="Copy Children", command=self.copy_children,state=c_state)
-        popup_menu.add_command(label="Paste ({}+V)".format(sign),command=self.paste_selection,state=p_state)
+        popup_menu.add_command(label="Paste",command=self.paste_selection,state=p_state,accelerator="({}+V)".format(sign))
         
         # Walk through the menu data if it exists
         cell_path = self.get_cell_path(cell)
