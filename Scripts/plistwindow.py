@@ -2194,29 +2194,29 @@ class PlistWindow(tk.Toplevel):
         popup_menu.add_command(label="Expand All", command=self.expand_all)
         popup_menu.add_command(label="Collapse All", command=self.collapse_all)
         popup_menu.add_separator()
+        is_mac = sys.platform == "darwin"
         # Determine if we are adding a child or a sibling
         if cell in ("",self.get_root_node()):
             # Top level - get the Root
             if self.get_check_type(self.get_root_node()).lower() in ("array","dictionary"):
-                popup_menu.add_command(label="New top level entry".format(self._tree.item(cell,"text")), command=lambda:self.new_row(self.get_root_node()),accelerator="(+)")
+                popup_menu.add_command(label="New top level entry{}".format(" (+)" if is_mac else ""), command=lambda:self.new_row(self.get_root_node()),accelerator=None if is_mac else "(+)")
         else:
             if self.get_check_type(cell).lower() in ["array","dictionary"] and (self._tree.item(cell,"open") or not len(self._tree.get_children(cell))):
-                popup_menu.add_command(label="New child under '{}'".format(self._tree.item(cell,"text")), command=lambda:self.new_row(cell),accelerator="(+)")
+                popup_menu.add_command(label="New child under '{}'{}".format(self._tree.item(cell,"text")," (+)" if is_mac else ""), command=lambda:self.new_row(cell),accelerator=None if is_mac else "(+)")
                 popup_menu.add_command(label="New sibling of '{}'".format(self._tree.item(cell,"text")), command=lambda:self.new_row(cell,True))
-                popup_menu.add_command(label="Remove '{}' and any children".format(self._tree.item(cell,"text")), command=lambda:self.remove_row(cell),accelerator="(-)")
+                popup_menu.add_command(label="Remove '{}' and any children{}".format(self._tree.item(cell,"text")," (-)" if is_mac else ""), command=lambda:self.remove_row(cell),accelerator=None if is_mac else "(-)")
             else:
-                popup_menu.add_command(label="New sibling of '{}'".format(self._tree.item(cell,"text")), command=lambda:self.new_row(cell),accelerator="(+)")
-                popup_menu.add_command(label="Remove '{}'".format(self._tree.item(cell,"text")), command=lambda:self.remove_row(cell),accelerator="(-)")
+                popup_menu.add_command(label="New sibling of '{}'{}".format(self._tree.item(cell,"text")," (+)" if is_mac else ""), command=lambda:self.new_row(cell),accelerator=None if is_mac else "(+)")
+                popup_menu.add_command(label="Remove '{}'{}".format(self._tree.item(cell,"text")," (-)" if is_mac else ""), command=lambda:self.remove_row(cell),accelerator=None if is_mac else "(-)")
         # Add the copy and paste options
         popup_menu.add_separator()
-        sign = "Command" if str(sys.platform) == "darwin" else "Ctrl"
         c_state = "normal" if len(self._tree.selection()) else "disabled"
         try: p_state = "normal" if len(self.root.clipboard_get()) else "disabled"
         except: p_state = "disabled" # Invalid clipboard content
-        popup_menu.add_command(label="Copy",command=self.copy_selection,state=c_state,accelerator="({}+C)".format(sign))
+        popup_menu.add_command(label="Copy{}".format(" (Cmd+C)" if is_mac else ""),command=self.copy_selection,state=c_state,accelerator=None if is_mac else "(Ctrl+C)")
         if not cell in ("",self.get_root_node()) and self.get_check_type(cell).lower() in ["array","dictionary"]:
             popup_menu.add_command(label="Copy Children", command=self.copy_children,state=c_state)
-        popup_menu.add_command(label="Paste",command=self.paste_selection,state=p_state,accelerator="({}+V)".format(sign))
+        popup_menu.add_command(label="Paste{}".format(" (Cmd+V)" if is_mac else ""),command=self.paste_selection,state=p_state,accelerator=None if is_mac else "(Ctrl+V)")
         
         # Walk through the menu data if it exists
         cell_path = self.get_cell_path(cell)
