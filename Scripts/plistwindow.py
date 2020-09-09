@@ -340,6 +340,7 @@ class PlistWindow(tk.Toplevel):
             file_menu.add_separator()
             file_menu.add_command(label="Convert Window", command=self.controller.show_convert, accelerator="Ctrl+T")
             file_menu.add_command(label="Strip Comments", command=self.strip_comments, accelerator="Ctrl+M")
+            file_menu.add_command(label="Strip Disabled Entries", command=self.strip_disabled, accelerator="Ctrl+E")
             file_menu.add_separator()
             file_menu.add_command(label="Settings",command=self.controller.show_settings, accelerator="Ctrl+,")
             file_menu.add_separator()
@@ -1395,6 +1396,41 @@ class PlistWindow(tk.Toplevel):
                     "index":self._tree.index(node)
                 })
                 self._tree.detach(node)
+        if not len(removedlist):
+            # Nothing removed
+            return
+        # We removed some, flush the changes, update the view,
+        # post the undo, and make sure we're edited
+        self.add_undo(removedlist)
+        if not self.edited:
+            self.edited = True
+            self.title(self.title()+" - Edited")
+        self.update_all_children()
+        self.alternate_colors()
+
+    def strip_disabled(self, event=None):
+        # Strips out dicts if they contain Enabled = False, or Disabled = True
+        nodes = self.iter_nodes(False)
+        root = self.get_root_node()
+        removedlist = []
+        for node in nodes:
+            name = str(self._tree.item(node,"text")).lower()
+            values = self.get_padded_values(node, 3)
+            value = values[1]
+            check_type = self.get_check_type(node).lower()
+            if check_type=="boolean" and (name=="enabled" and value=="False") or (name=="disabled" and value=="True"):
+                # Found one, remove its parent
+                rem_node = self._tree.parent(node)
+                if root in (node, rem_node):
+                    # Can't remove the root - skip it
+                    continue
+                removedlist.append({
+                    "type":"remove",
+                    "cell":rem_node,
+                    "from":self._tree.parent(rem_node),
+                    "index":self._tree.index(rem_node)
+                })
+                self._tree.detach(rem_node)
         if not len(removedlist):
             # Nothing removed
             return
