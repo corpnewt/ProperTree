@@ -28,6 +28,10 @@ except AttributeError:
 # Helper Methods #
 ###            ###
 
+def get_data(value):
+    if sys.version_info < (3,0): return plistlib.Data(value)
+    return value
+
 def _check_py3():
     return sys.version_info >= (3, 0)
 
