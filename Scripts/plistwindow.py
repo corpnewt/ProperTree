@@ -206,9 +206,8 @@ class PlistWindow(tk.Toplevel):
         self.plist_header = """<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
-<dict>"""
+"""
         self.plist_footer = """
-</dict>
 </plist>"""
         # Create the window
         self.root = root
@@ -1638,7 +1637,16 @@ class PlistWindow(tk.Toplevel):
             plist_data = plist.loads(clip,dict_type=dict if self.controller.settings.get("sort_dict",False) else OrderedDict)
         except:
             # May need the header
-            cb = self.plist_header + "\n" + clip + "\n" + self.plist_footer
+            # First check the type of the first element
+            clip_check = clip.strip().lower()
+            cb_list = [self.plist_header,clip,self.plist_footer]
+            # If we start with a key, assume it's a dict.  If we don't start with an array but have multiple newline-delimited elements, assume an array
+            # - for all else, let the type remain
+            element_type = "dict" if clip_check.startswith("<key>") else "array" if not clip_check.startswith("<array>") and len(clip_check.split("\n")) > 1 else None
+            if element_type:
+                cb_list.insert(1,"<{}>".format(element_type))
+                cb_list.insert(3,"</{}>".format(element_type))
+            cb = "\n".join(cb_list)
             try:
                 plist_data = plist.loads(cb,dict_type=dict if self.controller.settings.get("sort_dict",False) else OrderedDict)
             except Exception as e:
