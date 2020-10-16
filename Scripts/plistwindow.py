@@ -1043,6 +1043,32 @@ class PlistWindow(tk.Toplevel):
             if mb.askyesno("Disabled Parent Kexts","Enable the following disabled parent kexts?\n\n{}".format("\n".join(disabled_parents)),parent=self):
                 for x in ordered_kexts: # Walk our kexts and enable the parents
                     if x.get("BundlePath","") in disabled_parents: x["Enabled"] = True
+        # Finally - we walk the kexts and ensure that we're not loading the same CFBundleIdentifier more than once
+        enabled_ids = []
+        duplicate_bundles = []
+        duplicates_disabled = []
+        for kext in ordered_kexts:
+            temp_kext = {}
+            # Shallow copy the kext entry to avoid changing it in ordered_kexts
+            for x in kext: temp_kext[x] = kext[x]
+            duplicates_disabled.append(temp_kext)
+            # Ignore if alreday disabled
+            if not temp_kext.get("Enabled",False): continue
+            # Get the original info
+            info = next((x for x in kext_list if x[0].get("BundlePath","") == temp_kext.get("BundlePath","")),None)
+            if not info or not info[1].get("CFBundleIdentifier",None): continue # Broken info
+            # Let's see if it's already in enabled_ids - which is just a list of CFBundleIdentifier values
+            if info[1]["CFBundleIdentifier"] in enabled_ids:
+                # Already exists - set it to disabled, and add the bundle path to the duplicate_bundles list
+                temp_kext["Enabled"] = False
+                duplicate_bundles.append(temp_kext.get("BundlePath",""))
+            else:
+                # Doesn't already exist - add it to the enabled_ids list
+                enabled_ids.append(info[1]["CFBundleIdentifier"])
+        # Check if we have duplicates - and offer to disable them
+        if len(duplicate_bundles):
+            if mb.askyesno("Duplicate CFBundleIdentifiers","Disable the following kexts with duplicate CFBundleIdentifiers?\n\n{}".format("\n".join(duplicate_bundles)),parent=self):
+                ordered_kexts = duplicates_disabled
 
         tree_dict["Kernel"]["Add"] = ordered_kexts
 
