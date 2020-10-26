@@ -104,7 +104,6 @@ class ProperTree:
             # Remap the quit function to our own
             self.tk.createcommand('::tk::mac::Quit', self.quit)
             self.tk.createcommand("::tk::mac::OpenDocument", self.open_plist_from_app)
-            self.tk.createcommand("::tk::mac::ReopenApplication", self.open_plist_from_app)
             # Import the needed modules to change the bundle name and force focus
             try:
                 from Foundation import NSBundle
@@ -204,7 +203,7 @@ class ProperTree:
         
         # Wait before opening a new document to see if we need to.
         # This was annoying to debug, but seems to work.
-        self.tk.after(100, lambda:self.check_open(plists))
+        self.tk.after(250, lambda:self.check_open(plists))
 
         # Start our run loop
         tk.mainloop()
@@ -249,13 +248,21 @@ class ProperTree:
             args = [args]
         args = [x for x in args if not self.regexp.search(x)]
         for arg in args:
-            # Let's load the plist
-            if self.start_window == None:
-                self.start_window = self.open_plist_with_path(None,arg,None)
-            elif self.start_window.current_plist == None:
-                self.open_plist_with_path(None,arg,self.start_window)
+            windows = self.stackorder(self.tk)
+            # Verify that no other window has that file selected already
+            existing_window = next((window for window in windows if not window in self.default_windows and window.current_plist==arg),None)
+            if existing_window:
+                existing_window.focus_force()
+                existing_window.update()
+                continue
+            if len(windows) == 1 and windows[0] == self.start_window and windows[0].edited == False and windows[0].current_plist == None:
+                # Fresh window - replace the contents
+                current_window = windows[0]
             else:
-                self.open_plist_with_path(None,arg,None)
+                current_window = None
+            # Let's load the plist
+            window = self.open_plist_with_path(None,arg,current_window)
+            if self.start_window == None: self.start_window = window
 
     def change_hd_type(self, value):
         self.hd_type = value
@@ -486,16 +493,16 @@ class ProperTree:
     def open_plist(self, event=None):
         # Prompt the user to open a plist, attempt to load it, and if successful,
         # set its path as our current_plist value
-        current_window = None
-        windows = self.stackorder(self.tk)
-        if len(windows) == 1 and windows[0] == self.start_window and windows[0].edited == False and windows[0].current_plist == None:
-            # Fresh window - replace the contents
-            current_window = windows[0]
         path = fd.askopenfilename(title = "Select plist file") # ,parent=current_window) # Apparently parent here breaks on 10.15?
         if not len(path):
             # User cancelled - bail
             return None
         path = os.path.realpath(os.path.expanduser(path))
+        current_window = None
+        windows = self.stackorder(self.tk)
+        if len(windows) == 1 and windows[0] == self.start_window and windows[0].edited == False and windows[0].current_plist == None:
+            # Fresh window - replace the contents
+            current_window = windows[0]
         # Verify that no other window has that file selected already
         for window in windows:
             if window in self.default_windows:
@@ -506,13 +513,13 @@ class ProperTree:
                 window.update()
                 window.bell()
                 mb.showerror("File Already Open", "{} is already open here.".format(path)) # , parent=window)
-                return
-        self.open_plist_with_path(event,path,current_window)
+                return None
+        return self.open_plist_with_path(event,path,current_window)
 
     def open_plist_with_path(self, event = None, path = None, current_window = None, plist_type = "XML"):
         if path == None:
             # Uh... wut?
-            return
+            return None
         path = os.path.realpath(os.path.expanduser(path))
         # Let's try to load the plist
         try:
@@ -533,7 +540,7 @@ class ProperTree:
             current_window.open_plist(path,plist_data,plist_type,self.settings.get("expand_all_items_on_open",True))
         current_window.focus_force()
         current_window.update()
-        return True
+        return current_window
 
     def stackorder(self, root):
         """return a list of root and toplevel windows in stacking order (topmost is last)"""
