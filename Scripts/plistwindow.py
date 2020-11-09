@@ -699,9 +699,8 @@ class PlistWindow(tk.Toplevel):
         matches = self.find_all(type_check[1])
         if not len(matches):
             # Nothing found - let's throw an error
-            if not replacing:
-                self.bell()
-                mb.showerror("No Matches Found", '"{}" did not match any {} fields in the current plist.'.format(type_check[1],self.find_type.lower()),parent=self)
+            self.bell()
+            mb.showerror("No Matches Found", '"{}" did not match any {} fields in the current plist.'.format(type_check[1],self.find_type.lower()),parent=self)
             return None
         # Let's get the index of our selected item
         node  = "" if not len(self._tree.selection()) else self._tree.selection()[0]
