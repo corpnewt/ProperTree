@@ -34,7 +34,7 @@ class ProperTree:
         self.settings_window = tk.Toplevel(self.tk)
         self.settings_window.title("ProperTree Settings")
         w = 380
-        h = 150
+        h = 180
         self.settings_window.minsize(width=w,height=h)
         self.settings_window.resizable(True, False)
         self.settings_window.columnconfigure(0,weight=1)
@@ -58,8 +58,13 @@ class ProperTree:
         plist_label = tk.Label(self.settings_window,text="Default New Plist Type:")
         plist_label.grid(row=3,column=0,sticky="w",padx=10)
         self.plist_type_menu.grid(row=3,column=1,sticky="we",padx=10)
+        self.snapshot_string = tk.StringVar(self.settings_window)
+        self.snapshot_menu = tk.OptionMenu(self.settings_window, self.snapshot_string, "Latest", command=self.change_snapshot_version)
+        snapshot_label = tk.Label(self.settings_window,text="Snapshot OC Version:")
+        snapshot_label.grid(row=4,column=0,sticky="w",padx=10)
+        self.snapshot_menu.grid(row=4,column=1,sticky="we",padx=10)
         reset_settings = tk.Button(self.settings_window,text="Reset To Defaults",command=self.reset_settings)
-        reset_settings.grid(row=4,column=1,sticky="e",padx=10,pady=(0,10))
+        reset_settings.grid(row=5,column=1,sticky="e",padx=10)#,pady=(0,10))
 
         # Setup the from/to option menus
         f_title = tk.StringVar(self.tk)
@@ -187,13 +192,22 @@ class ProperTree:
         # sort_dict:                 bool, false = OrderedDict
         # xcode_data:                bool, true = <data>XXXX</data>, false = different lines
         # new_plist_default_type:    string, XML/Binary
+        # snapshot_version:          string, X.X.X version number, or Latest
         #
         self.settings = {}
-        try:
-            if os.path.exists("Scripts/settings.json"):
+        if os.path.exists("Scripts/settings.json"):
+            try:
                 self.settings = json.load(open("Scripts/settings.json"))
-        except:
-            pass
+            except:
+                pass
+        # Also load the snapshot defaults
+        self.snapshot_data = {}
+        if os.path.exists("Scripts/snapshot.plist"):
+            try:
+                with open("Scripts/snapshot.plist","rb") as f:
+                    self.snapshot_data = plist.load(f)
+            except:
+                pass
         os.chdir(cwd)
 
         # Setup the settings page to reflect our settings.json file
@@ -220,6 +234,9 @@ class ProperTree:
     def change_plist_type(self, event = None):
         self.settings["new_plist_default_type"] = self.plist_type_string.get()
 
+    def change_snapshot_version(self, event = None):
+        self.settings["snapshot_version"] = self.snapshot_string.get()
+
     def reset_settings(self, event = None):
         self.settings = {}
         self.update_settings()
@@ -230,6 +247,12 @@ class ProperTree:
         self.sort_dict_keys.set(self.settings.get("sort_dict",False))
         def_type = self.settings.get("new_plist_default_type","XML")
         self.plist_type_string.set(def_type if def_type in self.allowed_types else self.allowed_types[0])
+        self.snapshot_menu["menu"].delete(0,"end")
+        snapshot_choices = ["Latest"] + sorted(list(self.snapshot_data),reverse=True)
+        for choice in snapshot_choices:
+            self.snapshot_menu["menu"].add_command(label=choice,command=tk._setit(self.snapshot_string,choice,self.change_snapshot_version))
+        snapshot_vers = self.settings.get("snapshot_version","Latest")
+        self.snapshot_string.set(snapshot_vers if snapshot_vers in snapshot_choices else "Latest")
 
     def check_open(self, plists = []):
         plists = [x for x in plists if not self.regexp.search(x)]
