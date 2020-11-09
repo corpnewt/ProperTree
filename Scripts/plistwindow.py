@@ -845,7 +845,7 @@ class PlistWindow(tk.Toplevel):
                 "ExecutablePath":""
             }
             # Add our entries from kext_add as needed
-            for x in kext_add: kdict[x] = kext_add[x]
+            for y in kext_add: kdict[y] = kext_add[y]
             kinfo = {}
             # Get the Info.plist
             plist_rel_path = plist_full_path = None
@@ -873,7 +873,7 @@ class PlistWindow(tk.Toplevel):
             # Check if we have a PlugIns folder
             pdir = kdir+"/Contents/PlugIns"
             if os.path.exists(pdir) and os.path.isdir(pdir):
-                kexts.extend(self.walk_kexts(pdir,(parent+"/"+x if len(parent) else x)+"/Contents/PlugIns"))
+                kexts.extend(self.walk_kexts(pdir,(parent+"/"+x if len(parent) else x)+"/Contents/PlugIns",kext_add=kext_add))
         return kexts
 
     def oc_clean_snapshot(self, event = None):
