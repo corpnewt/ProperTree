@@ -34,7 +34,7 @@ class ProperTree:
         self.settings_window = tk.Toplevel(self.tk)
         self.settings_window.title("ProperTree Settings")
         w = 380
-        h = 180
+        h = 210
         self.settings_window.minsize(width=w,height=h)
         self.settings_window.resizable(True, False)
         self.settings_window.columnconfigure(0,weight=1)
@@ -47,6 +47,7 @@ class ProperTree:
         self.expand_on_open = tk.IntVar()
         self.use_xcode_data = tk.IntVar()
         self.sort_dict_keys = tk.IntVar()
+        self.force_schema   = tk.IntVar()
         self.expand_check = tk.Checkbutton(self.settings_window,text="Expand Children When Opening Plist",variable=self.expand_on_open,command=self.expand_command)
         self.xcode_check = tk.Checkbutton(self.settings_window,text="Use Xcode-Style <data> Tags (Inline) in XML Plists",variable=self.use_xcode_data,command=self.xcode_command)
         self.sort_check = tk.Checkbutton(self.settings_window,text="Ignore Dictionary Key Order",variable=self.sort_dict_keys,command=self.sort_command)
@@ -63,8 +64,10 @@ class ProperTree:
         snapshot_label = tk.Label(self.settings_window,text="Snapshot OC Version:")
         snapshot_label.grid(row=4,column=0,sticky="w",padx=10)
         self.snapshot_menu.grid(row=4,column=1,sticky="we",padx=10)
+        self.schema_check = tk.Checkbutton(self.settings_window,text="Force Update Snapshot Schema",variable=self.force_schema,command=self.schema_command)
+        self.schema_check.grid(row=5,column=0,columnspan=2,sticky="w",padx=10)
         reset_settings = tk.Button(self.settings_window,text="Reset To Defaults",command=self.reset_settings)
-        reset_settings.grid(row=5,column=1,sticky="e",padx=10)#,pady=(0,10))
+        reset_settings.grid(row=6,column=1,sticky="e",padx=10,pady=(0,10))
 
         # Setup the from/to option menus
         f_title = tk.StringVar(self.tk)
@@ -193,6 +196,7 @@ class ProperTree:
         # xcode_data:                bool, true = <data>XXXX</data>, false = different lines
         # new_plist_default_type:    string, XML/Binary
         # snapshot_version:          string, X.X.X version number, or Latest
+        # force_snapshot_schema:     bool
         #
         self.settings = {}
         if os.path.exists("Scripts/settings.json"):
@@ -231,6 +235,9 @@ class ProperTree:
     def sort_command(self, event = None):
         self.settings["sort_dict"] = True if self.sort_dict_keys.get() else False
 
+    def schema_command(self, event = None):
+        self.settings["force_snapshot_schema"] = True if self.force_schema.get() else False
+
     def change_plist_type(self, event = None):
         self.settings["new_plist_default_type"] = self.plist_type_string.get()
 
@@ -253,6 +260,7 @@ class ProperTree:
             self.snapshot_menu["menu"].add_command(label=choice,command=tk._setit(self.snapshot_string,choice,self.change_snapshot_version))
         snapshot_vers = self.settings.get("snapshot_version","Latest")
         self.snapshot_string.set(snapshot_vers if snapshot_vers in snapshot_choices else "Latest")
+        self.force_schema.set(self.settings.get("force_snapshot_schema",False))
 
     def check_open(self, plists = []):
         plists = [x for x in plists if not self.regexp.search(x)]
