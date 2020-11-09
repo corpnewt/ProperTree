@@ -1156,6 +1156,16 @@ class PlistWindow(tk.Toplevel):
             # Make sure our Tools list is empty
             tree_dict["Misc"]["Tools"] = []
 
+        # Check if we're forcing schema - and ensure values line up
+        if self.controller.settings.get("force_snapshot_schema",False):
+            ignored = ["Comment","Enabled","Path","BundlePath","ExecutablePath","PlistPath","Name"]
+            for entries,values in ((tree_dict["ACPI"]["Add"],acpi_add),(tree_dict["Kernel"]["Add"],kext_add),(tree_dict["Misc"]["Tools"],tool_add)):
+                for entry in entries:
+                    to_remove = [x for x in entry if not x in values and not x in ignored]
+                    to_add =    [x for x in values if not x in entry and not x in ignored]
+                    for add in to_add:    entry[add] = values[add]
+                    for rem in to_remove: entry.pop(rem,None)
+        
         # Now we remove the original tree - then replace it
         undo_list = []
         for x in self._tree.get_children():
