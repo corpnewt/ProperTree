@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys, os, plistlib, base64, binascii, datetime, tempfile, shutil, re, itertools, math
+import sys, os, plistlib, base64, binascii, datetime, tempfile, shutil, re, itertools, math, hashlib
 from collections import OrderedDict
 try:
     # Python 2
@@ -822,7 +822,7 @@ class PlistWindow(tk.Toplevel):
         # We should have the plist data now
         self.open_plist(self.current_plist,plist_data, self.plist_type_string.get())
 
-    def walk_kexts(self,path,parent=""):
+    def walk_kexts(self,path,parent="",kext_add={}):
         kexts = []
         # Let's make sure we check Lilu first if it exists
         kext_list   = sorted([x for x in os.listdir(path) if not x.lower() in ("fakesmc.kext","lilu.kext","virtualsmc.kext")])
@@ -837,14 +837,16 @@ class PlistWindow(tk.Toplevel):
             if not os.path.isdir(kdir):
                 continue
             kdict = {
-                "Arch":"Any",
+                # "Arch":"Any",
                 "BundlePath":parent+"/"+x if len(parent) else x,
                 "Comment":"",
                 "Enabled":True,
-                "MaxKernel":"",
-                "MinKernel":"",
+                # "MaxKernel":"",
+                # "MinKernel":"",
                 "ExecutablePath":""
             }
+            # Add our entries from kext_add as needed
+            for x in kext_add: kdict[x] = kext_add[x]
             kinfo = {}
             # Get the Info.plist
             plist_rel_path = plist_full_path = None
@@ -901,18 +903,54 @@ class PlistWindow(tk.Toplevel):
         oc_drivers = os.path.join(oc_folder,"Drivers")
         oc_kexts   = os.path.join(oc_folder,"Kexts")
         oc_tools   = os.path.join(oc_folder,"Tools")
+        oc_efi     = os.path.join(oc_folder,"OpenCore.efi")
 
         for x in [oc_acpi,oc_drivers,oc_kexts]:
             if not os.path.exists(x):
                 self.bell()
                 mb.showerror("Incorrect OC Folder Struction", "{} does not exist.".format(x), parent=self)
                 return
-            if not os.path.isdir(x):
+            if x != oc_efi and not os.path.isdir(x):
                 self.bell()
                 mb.showerror("Incorrect OC Folder Struction", "{} exists, but is not a directory.".format(x), parent=self)
                 return
 
         # Folders are valid - lets work through each section
+
+        # Let's get the hash of OpenCore.efi, compare to a known list, and then compare that version to our snapshot_version if found
+        hasher = hashlib.md5()
+        try:
+            with open(oc_efi,"rb") as f:
+                hasher.update(f.read())
+            oc_hash = hasher.hexdigest()
+        except:
+            oc_hash = "" # Couldn't determine hash :(
+        target_oc_version = None
+        for vers in self.controller.snapshot_data:
+            hash_release = self.controller.snapshot_data[vers].get("hash_release",None)
+            hash_debug    = self.controller.snapshot_data[vers].get("hash_debug",None)
+            if oc_hash.lower() in (hash_release,hash_debug):
+                # Got the version
+                target_oc_version = vers
+                break
+        # Get the expected target
+        snapshot_version = self.controller.settings.get("snapshot_version","Latest")
+        if snapshot_version == "Latest" and len(self.controller.snapshot_data):
+            # Actually get the latest version
+            snapshot_version = sorted(list(self.controller.snapshot_data),reverse=True)[0]
+        if target_oc_version and target_oc_version != snapshot_version: # Version mismatch - warn
+            if mb.askyesno("Snapshot Version Mismatch","Found OC version: {}\nTarget snapshot version: {}\n\nWould you like to snapshot for {} instead?".format(target_oc_version,snapshot_version,target_oc_version),parent=self):
+                # We want to change for this snapshot
+                snapshot_version = target_oc_version
+        # Let's apply our defaults
+        if snapshot_version != "Latest":
+            acpi_add = self.controller.snapshot_data[snapshot_version].get("acpi_add",{})
+            kext_add = self.controller.snapshot_data[snapshot_version].get("kext_add",{})
+            tool_add = self.controller.snapshot_data[snapshot_version].get("tool_add",{})
+        else:
+            acpi_add = {}
+            kext_add = {}
+            tool_add = {}
 
         # ACPI is first, we'll iterate the .aml files we have and add what is missing
         # while also removing what exists in the plist and not in the folder.
@@ -939,11 +977,14 @@ class PlistWindow(tk.Toplevel):
                 # Found it - skip
                 continue
             # Doesn't exist, add it
-            add.append({
-                "Enabled":True,
+            new_aml_entry = {
                 "Comment":os.path.basename(aml),
+                "Enabled":True,
                 "Path":aml
-            })
+            }
+            # Add our snapshot custom entries, if any
+            for x in acpi_add: new_aml_entry[x] = acpi_add[x]
+            add.append(new_aml_entry)
         new_add = []
         for aml in add:
             if not isinstance(aml,dict):
@@ -982,7 +1023,7 @@ class PlistWindow(tk.Toplevel):
             tree_dict["Kernel"] = {"Add":[]}
         if not "Add" in tree_dict["Kernel"] or not isinstance(tree_dict["Kernel"]["Add"],list):
             tree_dict["Kernel"]["Add"] = []
-        kext_list = self.walk_kexts(oc_kexts)
+        kext_list = self.walk_kexts(oc_kexts,kext_add=kext_add)
         bundle_list = [x[0].get("BundlePath","") for x in kext_list]
         kexts = [] if clean else tree_dict["Kernel"]["Add"]
         original_kexts = [x for x in kexts if x.get("BundlePath","") in bundle_list] # get the original load order for comparison purposes - but omit any that no longer exist
@@ -1084,14 +1125,17 @@ class PlistWindow(tk.Toplevel):
                 for name in files:
                     if not name.startswith(".") and name.lower().endswith(".efi"):
                         # Save it
-                        tools_list.append({
-                            "Arguments":"",
-                            "Auxiliary":True,
+                        new_tool_entry = {
+                            # "Arguments":"",
+                            # "Auxiliary":True,
                             "Name":name,
                             "Comment":name,
                             "Enabled":True,
                             "Path":os.path.join(path,name)[len(oc_tools):].replace("\\", "/").lstrip("/") # Strip the /Volumes/EFI/
-                        })
+                        }
+                        # Add our snapshot custom entries, if any
+                        for x in tool_add: new_tool_entry[x] = tool_add[x]
+                        tools_list.append(new_tool_entry)
             tools = [] if clean else tree_dict["Misc"]["Tools"]
             for tool in sorted(tools_list, key=lambda x: x.get("Path","").lower()):
                 if tool["Path"].lower() in [x.get("Path","").lower() for x in tools if isinstance(x,dict)]:
@@ -1908,7 +1952,7 @@ class PlistWindow(tk.Toplevel):
             return # Can't add to a non-collection!
         values = self.get_padded_values(target, 1)
         new_cell = None
-        if not self.get_check_type(target).lower() in ["dictionary","array"] or not self._tree.item(target,"open") or force_sibling:
+        if not self.get_check_type(target).lower() in ["dictionary","array"] or force_sibling or (not self._tree.item(target,"open") and len(self._tree.get_children(target))):
             target = self._tree.parent(target)
         # create a unique name
         names = [self._tree.item(x,"text")for x in self._tree.get_children(target)]
