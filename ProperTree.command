@@ -242,7 +242,7 @@ class ProperTree:
         self.settings["new_plist_default_type"] = self.plist_type_string.get()
 
     def change_snapshot_version(self, event = None):
-        self.settings["snapshot_version"] = self.snapshot_string.get()
+        self.settings["snapshot_version"] = self.snapshot_string.get().split(" ")[0]
 
     def reset_settings(self, event = None):
         self.settings = {}
@@ -255,11 +255,13 @@ class ProperTree:
         def_type = self.settings.get("new_plist_default_type","XML")
         self.plist_type_string.set(def_type if def_type in self.allowed_types else self.allowed_types[0])
         self.snapshot_menu["menu"].delete(0,"end")
-        snapshot_choices = ["Latest"] + sorted(list(self.snapshot_data),reverse=True)
+        snapshot_versions = ["{} -> {}".format(x["min_version"],x.get("max_version","Current")) for x in self.snapshot_data if "min_version" in x and len(x["min_version"])]
+        snapshot_choices = ["Latest"] + sorted(snapshot_versions,reverse=True)
         for choice in snapshot_choices:
             self.snapshot_menu["menu"].add_command(label=choice,command=tk._setit(self.snapshot_string,choice,self.change_snapshot_version))
         snapshot_vers = self.settings.get("snapshot_version","Latest")
-        self.snapshot_string.set(snapshot_vers if snapshot_vers in snapshot_choices else "Latest")
+        snapshot_name = next((x for x in snapshot_choices if x.split(" ")[0] == snapshot_vers))
+        self.snapshot_string.set(snapshot_name if snapshot_name in snapshot_choices else "Latest")
         self.force_schema.set(self.settings.get("force_snapshot_schema",False))
 
     def check_open(self, plists = []):
