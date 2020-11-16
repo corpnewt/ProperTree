@@ -924,32 +924,39 @@ class PlistWindow(tk.Toplevel):
             oc_hash = hasher.hexdigest()
         except:
             oc_hash = "" # Couldn't determine hash :(
-        target_oc_version = None
-        for vers in self.controller.snapshot_data:
-            hash_release = self.controller.snapshot_data[vers].get("hash_release",None)
-            hash_debug    = self.controller.snapshot_data[vers].get("hash_debug",None)
-            if oc_hash.lower() in (hash_release,hash_debug):
-                # Got the version
-                target_oc_version = vers
-                break
-        # Get the expected target
-        snapshot_version = self.controller.settings.get("snapshot_version","Latest")
-        if snapshot_version == "Latest" and len(self.controller.snapshot_data):
-            # Actually get the latest version
-            snapshot_version = sorted(list(self.controller.snapshot_data),reverse=True)[0]
-        if target_oc_version and target_oc_version != snapshot_version: # Version mismatch - warn
-            if mb.askyesno("Snapshot Version Mismatch","Found OC version: {}\nTarget snapshot version: {}\n\nWould you like to snapshot for {} instead?".format(target_oc_version,snapshot_version,target_oc_version),parent=self):
+        # Let's get the version of the snapshot that matches our target, and that matches our hash if any
+        latest_snap = {} # Highest min_version
+        target_snap = {} # Matches our hash
+        select_snap = {} # Whatever the user selected
+        user_snap   = self.controller.settings.get("snapshot_version","Latest")
+        for snap in self.controller.snapshot_data:
+            hashes = snap.get("release_hashes",[])
+            hashes.extend(snap.get("debug_hashes",[]))
+            # Retain the highest version we see
+            if snap.get("min_version","0.0.0") > latest_snap.get("min_version","0.0.0"):
+                latest_snap = snap
+            # Also retain the last snap that matches our hash
+            if len(oc_hash) and (oc_hash in snap.get("release_hashes",[]) or oc_hash in snap.get("debug_hashes",[])):
+                target_snap = snap
+            # Save the snap that matches the user's choice too if not Latest
+            if user_snap.lower() != "latest" and user_snap >= snap.get("min_version","0.0.0") and snap.get("min_version","0.0.0") > select_snap.get("min_version","0.0.0"):
+                select_snap = snap
+        if user_snap.lower() == "latest" or not select_snap:
+            select_snap = latest_snap
+        if target_snap and target_snap != select_snap: # Version mismatch - warn
+            found_ver  = "{} -> {}".format(target_snap.get("min_version","0.0.0"),target_snap.get("max_version","Current"))
+            select_ver = "{} -> {}".format(select_snap.get("min_version","0.0.0"),select_snap.get("max_version","Current"))
+            if mb.askyesno("Snapshot Version Mismatch","Found OC version: {}\nTarget snapshot version: {}\n\nWould you like to snapshot for {} instead?".format(
+                found_ver,
+                select_ver,
+                found_ver
+            ),parent=self):
                 # We want to change for this snapshot
-                snapshot_version = target_oc_version
-        # Let's apply our defaults
-        if snapshot_version != "Latest":
-            acpi_add = self.controller.snapshot_data[snapshot_version].get("acpi_add",{})
-            kext_add = self.controller.snapshot_data[snapshot_version].get("kext_add",{})
-            tool_add = self.controller.snapshot_data[snapshot_version].get("tool_add",{})
-        else:
-            acpi_add = {}
-            kext_add = {}
-            tool_add = {}
+                select_snap = target_snap
+        # Apply our snapshot values
+        acpi_add = select_snap.get("acpi_add",{})
+        kext_add = select_snap.get("kext_add",{})
+        tool_add = select_snap.get("tool_add",{})
 
         # ACPI is first, we'll iterate the .aml files we have and add what is missing
         # while also removing what exists in the plist and not in the folder.
