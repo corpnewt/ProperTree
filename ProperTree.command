@@ -34,7 +34,7 @@ class ProperTree:
         self.settings_window = tk.Toplevel(self.tk)
         self.settings_window.title("ProperTree Settings")
         w = 380
-        h = 210
+        h = 260
         self.settings_window.minsize(width=w,height=h)
         self.settings_window.resizable(True, False)
         self.settings_window.columnconfigure(0,weight=1)
@@ -47,27 +47,34 @@ class ProperTree:
         self.expand_on_open = tk.IntVar()
         self.use_xcode_data = tk.IntVar()
         self.sort_dict_keys = tk.IntVar()
+        self.comment_ignore_case = tk.IntVar()
         self.force_schema   = tk.IntVar()
         self.expand_check = tk.Checkbutton(self.settings_window,text="Expand Children When Opening Plist",variable=self.expand_on_open,command=self.expand_command)
         self.xcode_check = tk.Checkbutton(self.settings_window,text="Use Xcode-Style <data> Tags (Inline) in XML Plists",variable=self.use_xcode_data,command=self.xcode_command)
         self.sort_check = tk.Checkbutton(self.settings_window,text="Ignore Dictionary Key Order",variable=self.sort_dict_keys,command=self.sort_command)
+        self.ignore_case_check = tk.Checkbutton(self.settings_window,text="Ignore Case When Stripping Comments",variable=self.comment_ignore_case,command=self.ignore_case_command)
         self.expand_check.grid(row=0,column=0,columnspan=2,sticky="w",padx=10,pady=(10,0))
         self.xcode_check.grid(row=1,column=0,columnspan=2,sticky="w",padx=10)
         self.sort_check.grid(row=2,column=0,columnspan=2,sticky="w",padx=10)
+        self.ignore_case_check.grid(row=3,column=0,columnspan=2,sticky="w",padx=10)
+        comment_prefix_label = tk.Label(self.settings_window,text="Comment Prefix (default is #):")
+        comment_prefix_label.grid(row=4,column=0,sticky="w",padx=10)
+        self.comment_prefix_text = tk.Entry(self.settings_window)
+        self.comment_prefix_text.grid(row=4,column=1,sticky="we",padx=10)
         self.plist_type_string = tk.StringVar(self.settings_window)
         self.plist_type_menu = tk.OptionMenu(self.settings_window, self.plist_type_string, "XML","Binary", command=self.change_plist_type)
         plist_label = tk.Label(self.settings_window,text="Default New Plist Type:")
-        plist_label.grid(row=3,column=0,sticky="w",padx=10)
-        self.plist_type_menu.grid(row=3,column=1,sticky="we",padx=10)
+        plist_label.grid(row=5,column=0,sticky="w",padx=10)
+        self.plist_type_menu.grid(row=5,column=1,sticky="we",padx=10)
         self.snapshot_string = tk.StringVar(self.settings_window)
         self.snapshot_menu = tk.OptionMenu(self.settings_window, self.snapshot_string, "Latest", command=self.change_snapshot_version)
         snapshot_label = tk.Label(self.settings_window,text="Snapshot OC Version:")
-        snapshot_label.grid(row=4,column=0,sticky="w",padx=10)
-        self.snapshot_menu.grid(row=4,column=1,sticky="we",padx=10)
+        snapshot_label.grid(row=6,column=0,sticky="w",padx=10)
+        self.snapshot_menu.grid(row=6,column=1,sticky="we",padx=10)
         self.schema_check = tk.Checkbutton(self.settings_window,text="Force Update Snapshot Schema",variable=self.force_schema,command=self.schema_command)
-        self.schema_check.grid(row=5,column=0,columnspan=2,sticky="w",padx=10)
+        self.schema_check.grid(row=7,column=0,columnspan=2,sticky="w",padx=10)
         reset_settings = tk.Button(self.settings_window,text="Reset To Defaults",command=self.reset_settings)
-        reset_settings.grid(row=6,column=1,sticky="e",padx=10,pady=(0,10))
+        reset_settings.grid(row=8,column=1,sticky="e",padx=10,pady=(0,10))
 
         # Setup the from/to option menus
         f_title = tk.StringVar(self.tk)
@@ -194,6 +201,8 @@ class ProperTree:
         # expand_all_items_on_open:  bool
         # sort_dict:                 bool, false = OrderedDict
         # xcode_data:                bool, true = <data>XXXX</data>, false = different lines
+        # comment_strip_prefix:      string, defaults to #
+        # comment_strip_ignore_case: bool, true = ignore case when stripping comments
         # new_plist_default_type:    string, XML/Binary
         # snapshot_version:          string, X.X.X version number, or Latest
         # force_snapshot_schema:     bool
@@ -235,6 +244,9 @@ class ProperTree:
     def sort_command(self, event = None):
         self.settings["sort_dict"] = True if self.sort_dict_keys.get() else False
 
+    def ignore_case_command(self, event = None):
+        self.settings["comment_strip_ignore_case"] = True if self.comment_ignore_case.get() else False
+
     def schema_command(self, event = None):
         self.settings["force_snapshot_schema"] = True if self.force_schema.get() else False
 
@@ -263,6 +275,11 @@ class ProperTree:
         snapshot_name = next((x for x in snapshot_choices if x.split(" ")[0] == snapshot_vers))
         self.snapshot_string.set(snapshot_name if snapshot_name in snapshot_choices else "Latest")
         self.force_schema.set(self.settings.get("force_snapshot_schema",False))
+        self.comment_ignore_case.set(self.settings.get("comment_strip_ignore_case",False))
+        self.comment_prefix_text.delete(0,tk.END)
+        prefix = self.settings.get("comment_strip_prefix","#")
+        prefix = "#" if not prefix else prefix
+        self.comment_prefix_text.insert(0,prefix)
 
     def check_open(self, plists = []):
         plists = [x for x in plists if not self.regexp.search(x)]
@@ -591,6 +608,10 @@ class ProperTree:
                 # User cancelled or we failed to save, bail
                 return
             window.destroy()
+        # Make sure we retain any non-event updated settings
+        prefix = self.comment_prefix_text.get()
+        prefix = "#" if not prefix else prefix
+        self.settings["comment_strip_prefix"] = prefix
         # Actually quit the tkinter session
         self.tk.destroy()
         # Attempt to save the settings
