@@ -1466,12 +1466,21 @@ class PlistWindow(tk.Toplevel):
         self.drag_undo = None
         self.alternate_colors()
 
-    def strip_comments(self, event=None, prefix = "#"):
-        # Strips out any values attached to keys beginning with "#"
+    def strip_comments(self, event=None):
+        # Strips out any values attached to keys beginning with the prefix
         nodes = self.iter_nodes(False)
         removedlist = []
+        # Find out if we should ignore case
+        ignore_case = True if self.controller.comment_ignore_case.get() else False
+        # Get the current prefix - and default to "#" if needed
+        prefix = self.controller.comment_prefix_text.get()
+        # Normalize the case if needed as well
+        prefix = "#" if not prefix else prefix.lower() if ignore_case else prefix
         for node in nodes:
+            if node == self.get_root_node(): continue # Can't strip the root node
             name = self._tree.item(node,"text")
+            name = name.lower() if ignore_case else name # Normalize case if needed
+            print(name,prefix)
             if str(name).startswith(prefix):
                 # Found one, remove it
                 removedlist.append({
