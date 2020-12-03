@@ -880,7 +880,7 @@ class PlistWindow(tk.Toplevel):
         # Helper method to take MatchKernel output and break it into the MinKernel and MaxKernel
         temp_min = "0.0.0"
         temp_max = "99.99.99"
-        match_text = "10" if match_text == "1" else match_text # Accommodate 1 in the prefix matching assuming 10.x.x
+        match_text = "" if match_text == "1" else match_text # Strip out "1" in prefix matching to match any
         if match_text != "":
             try:
                 min_list = match_text.split(".")
