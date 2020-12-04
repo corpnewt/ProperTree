@@ -1518,7 +1518,6 @@ class PlistWindow(tk.Toplevel):
             if node == self.get_root_node(): continue # Can't strip the root node
             name = self._tree.item(node,"text")
             name = name.lower() if ignore_case else name # Normalize case if needed
-            print(name,prefix)
             if str(name).startswith(prefix):
                 # Found one, remove it
                 removedlist.append({
