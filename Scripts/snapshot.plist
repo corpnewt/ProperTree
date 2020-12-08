@@ -3,16 +3,38 @@
 <plist version="1.0">
 <array>
 	<dict>
+		<key>debug_hashes</key>
+		<array>
+			<string>f23d2a4dab95b33907f42f7270d78ac4</string>
+		</array>
+		<key>kext_add</key>
+		<dict>
+			<key>Arch</key>
+			<string>Any</string>
+			<key>MaxKernel</key>
+			<string></string>
+			<key>MinKernel</key>
+			<string></string>
+		</dict>
 		<key>min_version</key>
-		<string>0.6.1</string>
-		<key>max_version</key>
-		<string>0.6.3</string>
+		<string>0.6.4</string>
 		<key>release_hashes</key>
 		<array>
-			<string>3255c15833abcb05789af00c0e50bf82</string>
-			<string>f6bcc6d06d95a1e657e61a15666cde9f</string>
-			<string>19758cfb7f8f157959bf608fc76a069d</string>
+			<string>5e39db9a6525e4985d20fb3a0f647d7f</string>
 		</array>
+		<key>tool_add</key>
+		<dict>
+			<key>Arguments</key>
+			<string></string>
+			<key>Auxiliary</key>
+			<true/>
+			<key>RealPath</key>
+			<false/>
+			<key>TextMode</key>
+			<false/>
+		</dict>
+	</dict>
+	<dict>
 		<key>debug_hashes</key>
 		<array>
 			<string>8ef8d1803e91c6718dfee59408b6a468</string>
@@ -28,51 +50,25 @@
 			<key>MinKernel</key>
 			<string></string>
 		</dict>
-		<key>tool_add</key>
-		<dict>
-			<key>Arguments</key>
-			<string></string>
-			<key>Auxiliary</key>
-			<true/>
-		</dict>
-	</dict>
-	<dict>
-		<key>min_version</key>
-		<string>0.6.4</string>
-		<key>kext_add</key>
-		<dict>
-			<key>Arch</key>
-			<string>Any</string>
-			<key>MaxKernel</key>
-			<string></string>
-			<key>MinKernel</key>
-			<string></string>
-		</dict>
-		<key>tool_add</key>
-		<dict>
-			<key>Arguments</key>
-			<string></string>
-			<key>Auxiliary</key>
-			<true/>
-			<key>RealPath</key>
-			<false/>
-			<key>TextMode</key>
-			<false/>
-		</dict>
-	</dict>
-	<dict>
-		<key>min_version</key>
-		<string>0.5.6</string>
 		<key>max_version</key>
-		<string>0.6.0</string>
+		<string>0.6.3</string>
+		<key>min_version</key>
+		<string>0.6.1</string>
 		<key>release_hashes</key>
 		<array>
-			<string>947f8ccfec961d02f54d1a2f5c808504</string>
-			<string>3e99e56bc16ed23129b3659a3d536ae9</string>
-			<string>dd2bb459dfbb1fe04ca0cb61bb8f9581</string>
-			<string>da4a5e54641317b2aa7715f8b4273791</string>
-			<string>5010a4db83dacbcc14b090e00472c661</string>
+			<string>3255c15833abcb05789af00c0e50bf82</string>
+			<string>f6bcc6d06d95a1e657e61a15666cde9f</string>
+			<string>19758cfb7f8f157959bf608fc76a069d</string>
 		</array>
+		<key>tool_add</key>
+		<dict>
+			<key>Arguments</key>
+			<string></string>
+			<key>Auxiliary</key>
+			<true/>
+		</dict>
+	</dict>
+	<dict>
 		<key>debug_hashes</key>
 		<array>
 			<string>db78c5fef3550213e947b8d6fa5338e4</string>
@@ -88,6 +84,18 @@
 			<key>MinKernel</key>
 			<string></string>
 		</dict>
+		<key>max_version</key>
+		<string>0.6.0</string>
+		<key>min_version</key>
+		<string>0.5.6</string>
+		<key>release_hashes</key>
+		<array>
+			<string>947f8ccfec961d02f54d1a2f5c808504</string>
+			<string>3e99e56bc16ed23129b3659a3d536ae9</string>
+			<string>dd2bb459dfbb1fe04ca0cb61bb8f9581</string>
+			<string>da4a5e54641317b2aa7715f8b4273791</string>
+			<string>5010a4db83dacbcc14b090e00472c661</string>
+		</array>
 		<key>tool_add</key>
 		<dict>
 			<key>Arguments</key>
@@ -97,18 +105,6 @@
 		</dict>
 	</dict>
 	<dict>
-		<key>min_version</key>
-		<string>0.5.1</string>
-		<key>max_version</key>
-		<string>0.5.5</string>
-		<key>release_hashes</key>
-		<array>
-			<string>ff42893722bc0a3278c7d8029b797342</string>
-			<string>ba2a5846697e7895753e7b05989738e5</string>
-			<string>8cc62a1017afa01c2c75ad4b6fca8df2</string>
-			<string>21aa72da926ec362ab58626b60c36ac8</string>
-			<string>4bdb27730c0c06275e2fc389348d46d0</string>
-		</array>
 		<key>debug_hashes</key>
 		<array>
 			<string>4be8a2620c923129b3bac0b2d1b8fd6b</string>
@@ -124,6 +120,18 @@
 			<key>MinKernel</key>
 			<string></string>
 		</dict>
+		<key>max_version</key>
+		<string>0.5.5</string>
+		<key>min_version</key>
+		<string>0.5.1</string>
+		<key>release_hashes</key>
+		<array>
+			<string>ff42893722bc0a3278c7d8029b797342</string>
+			<string>ba2a5846697e7895753e7b05989738e5</string>
+			<string>8cc62a1017afa01c2c75ad4b6fca8df2</string>
+			<string>21aa72da926ec362ab58626b60c36ac8</string>
+			<string>4bdb27730c0c06275e2fc389348d46d0</string>
+		</array>
 		<key>tool_add</key>
 		<dict>
 			<key>Arguments</key>
@@ -131,14 +139,6 @@
 		</dict>
 	</dict>
 	<dict>
-		<key>min_version</key>
-		<string>0.5.0</string>
-		<key>max_version</key>
-		<string>0.5.0</string>
-		<key>release_hashes</key>
-		<array>
-			<string>081f9922be27b2d1e82fc8dbd3426498</string>
-		</array>
 		<key>debug_hashes</key>
 		<array>
 			<string>ec0e6c7dfa2ab84eaad52f167e85466f</string>
@@ -148,6 +148,14 @@
 			<key>MatchKernel</key>
 			<string></string>
 		</dict>
+		<key>max_version</key>
+		<string>0.5.0</string>
+		<key>min_version</key>
+		<string>0.5.0</string>
+		<key>release_hashes</key>
+		<array>
+			<string>081f9922be27b2d1e82fc8dbd3426498</string>
+		</array>
 	</dict>
 </array>
 </plist>
