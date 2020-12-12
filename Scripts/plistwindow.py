@@ -1982,9 +1982,7 @@ class PlistWindow(tk.Toplevel):
             return self.menu_code + str(type(value))
 
     def is_data(self, value):
-        if (sys.version_info >= (3, 0) and isinstance(value, bytes)) or (sys.version_info < (3,0) and isinstance(value, plistlib.Data)):
-            return True
-        return False
+        return (sys.version_info >= (3, 0) and isinstance(value, bytes)) or (sys.version_info < (3,0) and isinstance(value, plistlib.Data))
 
     def get_data(self, value):
         if sys.version_info < (3,0) and isinstance(value, plistlib.Data):
