@@ -6,6 +6,7 @@ min_tk_version = {
     "11":"8.6"
 }
 min_only_suggestion = True
+test_load_tk = True
 
 def _decode(value, encoding="utf-8", errors="ignore"):
         # Helper method to only decode if bytes type
@@ -43,10 +44,18 @@ def gather_python(show_all=False):
         c = p.communicate()
         pv = (_decode(c[0]) + _decode(c[1])).strip().split(" ")[-1]
         if not len(pv): continue # Bad version?
-        command = "import Tkinter; print(Tkinter.TkVersion)" if pv.startswith("2.") else "import tkinter; print(tkinter.TkVersion)"
+        tk_string = "Tkinter" if pv.startswith("2.") else "tkinter"
+        command = "import {} as tk; print(tk.TkVersion)".format(tk_string)
         p = subprocess.Popen([path,"-c",command], shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         c = p.communicate()
         tk = _decode(c[0]).strip()
+        if test_load_tk:
+            command = "import {} as tk; tk.Tk()".format(tk_string)
+            p = subprocess.Popen([path,"-c",command], shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            c = p.communicate()
+            if p.returncode != 0:
+                # Failed to run correctly - skip it
+                continue
         py_tk.append((path,pv,tk))
     min_tk = get_min_tk_version()
     if min_tk and not show_all:
@@ -59,12 +68,12 @@ def select_py(py_versions,min_tk):
         print(" - Currently Available Python Versions -")
         print("")
         for i,x in enumerate(py_versions,1):
-            print("{}. {} {} - tk version: {}{}".format(
+            print("{}. {} {} - tk {}{}".format(
                 i,
                 x[0],
                 x[1],
                 x[2],
-                "" if x[2] >= min_tk else " (Below recommended min: {})".format(min_tk)
+                "" if x[2] >= min_tk else " ({}+ recommended)".format(min_tk)
             ))
         print("")
         print("Q. Quit")
@@ -84,19 +93,15 @@ def main():
     print("Locating python versions...")
     py_versions = gather_python(min_only_suggestion)
     if not py_versions:
-        print(" - None found!  Aborting!")
+        print(" - No python installs with functioning tk found!  Aborting!")
         exit(1)
     min_tk = get_min_tk_version()
-    print(min_tk)
-    if all((x[-1] < min_tk for x in py_versions)) and not min_only_suggestion:
-        print(" - No installed py versions meet the minimum tk verison of {}!  Aborting!".format(min_tk))
-        exit(1)
     py_version = py_versions[0] if len(py_versions) == 1 else select_py(py_versions,min_tk)
     os.system("clear")
     print("Building .app with the following python install:")
     print(" - {}".format(py_version[0]))
-    print(" - v{}".format(py_version[1]))
-    print(" - tk version {}".format(py_version[2]))
+    print(" --> {}".format(py_version[1]))
+    print(" --> tk {}".format(py_version[2]))
     pypath = py_version[0]
     print("Checking for existing ProperTree.app...")
     os.chdir(os.path.dirname(os.path.realpath(__file__)))
