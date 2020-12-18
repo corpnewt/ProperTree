@@ -30,12 +30,18 @@ def gather_python(show_all=False):
     # Let's find the available python installs, check their tk version
     # and try to pick the latest one supported - or throw an error if
     # we're on macOS 11.x+ and using Tk 8.5 or older.
-    p = subprocess.Popen(["which","python"], shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    c = p.communicate()
-    pypaths = [x for x in _decode(c[0]).split("\n") if len(x)]
-    p = subprocess.Popen(["which","python3"], shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    c = p.communicate()
-    pypaths.extend([x for x in _decode(c[0]).split("\n") if len(x)])
+    pypaths = []
+    envpaths = []
+    for py in ("python","python3"):
+        p = subprocess.Popen(["which",py], shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        c = p.communicate()
+        binpath = "/usr/bin/{}".format(py)
+        envpath = "/usr/bin/env {}".format(py)
+        avail = [x for x in _decode(c[0]).split("\n") if len(x) and not x in pypaths and not x == binpath]
+        if os.path.exists(binpath): avail.insert(0,binpath)
+        if len(avail): # Only add paths that we found and verified
+            pypaths.extend(avail)
+            if not envpath in envpaths: envpaths.append((envpath,None,None))
     py_tk = []
     for path in pypaths:
         # Get the version of python first
@@ -59,8 +65,8 @@ def gather_python(show_all=False):
         py_tk.append((path,pv,tk))
     min_tk = get_min_tk_version()
     if min_tk and not show_all:
-        return [x for x in py_tk if x[-1] >= min_tk]
-    return py_tk
+        return [x for x in py_tk if x[-1] >= min_tk]+envpaths
+    return py_tk+envpaths
 
 def select_py(py_versions,min_tk):
     while True:
@@ -68,12 +74,12 @@ def select_py(py_versions,min_tk):
         print(" - Currently Available Python Versions -")
         print("")
         for i,x in enumerate(py_versions,1):
-            print("{}. {} {} - tk {}{}".format(
+            print("{}. {}{}{}{}".format(
                 i,
                 x[0],
-                x[1],
-                x[2],
-                "" if x[2] >= min_tk else " ({}+ recommended)".format(min_tk)
+                " {}".format(x[1]) if x[1] else "",
+                " - tk {}".format(x[2]) if x[2] else "",
+                "" if x[2]==None or x[2] >= min_tk else " ({}+ recommended)".format(min_tk)
             ))
         print("")
         print("Q. Quit")
