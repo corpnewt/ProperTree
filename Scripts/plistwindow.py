@@ -316,6 +316,7 @@ class PlistWindow(tk.Toplevel):
         self._tree.bind("+", self.new_row)
         self._tree.bind("-", self.remove_row)
         self._tree.bind("<Delete>", self.remove_row)
+        self._tree.bind("<BackSpace>", self.remove_row)
         self._tree.bind("<Return>", self.start_editing)
         self._tree.bind("<KP_Enter>", self.start_editing)
         self._tree.bind("<Escape>", self.deselect)
@@ -2062,9 +2063,15 @@ class PlistWindow(tk.Toplevel):
             "from":parent,
             "index":self._tree.index(target)
         })
+        # Retain the index of our selected node to select the new target
+        target_index = self._tree.get_children(parent).index(target)
         self._tree.detach(target)
-        # self._tree.delete(target) # Removes completely
-        # Might include an undo function for removals, at least - tbd
+        # Figure out what's left - select the node at the same index if possible,
+        # the last index if not, and the parent if no other items
+        remaining = self._tree.get_children(parent)
+        new_target = parent if not len(remaining) else remaining[target_index] if target_index < len(remaining) else remaining[-1]
+        self._tree.selection_set(new_target)
+        self._tree.focus(new_target)
         if not self.edited:
             self.edited = True
             self.title(self.title()+" - Edited")
