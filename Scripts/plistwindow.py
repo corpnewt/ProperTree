@@ -1701,7 +1701,10 @@ class PlistWindow(tk.Toplevel):
         if not auto_expand:
             self.collapse_all()
         # Ensure the root is expanded at least
-        self._tree.item(self.get_root_node(),open=True)
+        root = self.get_root_node()
+        self._tree.item(root,open=True)
+        self._tree.selection_set(root)
+        self._tree.focus(root)
         self.alternate_colors()
 
     def close_window(self, event=None):
