@@ -68,7 +68,8 @@ def gather_python(show_all=False):
         return [x for x in py_tk if x[-1] >= min_tk]+envpaths
     return py_tk+envpaths
 
-def select_py(py_versions,min_tk):
+def select_py(py_versions,min_tk,pt_current):
+    current = next((x[0] for x in py_versions if x[0] == pt_current),None)
     while True:
         os.system("clear")
         print(" - Currently Available Python Versions -")
@@ -79,14 +80,16 @@ def select_py(py_versions,min_tk):
                 x[0],
                 " {}".format(x[1]) if x[1] else "",
                 " - tk {}".format(x[2]) if x[2] else "",
-                "" if x[2]==None or x[2] >= min_tk else " ({}+ recommended)".format(min_tk)
+                "" if x[2]==None or x[2] >= min_tk else " ({}+ recommended)".format(min_tk),
             ))
         print("")
+        if current: print("C: Current ({})".format(current))
         print("Q. Quit")
         print("")
         menu = input("Please select the python version to use:  ").lower()
         if not len(menu): return
         if menu == "q": exit()
+        if menu == "c" and current: return next((x for x in py_versions if x[0] == current))
         try: menu = int(menu)
         except: continue
         if not 0 < menu <= len(py_versions): continue
@@ -95,14 +98,26 @@ def select_py(py_versions,min_tk):
 def main():
     # Let's check for an existing app - remove it if it exists,
     # then create and format a new bundle
+    os.chdir(os.path.dirname(os.path.realpath(__file__)))
+    os.chdir("../")
     temp = None
     print("Locating python versions...")
     py_versions = gather_python(min_only_suggestion)
     if not py_versions:
         print(" - No python installs with functioning tk found!  Aborting!")
         exit(1)
+    pt_current = None
+    if os.path.exists("ProperTree.app/Contents/MacOS/ProperTree.command"):
+        # Let's try to read the shebang
+        try:
+            with open("ProperTree.app/Contents/MacOS/ProperTree.command","r") as f:
+                pt = f.read().split("\n")
+                if pt[0].startswith("#!"):
+                    # Got a shebang - save it
+                    pt_current = pt[0][2:]
+        except: pass
     min_tk = get_min_tk_version()
-    py_version = py_versions[0] if len(py_versions) == 1 else select_py(py_versions,min_tk)
+    py_version = py_versions[0] if len(py_versions) == 1 else select_py(py_versions,min_tk,pt_current)
     os.system("clear")
     print("Building .app with the following python install:")
     print(" - {}".format(py_version[0]))
@@ -110,8 +125,6 @@ def main():
     print(" --> tk {}".format(py_version[2]))
     pypath = py_version[0]
     print("Checking for existing ProperTree.app...")
-    os.chdir(os.path.dirname(os.path.realpath(__file__)))
-    os.chdir("../")
     if os.path.exists("ProperTree.app"):
         print(" - Found, removing...")
         if os.path.exists("ProperTree.app/Contents/MacOS/Scripts/settings.json"):
