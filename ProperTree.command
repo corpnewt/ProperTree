@@ -34,7 +34,7 @@ class ProperTree:
         self.settings_window = tk.Toplevel(self.tk)
         self.settings_window.title("ProperTree Settings")
         w = 400
-        h = 260
+        h = 280
         self.settings_window.minsize(width=w,height=h)
         self.settings_window.resizable(True, False)
         self.settings_window.columnconfigure(0,weight=1)
@@ -66,15 +66,20 @@ class ProperTree:
         plist_label = tk.Label(self.settings_window,text="Default New Plist Type:")
         plist_label.grid(row=5,column=0,sticky="w",padx=10)
         self.plist_type_menu.grid(row=5,column=1,sticky="we",padx=10)
+        self.data_type_string = tk.StringVar(self.settings_window)
+        self.data_type_menu = tk.OptionMenu(self.settings_window, self.data_type_string, "Hex","Base64", command=self.change_data_type)
+        data_label = tk.Label(self.settings_window,text="Data Display Default:")
+        data_label.grid(row=6,column=0,sticky="w",padx=10)
+        self.data_type_menu.grid(row=6,column=1,sticky="we",padx=10)
         self.snapshot_string = tk.StringVar(self.settings_window)
         self.snapshot_menu = tk.OptionMenu(self.settings_window, self.snapshot_string, "Latest", command=self.change_snapshot_version)
         snapshot_label = tk.Label(self.settings_window,text="Snapshot OC Version:")
-        snapshot_label.grid(row=6,column=0,sticky="w",padx=10)
-        self.snapshot_menu.grid(row=6,column=1,sticky="we",padx=10)
+        snapshot_label.grid(row=7,column=0,sticky="w",padx=10)
+        self.snapshot_menu.grid(row=7,column=1,sticky="we",padx=10)
         self.schema_check = tk.Checkbutton(self.settings_window,text="Force Update Snapshot Schema",variable=self.force_schema,command=self.schema_command)
-        self.schema_check.grid(row=7,column=0,columnspan=2,sticky="w",padx=10)
+        self.schema_check.grid(row=8,column=0,columnspan=2,sticky="w",padx=10)
         reset_settings = tk.Button(self.settings_window,text="Reset To Defaults",command=self.reset_settings)
-        reset_settings.grid(row=8,column=1,sticky="e",padx=10,pady=(0,10))
+        reset_settings.grid(row=9,column=1,sticky="e",padx=10,pady=(0,10))
 
         # Setup the from/to option menus
         f_title = tk.StringVar(self.tk)
@@ -204,6 +209,7 @@ class ProperTree:
         # comment_strip_prefix:      string, defaults to #
         # comment_strip_ignore_case: bool, true = ignore case when stripping comments
         # new_plist_default_type:    string, XML/Binary
+        # display_data_as:           string, Hex/Base64
         # snapshot_version:          string, X.X.X version number, or Latest
         # force_snapshot_schema:     bool
         #
@@ -226,6 +232,7 @@ class ProperTree:
         # Setup the settings page to reflect our settings.json file
 
         self.allowed_types = ("XML","Binary")
+        self.allowed_data  = ("Hex","Base64")
         self.update_settings()
         
         # Wait before opening a new document to see if we need to.
@@ -253,6 +260,9 @@ class ProperTree:
     def change_plist_type(self, event = None):
         self.settings["new_plist_default_type"] = self.plist_type_string.get()
 
+    def change_data_type(self, event = None):
+        self.settings["display_data_as"] = self.data_type_string.get()
+
     def change_snapshot_version(self, event = None):
         self.settings["snapshot_version"] = self.snapshot_string.get().split(" ")[0]
 
@@ -264,8 +274,10 @@ class ProperTree:
         self.expand_on_open.set(self.settings.get("expand_all_items_on_open",True))
         self.use_xcode_data.set(self.settings.get("xcode_data",True))
         self.sort_dict_keys.set(self.settings.get("sort_dict",False))
-        def_type = self.settings.get("new_plist_default_type","XML")
+        def_type = self.settings.get("new_plist_default_type",self.allowed_types[0])
         self.plist_type_string.set(def_type if def_type in self.allowed_types else self.allowed_types[0])
+        dat_type = self.settings.get("display_data_as",self.allowed_data[0])
+        self.data_type_string.set(dat_type if dat_type in self.allowed_data else self.allowed_data[0])
         self.snapshot_menu["menu"].delete(0,"end")
         snapshot_versions = ["{} -> {}".format(x["min_version"],x.get("max_version","Current")) for x in self.snapshot_data if "min_version" in x and len(x["min_version"])]
         snapshot_choices = ["Latest"] + sorted(snapshot_versions,reverse=True)
@@ -287,11 +299,15 @@ class ProperTree:
             # Iterate the passed plists and open them
             for p in set(plists):
                 window = self.open_plist_with_path(None,p,None)
+                # Ensure our default data type is reflected
+                window.change_data_type(self.data_type_string.get())
                 if self.start_window == None:
                     self.start_window = window
         elif not len(self.stackorder(self.tk)):
             # create a fresh plist to start
             self.start_window = self.new_plist()
+            # Ensure our default data type is reflected
+            self.start_window.change_data_type(self.data_type_string.get())
 
     def open_plist_from_app(self, *args):
         if isinstance(args, str):
@@ -303,6 +319,7 @@ class ProperTree:
             existing_window = next((window for window in windows if not window in self.default_windows and window.current_plist==arg),None)
             if existing_window:
                 existing_window.focus_force()
+                existing_window._tree.focus_force()
                 existing_window.update()
                 continue
             if len(windows) == 1 and windows[0] == self.start_window and windows[0].edited == False and windows[0].current_plist == None:
@@ -312,6 +329,8 @@ class ProperTree:
                 current_window = None
             # Let's load the plist
             window = self.open_plist_with_path(None,arg,current_window)
+            # Ensure our default data type is reflected
+            window.change_data_type(self.data_type_string.get())
             if self.start_window == None: self.start_window = window
 
     def change_hd_type(self, value):
@@ -534,9 +553,11 @@ class ProperTree:
         window = plistwindow.PlistWindow(self, self.tk)
         window.open_plist(final_title,{}) # Created an empty root
         window.current_plist = None # Ensure it's initialized as new
-        default_type = self.settings.get("new_plist_default_type","XML")
-        window.plist_type_string.set(default_type if default_type in self.allowed_types else self.allowed_types[0])
+        # Ensure our default plist and data types are reflected
+        window.change_plist_type(self.plist_type_string.get())
+        window.change_data_type(self.data_type_string.get())
         window.focus_force()
+        window._tree.focus_force()
         window.update()
         return window
 
@@ -560,6 +581,7 @@ class ProperTree:
             if window.current_plist == path:
                 # found one - just make this focus instead
                 window.focus_force()
+                window._tree.focus_force()
                 window.update()
                 window.bell()
                 mb.showerror("File Already Open", "{} is already open here.".format(path)) # , parent=window)
@@ -588,7 +610,10 @@ class ProperTree:
             # Need to create one first
             current_window = plistwindow.PlistWindow(self, self.tk)
             current_window.open_plist(path,plist_data,plist_type,self.settings.get("expand_all_items_on_open",True))
+        # Ensure our default data type is reflected
+        current_window.change_data_type(self.data_type_string.get())
         current_window.focus_force()
+        current_window._tree.focus_force()
         current_window.update()
         return current_window
 
