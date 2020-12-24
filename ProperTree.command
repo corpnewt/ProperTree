@@ -554,7 +554,7 @@ class ProperTree:
         window.open_plist(final_title,{}) # Created an empty root
         window.current_plist = None # Ensure it's initialized as new
         # Ensure our default plist and data types are reflected
-        window.change_plist_type(self.plist_type_string.get())
+        window.plist_type_string.set(self.plist_type_string.get())
         window.change_data_type(self.data_type_string.get())
         window.focus_force()
         window._tree.focus_force()
