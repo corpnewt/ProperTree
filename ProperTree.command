@@ -96,7 +96,7 @@ class ProperTree:
         # Setup the color picker click methods
         self.r1_canvas.bind("<ButtonRelease-1>",lambda x:self.pick_color("alternating_color_1",self.r1_canvas))
         self.r2_canvas.bind("<ButtonRelease-1>",lambda x:self.pick_color("alternating_color_2",self.r2_canvas))
-        self.default_row_colors = ("#E8E8E8","#DFDFDF")
+        self.default_row_colors = ("#DFDFDF","#E8E8E8")
 
         # Setup the from/to option menus
         f_title = tk.StringVar(self.tk)
