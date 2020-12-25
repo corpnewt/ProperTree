@@ -229,8 +229,8 @@ class ProperTree:
         # display_data_as:           string, Hex/Base64
         # snapshot_version:          string, X.X.X version number, or Latest
         # force_snapshot_schema:     bool
-        # alternating_color_1:       string, #E8E8E8
-        # alternating_color_2:       string, #DFDFDF
+        # alternating_color_1:       string, #DFDFDF
+        # alternating_color_2:       string, #E8E8E8
         #
         self.settings = {}
         if os.path.exists("Scripts/settings.json"):
