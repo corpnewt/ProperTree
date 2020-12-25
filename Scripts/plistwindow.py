@@ -2637,5 +2637,5 @@ class PlistWindow(tk.Toplevel):
             self._tree.tag_configure('odd', background='systemWindowBackgroundColor')
             self._tree.tag_configure('even', background='systemWindowBackgroundColor1')
         except:
-            self._tree.tag_configure('odd', background='#E8E8E8')
-            self._tree.tag_configure('even', background='#DFDFDF')
+            self._tree.tag_configure('even', background=self.controller.r1_canvas["background"])
+            self._tree.tag_configure('odd', background=self.controller.r2_canvas["background"])
