@@ -6,11 +6,13 @@ try:
     import ttk
     import tkFileDialog as fd
     import tkMessageBox as mb
+    from tkColorChooser import askcolor as ac
 except:
     import tkinter as tk
     import tkinter.ttk as ttk
     from tkinter import filedialog as fd
     from tkinter import messagebox as mb
+    from tkinter.colorchooser import askcolor as ac
 # Add this script's dir to the local PATH var - may improve import consistency
 sys.path.append(os.path.abspath(os.path.dirname(os.path.realpath(__file__))))
 from Scripts import *
@@ -34,7 +36,7 @@ class ProperTree:
         self.settings_window = tk.Toplevel(self.tk)
         self.settings_window.title("ProperTree Settings")
         w = 400
-        h = 280
+        h = 370 
         self.settings_window.minsize(width=w,height=h)
         self.settings_window.resizable(True, False)
         self.settings_window.columnconfigure(0,weight=1)
@@ -78,8 +80,23 @@ class ProperTree:
         self.snapshot_menu.grid(row=7,column=1,sticky="we",padx=10)
         self.schema_check = tk.Checkbutton(self.settings_window,text="Force Update Snapshot Schema",variable=self.force_schema,command=self.schema_command)
         self.schema_check.grid(row=8,column=0,columnspan=2,sticky="w",padx=10)
+        sep = ttk.Separator(self.settings_window,orient="horizontal")
+        sep.grid(row=9,column=0,columnspan=2,sticky="we",padx=10,pady=10)
+        r1_label = tk.Label(self.settings_window,text="Alternating Row Color #1:")
+        r1_label.grid(row=10,column=0,sticky="w",padx=10)
+        self.r1_canvas = tk.Canvas(self.settings_window, height=20, width=30, background="black", relief="groove", bd=2)
+        self.r1_canvas.grid(row=10,column=1,sticky="we",padx=10)
+        r2_label = tk.Label(self.settings_window,text="Alternating Row Color #2:")
+        r2_label.grid(row=11,column=0,sticky="w",padx=10)
+        self.r2_canvas = tk.Canvas(self.settings_window, height=20, width=30, background="black", relief="groove", bd=2)
+        self.r2_canvas.grid(row=11,column=1,sticky="we",padx=10)
         reset_settings = tk.Button(self.settings_window,text="Reset To Defaults",command=self.reset_settings)
-        reset_settings.grid(row=9,column=1,sticky="e",padx=10,pady=(0,10))
+        reset_settings.grid(row=12,column=1,sticky="e",padx=10,pady=10)
+
+        # Setup the color picker click methods
+        self.r1_canvas.bind("<ButtonRelease-1>",lambda x:self.pick_color("alternating_color_1",self.r1_canvas))
+        self.r2_canvas.bind("<ButtonRelease-1>",lambda x:self.pick_color("alternating_color_2",self.r2_canvas))
+        self.default_row_colors = ("#E8E8E8","#DFDFDF")
 
         # Setup the from/to option menus
         f_title = tk.StringVar(self.tk)
@@ -212,6 +229,8 @@ class ProperTree:
         # display_data_as:           string, Hex/Base64
         # snapshot_version:          string, X.X.X version number, or Latest
         # force_snapshot_schema:     bool
+        # alternating_color_1:       string, #E8E8E8
+        # alternating_color_2:       string, #DFDFDF
         #
         self.settings = {}
         if os.path.exists("Scripts/settings.json"):
@@ -266,6 +285,14 @@ class ProperTree:
     def change_snapshot_version(self, event = None):
         self.settings["snapshot_version"] = self.snapshot_string.get().split(" ")[0]
 
+    def pick_color(self, color_name = None, canvas = None):
+        if not color_name or not canvas: return # uh wut?
+        _,color = ac(color=canvas["background"])
+        if not color: return # User bailed
+        self.settings[color_name] = color
+        canvas.configure(background=color)
+        self.update_colors()
+
     def reset_settings(self, event = None):
         self.settings = {}
         self.update_settings()
@@ -292,6 +319,21 @@ class ProperTree:
         prefix = self.settings.get("comment_strip_prefix","#")
         prefix = "#" if not prefix else prefix
         self.comment_prefix_text.insert(0,prefix)
+        color_1 = "".join([x for x in self.settings.get("alternating_color_1",self.default_row_colors[0]) if x.lower() in "0123456789abcdef"])
+        color_2 = "".join([x for x in self.settings.get("alternating_color_2",self.default_row_colors[-1]) if x.lower() in "0123456789abcdef"])
+        self.r1_canvas.configure(background="#"+color_1 if len(color_1) == 6 else self.default_row_colors[0])
+        self.r2_canvas.configure(background="#"+color_2 if len(color_2) == 6 else self.default_row_colors[-1])
+        self.update_colors()
+
+    def update_colors(self):
+        # Update all windows' colors
+        windows = self.stackorder(self.tk)
+        if not len(windows):
+            # Nothing to do
+            return
+        for window in windows:
+            if window in self.default_windows: continue
+            window.alternate_colors()
 
     def check_open(self, plists = []):
         plists = [x for x in plists if not self.regexp.search(x)]
