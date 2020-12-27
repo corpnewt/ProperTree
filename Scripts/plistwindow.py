@@ -2497,9 +2497,9 @@ class PlistWindow(tk.Toplevel):
         # what row and column was clicked on
         rowid = self._tree.identify_row(event.y)
         column = self._tree.identify_column(event.x)
-        if rowid == "":
-            # Nothing double clicked, bail
-            return
+        if rowid == "" or column == "#3":
+            # Nothing (or drag handles) double clicked, bail
+            return "break"
         # clicked row parent id
         parent = self._tree.parent(rowid)
         # get column position info
