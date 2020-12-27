@@ -202,7 +202,6 @@ class EntryPopup(tk.Entry):
 class PlistWindow(tk.Toplevel):
     def __init__(self, controller, root, **kw):
         tk.Toplevel.__init__(self, root, **kw)
-        os.chdir(os.path.dirname(os.path.realpath(__file__)))
         self.plist_header = """<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
