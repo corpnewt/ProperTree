@@ -1834,21 +1834,12 @@ class PlistWindow(tk.Toplevel):
                 plist_data = {"New item":plist_data}
         if isinstance(plist_data,dict):
             dict_list = list(plist_data.items()) if not self.controller.settings.get("sort_dict",False) else sorted(list(plist_data.items()))
+            names = [self._tree.item(x,"text") for x in self._tree.get_children(node)] if t == "dictionary" else []
             for (key,val) in dict_list:
                 if t == "dictionary":
                     # create a unique name
-                    names = [self._tree.item(x,"text") for x in self._tree.get_children(node)]
-                    name = str(key)
-                    num  = 0
-                    while True:
-                        temp_name = name if num == 0 else name+" "+str(num)
-                        if temp_name in names:
-                            num += 1
-                            continue
-                        # Should be good here
-                        name = temp_name
-                        break
-                    key = name
+                    key = self.get_unique_name(key,names)
+                    names.append(key)
                 last = self.add_node(val, node, key)
                 add_list.append({"type":"add","cell":last})
                 self._tree.item(last,open=True)
@@ -2015,6 +2006,17 @@ class PlistWindow(tk.Toplevel):
     # Node Update Functions #
     ###                   ###
 
+    def get_unique_name(self,name,names,int_check=False):
+        start = 1
+        sep = " - "
+        # create a unique name
+        num = start # Initialize our counter
+        while True:
+            temp_name = str(name+num) if isinstance(name,int) else name if num == start else name+str(sep)+str(num)
+            if not temp_name in names: break
+            num += 1
+        return temp_name
+
     def new_row(self,target=None,force_sibling=False):
         if target == None or isinstance(target, tk.Event):
             target = "" if not len(self._tree.selection()) else self._tree.selection()[0]
@@ -2026,17 +2028,10 @@ class PlistWindow(tk.Toplevel):
         if not self.get_check_type(target).lower() in ["dictionary","array"] or force_sibling or (not self._tree.item(target,"open") and len(self._tree.get_children(target))):
             target = self._tree.parent(target)
         # create a unique name
-        names = [self._tree.item(x,"text")for x in self._tree.get_children(target)]
-        name = "New String"
-        num  = 0
-        while True:
-            temp_name = name if num == 0 else name+" "+str(num)
-            if temp_name in names:
-                num += 1
-                continue
-            # Should be good here
-            name = temp_name
-            break
+        name = ""
+        if self.get_check_type(target).lower() == "dictionary":
+            names = [self._tree.item(x,"text")for x in self._tree.get_children(target)]
+            name = self.get_unique_name("New String",names)
         new_cell = self._tree.insert(target, "end", text=name, values=(self.menu_code + " String","",self.drag_code,))
         # Verify that array names are updated to show the proper indexes
         if self.get_check_type(target).lower() == "array":
