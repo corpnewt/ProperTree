@@ -1854,8 +1854,8 @@ class PlistWindow(tk.Toplevel):
                 self._tree.item(last,open=True)
         first = self.get_root_node() if not len(add_list) else add_list[0].get("cell")
         self.add_undo(add_list)
-        self._tree.focus()
         self._tree.selection_set(first)
+        self._tree.focus(first)
         self._tree.see(first)
         self._tree.update()
         if not self.edited:
