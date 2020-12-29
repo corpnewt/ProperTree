@@ -271,14 +271,22 @@ class PlistWindow(tk.Toplevel):
         self.bool_menu.add_command(label="True", command=lambda:self.set_bool("True"))
         self.bool_menu.add_command(label="False", command=lambda:self.set_bool("False"))
 
+        self.style = ttk.Style()
+        # Treeview theming is horribly broken in Windows for whatever reasons...
+        self.style_name = "Corp.TLabel" if os.name=="nt" else "Corp.Treeview"
+
         # Create the treeview
         self._tree_frame = tk.Frame(self)
-        self._tree = ttk.Treeview(self._tree_frame, columns=("Type","Value","Drag"), selectmode="browse")
+        self._tree = ttk.Treeview(self._tree_frame, columns=("Type","Value","Drag"), selectmode="browse", style=self.style_name)
         self._tree.heading("#0", text="Key")
         self._tree.heading("#1", text="Type")
         self._tree.heading("#2", text="Value")
         self._tree.column("Type",width=100,stretch=False)
         self._tree.column("Drag",minwidth=40,width=40,stretch=False,anchor="center")
+
+        # Setup the initial colors
+        self.r1 = self.r2 = self.hl = self.r1t = self.r2t = self.hlt = None
+        self.set_colors()
 
         # Set the close window and copy/paste bindings
         key = "Command" if str(sys.platform) == "darwin" else "Control"
@@ -304,7 +312,6 @@ class PlistWindow(tk.Toplevel):
 
         # Set bindings
         self._tree.bind("<Double-1>", self.on_double_click)
-        self._tree.bind("<1>", self.on_single_click)
         self._tree.bind('<<TreeviewSelect>>', self.tree_click_event)
         self._tree.bind('<<TreeviewOpen>>', self.pre_alternate)
         self._tree.bind('<<TreeviewClose>>', self.alternate_colors)
@@ -786,7 +793,7 @@ class PlistWindow(tk.Toplevel):
             x,y,width,height = self._tree.bbox(node, edit_col)
         except ValueError:
             # Couldn't unpack - bail
-            return    
+            return 'break'
         # Create an event
         e = tk.Event
         e.x = x+5
@@ -1454,6 +1461,7 @@ class PlistWindow(tk.Toplevel):
                 self.edited = True
                 self.title(self.title()+" - Edited")
             self.dragging = True
+            self.alternate_colors()
 
     def confirm_drag(self, event):
         if not self.dragging:
@@ -2485,10 +2493,7 @@ class PlistWindow(tk.Toplevel):
     def tree_click_event(self, event):
         # close previous popups
         self.destroy_popups()
-
-    def on_single_click(self, event):
-        # close previous popups
-        self.destroy_popups()
+        self.alternate_colors()
 
     def on_double_click(self, event):
         # close previous popups
@@ -2612,29 +2617,44 @@ class PlistWindow(tk.Toplevel):
         # Call the actual alternate_colors function
         self.alternate_colors(event)
 
+    def text_color(self, hex_color):
+        hex_color = hex_color.lower()
+        if hex_color.startswith("0x"): hex_color = hex_color[2:]
+        if hex_color.startswith("#"): hex_color = hex_color[1:]
+        # Check for bogus hex and return "black" by default
+        if len(hex_color) != 6 or not all((x in "0123456789abcdef" for x in hex_color)): return "black"
+        # Get the r, g, and b values and determine our fake luminance
+        r = float(int(hex_color[0:2],16))
+        g = float(int(hex_color[2:4],16))
+        b = float(int(hex_color[4:6],16))
+        return "black" if (r*0.299 + g*0.587 + b*0.114) > 186 else "white"
+
+    def set_colors(self, event = None):
+        # Setup the colors and styles
+        self.r1 = self.controller.r1_canvas["background"]
+        self.r2 = self.controller.r2_canvas["background"]
+        self.hl = self.controller.hl_canvas["background"]
+        self.bg = self.controller.bg_canvas["background"]
+        self.r1t = self.text_color(self.r1)
+        self.r2t = self.text_color(self.r2)
+        self.hlt = self.text_color(self.hl)
+        self.style.configure(self.style_name, background=self.bg, fieldbackground=self.bg)
+        self.style.map(self.style_name, background=[("selected", self.hl)], foreground=[("selected", self.hlt)])
+        self.alternate_colors()
+
     def alternate_colors(self, event = None):
         # Let's walk the children of our treeview
         visible = self.iter_nodes(True,event)
         for x,item in enumerate(visible):
             tags = self._tree.item(item,"tags")
-            if not isinstance(tags,list):
-                tags = []
-            # Remove odd or even
-            try:
-                tags.remove("odd")
-            except:
-                pass
-            try:
-                tags.remove("even")
-            except:
-                pass
-            tags.append("odd" if x % 2 else "even")
+            if not isinstance(tags,list): tags = []
+            # Strip out odd/even/selected
+            tags = [x for x in tags if not x in ("odd","even","selected")]
+            if item == self._tree.focus():
+                tags.append("selected")
+            else:
+                tags.append("odd" if x % 2 else "even")
             self._tree.item(item, tags=tags)
-
-        '''try:
-            # MacOS colors which change value when Dark Mode is enabled
-            self._tree.tag_configure('odd', background='systemWindowBackgroundColor')
-            self._tree.tag_configure('even', background='systemWindowBackgroundColor1')
-        except:'''
-        self._tree.tag_configure('even', background=self.controller.r1_canvas["background"])
-        self._tree.tag_configure('odd', background=self.controller.r2_canvas["background"])
+        self._tree.tag_configure('even', foreground=self.r1t, background=self.r1)
+        self._tree.tag_configure('odd', foreground=self.r2t, background=self.r2)
+        self._tree.tag_configure("selected", foreground="black", background=self.hl)
