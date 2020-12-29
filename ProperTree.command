@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys, os, binascii, base64, json, re
+import sys, os, binascii, base64, json, re, subprocess
 from collections import OrderedDict
 try:
     import Tkinter as tk
@@ -36,9 +36,9 @@ class ProperTree:
         self.settings_window = tk.Toplevel(self.tk)
         self.settings_window.title("ProperTree Settings")
         w = 400
-        h = 370 
+        h = 510
         self.settings_window.minsize(width=w,height=h)
-        self.settings_window.resizable(True, False)
+        self.settings_window.resizable(False, False)
         self.settings_window.columnconfigure(0,weight=1)
         self.settings_window.columnconfigure(1,weight=1)
         # Let's also center the window
@@ -90,13 +90,45 @@ class ProperTree:
         r2_label.grid(row=11,column=0,sticky="w",padx=10)
         self.r2_canvas = tk.Canvas(self.settings_window, height=20, width=30, background="black", relief="groove", bd=2)
         self.r2_canvas.grid(row=11,column=1,sticky="we",padx=10)
-        reset_settings = tk.Button(self.settings_window,text="Reset To Defaults",command=self.reset_settings)
-        reset_settings.grid(row=12,column=1,sticky="e",padx=10,pady=10)
+        r3_label = tk.Label(self.settings_window,text="Background Color:")
+        r3_label.grid(row=12,column=0,sticky="w",padx=10)
+        self.bg_canvas = tk.Canvas(self.settings_window, height=20, width=30, background="black", relief="groove", bd=2)
+        self.bg_canvas.grid(row=12,column=1,sticky="we",padx=10)
+        r4_label = tk.Label(self.settings_window,text="Highlight Color:")
+        r4_label.grid(row=13,column=0,sticky="w",padx=10)
+        self.hl_canvas = tk.Canvas(self.settings_window, height=20, width=30, background="black", relief="groove", bd=2)
+        self.hl_canvas.grid(row=13,column=1,sticky="we",padx=10)
+        sep_theme = ttk.Separator(self.settings_window,orient="horizontal")
+        sep_theme.grid(row=14,column=0,columnspan=2,sticky="we",padx=10,pady=10)
+        r5_label = tk.Label(self.settings_window,text="Default Theme Options:")
+        r5_label.grid(row=15,column=0,sticky="w",padx=10)
+        default_high = tk.Button(self.settings_window,text="Reset Highlight",command=lambda:self.swap_colors("highlight"))
+        default_high.grid(row=16,column=0,sticky="we",padx=10)
+        default_light = tk.Button(self.settings_window,text="Light Mode Defaults",command=lambda:self.swap_colors("light"))
+        default_light.grid(row=15,column=1,sticky="we",padx=10)
+        default_dark = tk.Button(self.settings_window,text="Dark Mode Defaults",command=lambda:self.swap_colors("dark"))
+        default_dark.grid(row=16,column=1,sticky="we",padx=10)
+        reset_settings = tk.Button(self.settings_window,text="Reset All To Defaults",command=self.reset_settings)
+        reset_settings.grid(row=17,column=1,sticky="e",padx=10,pady=10)
 
         # Setup the color picker click methods
         self.r1_canvas.bind("<ButtonRelease-1>",lambda x:self.pick_color("alternating_color_1",self.r1_canvas))
         self.r2_canvas.bind("<ButtonRelease-1>",lambda x:self.pick_color("alternating_color_2",self.r2_canvas))
-        self.default_row_colors = ("#DFDFDF","#E8E8E8")
+        self.hl_canvas.bind("<ButtonRelease-1>",lambda x:self.pick_color("highlight_color",self.hl_canvas))
+        self.bg_canvas.bind("<ButtonRelease-1>",lambda x:self.pick_color("background_color",self.bg_canvas))
+        
+        self.default_dark  = {
+            "alternating_color_1":"#161616",
+            "alternating_color_2":"#202020",
+            "highlight_color":"#1E90FF",
+            "background_color":"#161616"
+        }
+        self.default_light = {
+            "alternating_color_1":"#F0F1F1",
+            "alternating_color_2":"#FEFEFE",
+            "highlight_color":"#1E90FF",
+            "background_color":"#FEFEFE"
+        }
 
         # Setup the from/to option menus
         f_title = tk.StringVar(self.tk)
@@ -137,10 +169,12 @@ class ProperTree:
         # Setup the menu-related keybinds - and change the app name if needed
         key="Control"
         sign = "Ctrl+"
+        self.use_dark = self.get_dark()
         if str(sys.platform) == "darwin":
             # Remap the quit function to our own
             self.tk.createcommand('::tk::mac::Quit', self.quit)
             self.tk.createcommand("::tk::mac::OpenDocument", self.open_plist_from_app)
+            self.tk.createcommand("::tk::mac::ShowPreferences", self.show_settings)
             # Import the needed modules to change the bundle name and force focus
             try:
                 from Foundation import NSBundle
@@ -208,10 +242,10 @@ class ProperTree:
         self.tk.bind_all("<{}-r>".format(key), self.oc_snapshot)
         self.tk.bind_all("<{}-R>".format(key), self.oc_clean_snapshot)
         self.tk.bind_all("<{}-l>".format(key), self.reload_from_disk)
-        self.tk.bind_all("<{}-comma>".format(key), self.show_settings)
         if not str(sys.platform) == "darwin":
             # Rewrite the default Command-Q command
             self.tk.bind_all("<{}-q>".format(key), self.quit)
+            self.tk.bind_all("<{}-comma>".format(key), self.show_settings)
         
         cwd = os.getcwd()
         os.chdir(os.path.dirname(os.path.realpath(__file__)))
@@ -229,9 +263,12 @@ class ProperTree:
         # display_data_as:           string, Hex/Base64
         # snapshot_version:          string, X.X.X version number, or Latest
         # force_snapshot_schema:     bool
-        # alternating_color_1:       string, #DFDFDF
-        # alternating_color_2:       string, #E8E8E8
+        # alternating_color_1:       string, Dark: #161616 - Light: #F0F1F1
+        # alternating_color_2:       string, Dark: #202020 - Light: #FEFEFE
+        # highlight_color:           string, Dark: #1E90FF - Light: #1E90FF
+        # background_color:          string, Dark: #161616 - Light: #FEFEFE
         #
+
         self.settings = {}
         if os.path.exists("Scripts/settings.json"):
             try:
@@ -257,9 +294,37 @@ class ProperTree:
         # Wait before opening a new document to see if we need to.
         # This was annoying to debug, but seems to work.
         self.tk.after(250, lambda:self.check_open(plists))
+        self.check_dark_mode()
 
         # Start our run loop
         tk.mainloop()
+
+    def check_dark_mode(self):
+        check_dark = self.get_dark()
+        if check_dark != self.use_dark and any((x not in self.settings for x in ("alternating_color_1","alternating_color_2","background_color"))):
+            # Mode changed
+            self.use_dark = check_dark
+            self.update_settings()
+        # Continue the loop
+        self.tk.after(10000, lambda:self.check_dark_mode())
+
+    def get_dark(self):
+        if os.name=="nt":
+            # Get the registry entry to tell us if we're in dark/light mode
+            p = subprocess.Popen(["reg","query","HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize","/v","AppsUseLightTheme"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            c = p.communicate()
+            return c[0].decode("utf-8", "ignore").strip().lower().split(" ")[-1] in ("","0x0")
+        elif str(sys.platform) != "darwin":
+            return True # Default to dark mode on Linux platforms
+        # Get the macOS version - and see if dark mode is a thing
+        p = subprocess.Popen(["sw_vers","-productVersion"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        c = p.communicate()
+        p_vers = c[0].decode("utf-8", "ignore").strip().lower()
+        if p_vers < "10.14.0": return True # Default to dark on anything prior to 
+        # At this point - we have an OS that supports dark mode, let's check our value
+        p = subprocess.Popen(["defaults","read","-g","AppleInterfaceStyle"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        c = p.communicate()
+        return c[0].decode("utf-8", "ignore").strip().lower() == "dark"
 
     def expand_command(self, event = None):
         self.settings["expand_all_items_on_open"] = True if self.expand_on_open.get() else False
@@ -293,6 +358,26 @@ class ProperTree:
         canvas.configure(background=color)
         self.update_colors()
 
+    def swap_colors(self, color_type = None):
+        if not isinstance(color_type,str): return
+        color_type = color_type.lower()
+        if color_type == "highlight":
+            self.settings.pop("highlight_color",None)
+            return self.update_settings()
+        self.use_dark = self.get_dark()
+        # Find out if we're setting it to light or dark mode - and if on macOS + using the system's current settings,
+        # remove them to use defaults
+        color_dict = self.default_light if color_type == "light" else self.default_dark
+        to_remove = (self.use_dark and color_type == "dark") or (not self.use_dark and color_type != "dark")
+        if str(sys.platform)=="darwin":
+            self.use_dark = self.get_dark()
+            to_remove = (self.use_dark and color_type == "dark") or (not self.use_dark and color_type != "dark")
+        for x in color_dict:
+            if color_type != "highlight" and x.lower() == "highlight_color": continue
+            if to_remove: self.settings.pop(x,None)
+            else: self.settings[x] = color_dict[x]
+        self.update_settings()
+
     def reset_settings(self, event = None):
         self.settings = {}
         self.update_settings()
@@ -319,10 +404,15 @@ class ProperTree:
         prefix = self.settings.get("comment_strip_prefix","#")
         prefix = "#" if not prefix else prefix
         self.comment_prefix_text.insert(0,prefix)
-        color_1 = "".join([x for x in self.settings.get("alternating_color_1",self.default_row_colors[0]) if x.lower() in "0123456789abcdef"])
-        color_2 = "".join([x for x in self.settings.get("alternating_color_2",self.default_row_colors[-1]) if x.lower() in "0123456789abcdef"])
-        self.r1_canvas.configure(background="#"+color_1 if len(color_1) == 6 else self.default_row_colors[0])
-        self.r2_canvas.configure(background="#"+color_2 if len(color_2) == 6 else self.default_row_colors[-1])
+        default_color = self.default_dark if self.use_dark else self.default_light
+        color_1 = "".join([x for x in self.settings.get("alternating_color_1",default_color["alternating_color_1"]) if x.lower() in "0123456789abcdef"])
+        color_2 = "".join([x for x in self.settings.get("alternating_color_2",default_color["alternating_color_2"]) if x.lower() in "0123456789abcdef"])
+        color_h = "".join([x for x in self.settings.get("highlight_color"    ,default_color["highlight_color"    ]) if x.lower() in "0123456789abcdef"])
+        color_b = "".join([x for x in self.settings.get("background_color"   ,default_color["background_color"   ]) if x.lower() in "0123456789abcdef"])
+        self.r1_canvas.configure(background="#"+color_1 if len(color_1) == 6 else default_color["alternating_color_1"])
+        self.r2_canvas.configure(background="#"+color_2 if len(color_2) == 6 else default_color["alternating_color_2"])
+        self.hl_canvas.configure(background="#"+color_h if len(color_h) == 6 else default_color["highlight_color"])
+        self.bg_canvas.configure(background="#"+color_b if len(color_b) == 6 else default_color["background_color"])
         self.update_colors()
 
     def update_colors(self):
@@ -333,7 +423,7 @@ class ProperTree:
             return
         for window in windows:
             if window in self.default_windows: continue
-            window.alternate_colors()
+            window.set_colors()
 
     def check_open(self, plists = []):
         plists = [x for x in plists if not self.regexp.search(x)]
