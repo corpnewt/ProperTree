@@ -1838,7 +1838,7 @@ class PlistWindow(tk.Toplevel):
             for (key,val) in dict_list:
                 if t == "dictionary":
                     # create a unique name
-                    key = self.get_unique_name(key,names)
+                    key = self.get_unique_name(str(key),names)
                     names.append(key)
                 last = self.add_node(val, node, key)
                 add_list.append({"type":"add","cell":last})
