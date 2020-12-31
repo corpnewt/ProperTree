@@ -629,16 +629,15 @@ class PlistWindow(tk.Toplevel):
                 "text":name,
                 "values":values
                 })
-            self._tree.selection_set(x[1])
-            self._tree.see(x[1])
-        self.alternate_colors()
+        # Select the last matched cell
+        self.select(matches[-1][1])
         self.add_undo(replacements)
         # Ensure we're edited
         if not self.edited:
             self.edited = True
             self.title(self.title()+" - Edited")
         # Let's try to find the next
-        self.find_next(replacing=True)
+        if not replace_all: self.find_next(replacing=True)
 
     def is_match(self, node, text):
         case_sensitive = self.f_case_var.get()
@@ -717,14 +716,10 @@ class PlistWindow(tk.Toplevel):
         for match in matches[::-1]:
             if match[0] < index:
                 # Found one - select it
-                self._tree.selection_set(match[1])
-                self._tree.see(match[1])
-                self.alternate_colors()
+                self.select(match[1])
                 return match
         # If we got here - start over
-        self._tree.selection_set(matches[-1][1])
-        self._tree.see(matches[-1][1])
-        self.alternate_colors()
+        self.select(matches[-1][1])
         return match[-1]
 
     def find_next(self, event=None, replacing=False):
@@ -753,14 +748,10 @@ class PlistWindow(tk.Toplevel):
         for match in matches:
             if match[0] > index:
                 # Found one - select it
-                self._tree.selection_set(match[1])
-                self._tree.see(match[1])
-                self.alternate_colors()
+                self.select(match[1])
                 return match
         # If we got here - start over
-        self._tree.selection_set(matches[0][1])
-        self._tree.see(matches[0][1])
-        self.alternate_colors()
+        self.select(matches[0][1])
         return match[0]
 
     def deselect(self, event=None):
@@ -1710,9 +1701,7 @@ class PlistWindow(tk.Toplevel):
         # Ensure the root is expanded at least
         root = self.get_root_node()
         self._tree.item(root,open=True)
-        self._tree.selection_set(root)
-        self._tree.focus(root)
-        self.alternate_colors()
+        self.select(root)
 
     def close_window(self, event=None):
         # Check if we need to save first, then quit if we didn't cancel
@@ -1845,15 +1834,11 @@ class PlistWindow(tk.Toplevel):
                 self._tree.item(last,open=True)
         first = self.get_root_node() if not len(add_list) else add_list[0].get("cell")
         self.add_undo(add_list)
-        self._tree.selection_set(first)
-        self._tree.focus(first)
-        self._tree.see(first)
-        self._tree.update()
         if not self.edited:
             self.edited = True
             self.title(self.title()+" - Edited")
         self.update_all_children()
-        self.alternate_colors()
+        self.select(first)
 
     def stackorder(self, root):
         """return a list of root and toplevel windows in stacking order (topmost is last)"""
@@ -2037,9 +2022,7 @@ class PlistWindow(tk.Toplevel):
         if self.get_check_type(target).lower() == "array":
             self.update_array_counts(target)
         # Select and scroll to the target
-        self._tree.focus(new_cell)
-        self._tree.selection_set(new_cell)
-        self._tree.see(new_cell)
+        self.select(new_cell,alternate=False)
         if not self.edited:
             self.edited = True
             self.title(self.title()+" - Edited")
@@ -2075,8 +2058,7 @@ class PlistWindow(tk.Toplevel):
         # the last index if not, and the parent if no other items
         remaining = self._tree.get_children(parent)
         new_target = parent if not len(remaining) else remaining[target_index] if target_index < len(remaining) else remaining[-1]
-        self._tree.selection_set(new_target)
-        self._tree.focus(new_target)
+        self.select(new_target,alternate=False)
         if not self.edited:
             self.edited = True
             self.title(self.title()+" - Edited")
@@ -2365,9 +2347,7 @@ class PlistWindow(tk.Toplevel):
     def popup(self, event):
         # Select the item there if possible
         cell = self._tree.identify('item', event.x, event.y)
-        if cell:
-            self._tree.selection_set(cell)
-            self._tree.focus(cell)
+        if cell: self.select(cell,alternate=False)
         # Build right click menu
         popup_menu = tk.Menu(self, tearoff=0)
         if self.get_check_type(cell).lower() in ["array","dictionary"]:
@@ -2603,6 +2583,12 @@ class PlistWindow(tk.Toplevel):
             return []
         return None
 
+    def select(self, node, see = True, alternate = True):
+        self._tree.selection_set(node)
+        self._tree.focus(node)
+        if see: self._tree.see(node)
+        if alternate: self.alternate_colors()
+
     def pre_alternate(self, event):
         # Only called before an item opens - we need to open it manually to ensure
         # colors alternate correctly
@@ -2635,6 +2621,9 @@ class PlistWindow(tk.Toplevel):
         self.hlt = self.text_color(self.hl)
         self.style.configure(self.style_name, background=self.bg, fieldbackground=self.bg)
         self.style.map(self.style_name, background=[("selected", self.hl)], foreground=[("selected", self.hlt)])
+        self._tree.tag_configure('even', foreground=self.r1t, background=self.r1)
+        self._tree.tag_configure('odd', foreground=self.r2t, background=self.r2)
+        self._tree.tag_configure("selected", foreground="black", background=self.hl)
         self.alternate_colors()
 
     def alternate_colors(self, event = None):
@@ -2650,6 +2639,3 @@ class PlistWindow(tk.Toplevel):
             else:
                 tags.append("odd" if x % 2 else "even")
             self._tree.item(item, tags=tags)
-        self._tree.tag_configure('even', foreground=self.r1t, background=self.r1)
-        self._tree.tag_configure('odd', foreground=self.r2t, background=self.r2)
-        self._tree.tag_configure("selected", foreground="black", background=self.hl)
