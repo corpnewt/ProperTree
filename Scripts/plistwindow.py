@@ -452,9 +452,9 @@ class PlistWindow(tk.Toplevel):
         value_type = value_type.lower()
         if value_type == "data":
             if self.data_display == "hex":
+                value = "".join(value.split()).replace("<","").replace(">","")
                 if value.lower().startswith("0x"):
                     value = value[2:]
-                value = value.replace(" ","").replace("<","").replace(">","")
                 if [x for x in value.lower() if x not in "0123456789abcdef"]:
                     return (False,"Invalid Hex Data","Invalid character in passed hex data.")
                 if len(value) % 2:
