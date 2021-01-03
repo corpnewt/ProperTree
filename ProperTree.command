@@ -428,13 +428,19 @@ class ProperTree:
     def check_open(self, plists = []):
         plists = [x for x in plists if not self.regexp.search(x)]
         if isinstance(plists, list) and len(plists):
+            at_least_one = False
             # Iterate the passed plists and open them
             for p in set(plists):
                 window = self.open_plist_with_path(None,p,None)
+                if not window: continue
+                at_least_one = True
                 # Ensure our default data type is reflected
                 window.change_data_type(self.data_type_string.get())
                 if self.start_window == None:
                     self.start_window = window
+            if not at_least_one: # Check if we have any other windows open - and close as needed
+                windows = self.stackorder(self.tk)
+                if not len(windows): self.quit()
         elif not len(self.stackorder(self.tk)):
             # create a fresh plist to start
             self.start_window = self.new_plist()
