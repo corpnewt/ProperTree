@@ -1228,6 +1228,8 @@ class PlistWindow(tk.Toplevel):
                 "cell":child
             })
         self.add_undo(undo_list)
+        # Select the root element
+        self.select(self.get_root_node())
         # Ensure we're edited
         if not self.edited:
             self.edited = True
@@ -1326,6 +1328,9 @@ class PlistWindow(tk.Toplevel):
             self.bell()
             # Nothing to undo/redo
             return
+        # Retain the selection bounding box
+        selected = self._tree.focus()
+        pre_nodes = self.iter_nodes()
         task_list = u.pop(-1)
         r_task_list = []
         # Iterate in reverse to undo the last thing first
@@ -1360,6 +1365,7 @@ class PlistWindow(tk.Toplevel):
                 })
                 # Now we actually add it
                 self._tree.move(cell,task["from"],task.get("index","end"))
+                selected = cell
             elif ttype == "move":
                 # We moved a cell - let's save the old info
                 r_task_list.append({
@@ -1378,6 +1384,14 @@ class PlistWindow(tk.Toplevel):
         if not self.edited:
             self.edited = True
             self.title(self.title()+" - Edited")
+        # Change selection if needed
+        nodes = self.iter_nodes()
+        if selected in nodes:
+            self.select(selected)
+        else:
+            # Our item no longer exists, let's adjust our selection
+            index = pre_nodes.index(selected)
+            self.select(nodes[index] if index < len(nodes) else nodes[-1])
         self.update_all_children()
         self.alternate_colors()
 
