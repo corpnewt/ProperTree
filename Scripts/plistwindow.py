@@ -278,12 +278,13 @@ class PlistWindow(tk.Toplevel):
 
         # Create the treeview
         self._tree_frame = tk.Frame(self)
-        self._tree = ttk.Treeview(self._tree_frame, columns=("Type","Value","Drag"), selectmode="browse", style=self.style_name)
+        # self._tree = ttk.Treeview(self._tree_frame, columns=("Type","Value","Drag"), selectmode="browse", style=self.style_name)
+        self._tree = ttk.Treeview(self._tree_frame, columns=("Type","Value"), selectmode="browse", style=self.style_name)
         self._tree.heading("#0", text="Key")
         self._tree.heading("#1", text="Type")
         self._tree.heading("#2", text="Value")
         self._tree.column("Type",width=100,stretch=False)
-        self._tree.column("Drag",minwidth=40,width=40,stretch=False,anchor="center")
+        # self._tree.column("Drag",minwidth=40,width=40,stretch=False,anchor="center")
 
         # Setup the initial colors
         self.r1 = self.r2 = self.hl = self.r1t = self.r2t = self.hlt = None
