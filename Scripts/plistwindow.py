@@ -2344,6 +2344,25 @@ class PlistWindow(tk.Toplevel):
         self.update_all_children()
         self.alternate_colors()
 
+    def sort_keys(self, cell):
+        # Let's build a sorted list of keys, then generate move edits for each
+        children = self._tree.get_children(cell)
+        sorted_children = sorted([(x,self._tree.item(x,"text")) for x in children],key=lambda x:x[1])
+        undo_tasks = []
+        for index,child in enumerate(sorted_children):
+            if child[0] == children[index]: continue # They're the same, nothing to do here
+            # Add the move command
+            undo_tasks.append({
+                "type":"move",
+                "cell":child[0],
+                "from":cell,
+                "to":cell,
+                "index":self._tree.index(child[0])
+            })
+            self._tree.move(child[0], cell, index)
+        self.add_undo(undo_tasks)
+        self.alternate_colors()
+
     def popup(self, event):
         # Select the item there if possible
         cell = self._tree.identify('item', event.x, event.y)
@@ -2374,6 +2393,12 @@ class PlistWindow(tk.Toplevel):
             else:
                 popup_menu.add_command(label="New sibling of '{}'{}".format(self._tree.item(cell,"text")," (+)" if is_mac else ""), command=lambda:self.new_row(cell),accelerator=None if is_mac else "(+)")
                 popup_menu.add_command(label="Remove '{}'{}".format(self._tree.item(cell,"text")," (-)" if is_mac else ""), command=lambda:self.remove_row(cell),accelerator=None if is_mac else "(-)")
+        # Check if the parent is a dictionary, and if so - add a Sort Keys option
+        parent = cell if cell in ("",self.get_root_node()) or (self.get_check_type(cell).lower() == "dictionary" and len(self._tree.get_children(cell))>1) else self._tree.parent(cell)
+        if self.get_check_type(parent).lower() == "dictionary" and len(self._tree.get_children(parent))>1:
+            # Add a separator, and the Sort Keys option
+            popup_menu.add_separator()
+            popup_menu.add_command(label="Sort keys in '{}'".format(self._tree.item(parent,"text")), command=lambda:self.sort_keys(parent))
         # Add the copy and paste options
         popup_menu.add_separator()
         c_state = "normal" if len(self._tree.selection()) else "disabled"
@@ -2586,6 +2611,7 @@ class PlistWindow(tk.Toplevel):
     def select(self, node, see = True, alternate = True):
         self._tree.selection_set(node)
         self._tree.focus(node)
+        self._tree.update()
         if see: self._tree.see(node)
         if alternate: self.alternate_colors()
 
