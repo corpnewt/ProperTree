@@ -227,20 +227,21 @@ class ProperTree:
             self.tk.config(menu=main_menu)
 
         # Set bindings
+        # on at least macOS, tk 8.5 works with <Command-Z>, but 8.6 requires <Shift-Command-z>
         self.tk.bind("<{}-w>".format(key), self.close_window)
         self.settings_window.bind("<{}-w>".format(key), self.close_window)
         self.tk.bind_all("<{}-n>".format(key), self.new_plist)
         self.tk.bind_all("<{}-o>".format(key), self.open_plist)
         self.tk.bind_all("<{}-s>".format(key), self.save_plist)
-        self.tk.bind_all("<{}-S>".format(key), self.save_plist_as)
+        self.tk.bind_all("<Shift-{}-s>".format(key) if tk.TkVersion >= 8.6 else "<{}-S>".format(key), self.save_plist_as)
         self.tk.bind_all("<{}-d>".format(key), self.duplicate_plist)
         self.tk.bind_all("<{}-t>".format(key), self.show_convert)
         self.tk.bind_all("<{}-z>".format(key), self.undo)
-        self.tk.bind_all("<{}-Z>".format(key), self.redo)
+        self.tk.bind_all("<Shift-{}-z>".format(key) if tk.TkVersion >= 8.6 else "<{}-Z>".format(key), self.redo)
         self.tk.bind_all("<{}-m>".format(key), self.strip_comments)
         self.tk.bind_all("<{}-e>".format(key), self.strip_disabled)
         self.tk.bind_all("<{}-r>".format(key), self.oc_snapshot)
-        self.tk.bind_all("<{}-R>".format(key), self.oc_clean_snapshot)
+        self.tk.bind_all("<Shift-{}-R>".format(key) if tk.TkVersion >= 8.6 else "<{}-R>".format(key), self.oc_clean_snapshot)
         self.tk.bind_all("<{}-l>".format(key), self.reload_from_disk)
         if not str(sys.platform) == "darwin":
             # Rewrite the default Command-Q command
