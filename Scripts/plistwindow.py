@@ -1256,7 +1256,7 @@ class PlistWindow(tk.Toplevel):
             return
         column = self._tree.identify_column(event.x)
         rowid  = self._tree.identify_row(event.y)
-        if rowid and column == "#3":
+        if rowid: # and column == "#3":
             # Mouse down in the drag column
             self.clicked_drag = True
 
