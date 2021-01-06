@@ -83,7 +83,7 @@ def select_py(py_versions,min_tk,pt_current):
                 "" if x[2]==None or x[2] >= min_tk else " ({}+ recommended)".format(min_tk),
             ))
         print("")
-        if current: print("C: Current ({})".format(current))
+        if current: print("C. Current ({})".format(current))
         print("Q. Quit")
         print("")
         menu = input("Please select the python version to use:  ").lower()
