@@ -70,7 +70,7 @@ class EntryPopup(tk.Entry):
         if self.column == "#0":
             check_type = self.master.get_check_type(self.cell).lower()
             # We are currently in the key column
-            if check_type in ["array","dictionary"]:
+            if check_type in ("dictionary","array"):
                 # Can't edit the other field with these - bail
                 return 'break'
             edit_col = "#2"
@@ -178,7 +178,7 @@ class EntryPopup(tk.Entry):
             type_value = self.master.get_check_type(self.cell).lower()
             value = self.get()
             # We need to sanitize data and numbers for sure
-            if type_value.lower() == "date" and value.lower() in ["today","now"]:
+            if type_value.lower() == "date" and value.lower() in ("today","now"):
                 # Set it to today first
                 value = datetime.datetime.now().strftime("%b %d, %Y %I:%M:%S %p")
             output = self.master.qualify_value(value,type_value)
@@ -500,7 +500,7 @@ class PlistWindow(tk.Toplevel):
                         return (False,"Invalid Number Data","Couldn't convert to an integer or float.")
             value = str(value)
         elif value_type == "boolean":
-            if not value.lower() in ["true","false"]:
+            if not value.lower() in ("true","false"):
                 return (False,"Invalid Boolean Data","Booleans can only be True/False.")
             value = "True" if value.lower() == "true" else "False"
         return (True,value)
@@ -673,7 +673,7 @@ class PlistWindow(tk.Toplevel):
         elif node_type == "string":
             if (text in value if case_sensitive else text.lower() in value.lower()):
                 return True
-        elif node_type in ["date","boolean","number"]:
+        elif node_type in ("date","boolean","number"):
             if text.lower() == value.lower():
                 # Can only return if we find the same date
                 return True
@@ -931,7 +931,7 @@ class PlistWindow(tk.Toplevel):
         oc_tools   = os.path.join(oc_folder,"Tools")
         oc_efi     = os.path.join(oc_folder,"OpenCore.efi")
 
-        for x in [oc_acpi,oc_drivers,oc_kexts]:
+        for x in (oc_acpi,oc_drivers,oc_kexts):
             if not os.path.exists(x):
                 self.bell()
                 mb.showerror("Incorrect OC Folder Struction", "{} does not exist.".format(x), parent=self)
@@ -1423,7 +1423,7 @@ class PlistWindow(tk.Toplevel):
         tv_item = self._tree.identify('item', event.x, event.y)
         tv_item = self.get_root_node() if tv_item == "" else tv_item # Force Root node as needed
         self._tree.item(tv_item,open=True)
-        if not self.get_check_type(tv_item).lower() in ["dictionary","array"]:
+        if not self.get_check_type(tv_item).lower() in ("dictionary","array"):
             # Allow adding as child
             if not tv_item == self.get_root_node():
                 tv_item = self._tree.parent(tv_item)
@@ -1490,7 +1490,7 @@ class PlistWindow(tk.Toplevel):
         })
         # Create a unique name
         t = self.get_check_type(node).lower()
-        verify = t in ["dictionary",""]
+        verify = t in ("dictionary","")
         if verify:
             names = [self._tree.item(x,"text") for x in self._tree.get_children(node) if not x == target]
             name = self._tree.item(target,"text")
@@ -1812,7 +1812,7 @@ class PlistWindow(tk.Toplevel):
         node = "" if not len(self._tree.selection()) else self._tree.selection()[0]
         # Verify the type - or get the parent
         t = self.get_check_type(node).lower()
-        if not node == "" and not t in ["dictionary","array"]:
+        if not node == "" and not t in ("dictionary","array"):
             node = self._tree.parent(node)
         node = self.get_root_node() if node == "" else node # Force Root node if need be
         t = self.get_check_type(node).lower()
@@ -2026,7 +2026,7 @@ class PlistWindow(tk.Toplevel):
             return # Can't add to a non-collection!
         values = self.get_padded_values(target, 1)
         new_cell = None
-        if not self.get_check_type(target).lower() in ["dictionary","array"] or force_sibling or (not self._tree.item(target,"open") and len(self._tree.get_children(target))):
+        if not self.get_check_type(target).lower() in ("dictionary","array") or force_sibling or (not self._tree.item(target,"open") and len(self._tree.get_children(target))):
             target = self._tree.parent(target)
         # create a unique name
         name = ""
@@ -2360,12 +2360,13 @@ class PlistWindow(tk.Toplevel):
         self.update_all_children()
         self.alternate_colors()
 
-    def sort_keys(self, cell):
-        # Let's build a sorted list of keys, then generate move edits for each
+    def do_sort(self, cell, recursive = False):
+        undo_tasks = []
         children = self._tree.get_children(cell)
         sorted_children = sorted([(x,self._tree.item(x,"text")) for x in children],key=lambda x:x[1])
-        undo_tasks = []
         for index,child in enumerate(sorted_children):
+            if self.get_check_type(child[0]).lower() in ("dictionary","array"):
+                undo_tasks.extend(self.do_sort(child[0],recursive))
             if child[0] == children[index]: continue # They're the same, nothing to do here
             # Add the move command
             undo_tasks.append({
@@ -2376,6 +2377,11 @@ class PlistWindow(tk.Toplevel):
                 "index":self._tree.index(child[0])
             })
             self._tree.move(child[0], cell, index)
+        return undo_tasks
+
+    def sort_keys(self, cell, recursive = False):
+        # Let's build a sorted list of keys, then generate move edits for each
+        undo_tasks = self.do_sort(cell,recursive)
         self.add_undo(undo_tasks)
         self.alternate_colors()
 
@@ -2385,7 +2391,7 @@ class PlistWindow(tk.Toplevel):
         if cell: self.select(cell,alternate=False)
         # Build right click menu
         popup_menu = tk.Menu(self, tearoff=0)
-        if self.get_check_type(cell).lower() in ["array","dictionary"]:
+        if self.get_check_type(cell).lower() in ("array","dictionary"):
             popup_menu.add_command(label="Expand Node", command=self.expand_node)
             popup_menu.add_command(label="Collapse Node", command=self.collapse_node)
             popup_menu.add_separator()
@@ -2402,26 +2408,32 @@ class PlistWindow(tk.Toplevel):
             if self.get_check_type(self.get_root_node()).lower() in ("array","dictionary"):
                 popup_menu.add_command(label="New top level entry{}".format(" (+)" if is_mac else ""), command=lambda:self.new_row(self.get_root_node()),accelerator=None if is_mac else "(+)")
         else:
-            if self.get_check_type(cell).lower() in ["array","dictionary"] and (self._tree.item(cell,"open") or not len(self._tree.get_children(cell))):
+            if self.get_check_type(cell).lower() in ("dictionary","array") and (self._tree.item(cell,"open") or not len(self._tree.get_children(cell))):
                 popup_menu.add_command(label="New child under '{}'{}".format(self._tree.item(cell,"text")," (+)" if is_mac else ""), command=lambda:self.new_row(cell),accelerator=None if is_mac else "(+)")
                 popup_menu.add_command(label="New sibling of '{}'".format(self._tree.item(cell,"text")), command=lambda:self.new_row(cell,True))
                 popup_menu.add_command(label="Remove '{}' and any children{}".format(self._tree.item(cell,"text")," (-)" if is_mac else ""), command=lambda:self.remove_row(cell),accelerator=None if is_mac else "(-)")
             else:
                 popup_menu.add_command(label="New sibling of '{}'{}".format(self._tree.item(cell,"text")," (+)" if is_mac else ""), command=lambda:self.new_row(cell),accelerator=None if is_mac else "(+)")
                 popup_menu.add_command(label="Remove '{}'{}".format(self._tree.item(cell,"text")," (-)" if is_mac else ""), command=lambda:self.remove_row(cell),accelerator=None if is_mac else "(-)")
-        # Check if the parent is a dictionary, and if so - add a Sort Keys option
-        parent = cell if cell in ("",self.get_root_node()) or (self.get_check_type(cell).lower() == "dictionary" and len(self._tree.get_children(cell))>1) else self._tree.parent(cell)
-        if self.get_check_type(parent).lower() == "dictionary" and len(self._tree.get_children(parent))>1:
-            # Add a separator, and the Sort Keys option
+        # Let's get our sorting menus
+        parent = cell if cell in ("",self.get_root_node()) else self._tree.parent(cell)
+        if self.get_check_type(parent).lower() in ("dictionary","array"):
+            # Add a separator, and the Sort Keys options
             popup_menu.add_separator()
-            popup_menu.add_command(label="Sort keys in '{}'".format(self._tree.item(parent,"text")), command=lambda:self.sort_keys(parent))
+            # Find out if we can recursively start with the cell, or if we need to start with the parent
+            recurs_target = cell if self.get_check_type(cell).lower() in ("dictionary","array") and len(self._tree.get_children(cell)) else parent
+            popup_menu.add_command(label="Recursively sort keys starting at '{}'".format(self._tree.item(recurs_target,"text")), command=lambda:self.sort_keys(recurs_target,recursive=True))
+            # Check the actual cell
+            sort_target = cell if cell in ("",self.get_root_node()) or (self.get_check_type(cell).lower() == "dictionary" and len(self._tree.get_children(cell))>1) else self._tree.parent(cell)
+            popup_menu.add_command(label="Sort keys in '{}'".format(self._tree.item(sort_target,"text")), command=lambda:self.sort_keys(sort_target))
+            
         # Add the copy and paste options
         popup_menu.add_separator()
         c_state = "normal" if len(self._tree.selection()) else "disabled"
         try: p_state = "normal" if len(self.root.clipboard_get()) else "disabled"
         except: p_state = "disabled" # Invalid clipboard content
         popup_menu.add_command(label="Copy{}".format(" (Cmd+C)" if is_mac else ""),command=self.copy_selection,state=c_state,accelerator=None if is_mac else "(Ctrl+C)")
-        if not cell in ("",self.get_root_node()) and self.get_check_type(cell).lower() in ["array","dictionary"]:
+        if not cell in ("",self.get_root_node()) and self.get_check_type(cell).lower() in ("array","dictionary"):
             popup_menu.add_command(label="Copy Children", command=self.copy_children,state=c_state)
         popup_menu.add_command(label="Paste{}".format(" (Cmd+V)" if is_mac else ""),command=self.paste_selection,state=p_state,accelerator=None if is_mac else "(Ctrl+V)")
         
@@ -2549,7 +2561,7 @@ class PlistWindow(tk.Toplevel):
             return 'break'
         if parent == "" and (index == 0 or self.get_check_type(self.get_root_node()).lower() in ("array","dictionary")): return 'break' # Not changing the type - can't change the name of Root
         if index == 2:
-            if t.lower() in ["dictionary","array"]:
+            if t.lower() in ("dictionary","array"):
                 # Can't edit the "value" directly - should only show the number of children
                 return 'break'
             elif t.lower() == "boolean":
