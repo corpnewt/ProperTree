@@ -69,7 +69,15 @@ git clone https://github.com/corpnewt/ProperTree
   
 * **ProperTree crashes on Big Sur (macOS 11)**
 
-  This is due to the default python installs on macOS leveraging an older `tk` version - which lacks support for macOS 11.  To solve this, you can download and install the latest python 3 version from https://www.python.org/downloads/mac-osx/ (note: Currently the "universal" 3.9.1 installer causes theme issues and should not be used) then leverage the `buildapp-select.command` from ProperTree's `Scripts` directory to build a .app bundle that will leverage that python version.  An example of the output of that script is below (I would select option `3` or `C` to use the non-system python install):
+  __As of macOS 11.2 (20D5029f), the system's `tk` installation appears to be fixed, and works correctly.  As such, it should not require an external python version to function.__
+
+  This is due to the default python installs on macOS leveraging an older `tk` version - which lacks support for macOS 11.  To solve this, you can download and install the latest python 3 version from https://www.python.org/downloads/mac-osx/ (note: Currently the "universal" 3.9.1 installer causes theme issues and should not be used) then leverage the `buildapp-select.command` from ProperTree's `Scripts` directory to build a .app bundle that will leverage that python version.
+  
+  If you already have python 3 installed via `brew` or another package manager - it is likely still linking to the system `tk` version, which will still have issues unless linked against a newer version. 
+
+* **`buildapp-select.command` Usage**
+
+  An example of the output of `buildapp-select.command` is shown below.  It will walk the output of `which python` and `which python3`, then attempt to load the `tk` interface while keeping track of which work and which fail.  The example below is from macOS 11.2 (20D4029f) with the system versions of python 2 and 3, as well as python 3.9.1 installed from python.org.  If there's an existing `ProperTree.app` in the directory above the `Scripts` folder, the shebang of that app will be located and served up as the `C: Current` option.  At the following menu, I would select option `3` or `C` to use the non-system python install.
 
 ```
  - Currently Available Python Versions -
@@ -80,12 +88,8 @@ git clone https://github.com/corpnewt/ProperTree
 4. /usr/bin/env python
 5. /usr/bin/env python3
 
-C: Current (/Library/Frameworks/Python.framework/Versions/3.9/bin/python3)
+C. Current (/Library/Frameworks/Python.framework/Versions/3.9/bin/python3)
 Q. Quit
 
 Please select the python version to use:  
 ```
-  
-  If you already have python 3 installed via `brew` or another package manager - it is likely still linking to the system `tk` version, which will still have issues unless linked against a newer version. 
-
-  As of macOS 11.2 (20D5029f), the system's `tk` install appears to be fixed, and works correctly.  As such, it should not require an external python version to function.
