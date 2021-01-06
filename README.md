@@ -49,7 +49,7 @@ git clone https://github.com/corpnewt/ProperTree
 
 * **How can I have ProperTree open when I double-click a .plist file?**
 
-  On macOS you can run `buildapp.command` located in ProperTree's `Scripts` directory to build an application bundle which can be associated with .plist files.  While this approach *works* - it sometimes has odd issues when attempting to open multiple .plist files by double-clicking.  Typically the first will work as normal, but opening any subsequent .plist file requires using the File -> Open menu.
+  On macOS you can run `buildapp-select.command` located in ProperTree's `Scripts` directory to build an application bundle which can be associated with .plist files.
   
   On Windows, you can run `AssociatePlistFiles.bat` located in ProperTree's `Scripts` directory to associate .plist files with `ProperTree.bat`, and also to add an `Open with ProperTree` option to the contextual menu when right-clicking .plist files.  This approach is location-dependent, and moving your copy of ProperTree will require you re-run `AssociatePlistFiles.bat`.
 
@@ -65,10 +65,27 @@ git clone https://github.com/corpnewt/ProperTree
 
 * **I use an international keyboard layout on macOS and some keys crash ProperTree with `NSRangeException', reason: '-[__NSCFConstantString characterAtIndex:]: Range or index out of bounds`**
 
-  This is a bug in the Cocoa implementation of Tcl/Tk on macOS (discussed [here](https://bugs.python.org/issue22566)).  The latest python 2 installer from [python.org](https://www.python.org/downloads/release/python-2718/) ships with, and uses Tcl/Tk 8.6.8 which has this issue fixed.  Given that the shebang in `ProperTree.command` leverages `#!/usr/bin/env python` - the first python 2 binary found should be used. `buildapp-python3.command` from ProperTree's `Scripts` directory can be used to hardcode the first python3 path into the .app bundle's executable shebang.
+  This is a bug in the Cocoa implementation of Tcl/Tk on macOS (discussed [here](https://bugs.python.org/issue22566)).  The latest python 2 installer from [python.org](https://www.python.org/downloads/release/python-2718/) ships with, and uses Tcl/Tk 8.6.8 which has this issue fixed.  Given that the shebang in `ProperTree.command` leverages `#!/usr/bin/env python` - the first python 2 binary found should be used. `buildapp-select.command` from ProperTree's `Scripts` directory can be used to hardcode a specific python install's path into the .app bundle's executable shebang.
   
 * **ProperTree crashes on Big Sur (macOS 11)**
 
-  This is due to the default python installs on macOS leveraging an older `tk` version - which lacks support for macOS 11.  To solve this, you can download and install the latest python 3 version from https://www.python.org/downloads/mac-osx/ then leverage the `buildapp-python3.command` from ProperTree's `Scripts` directory to build a .app bundle that will leverage that python version.
+  This is due to the default python installs on macOS leveraging an older `tk` version - which lacks support for macOS 11.  To solve this, you can download and install the latest python 3 version from https://www.python.org/downloads/mac-osx/ (note: Currently the "universal" 3.9.1 installer causes theme issues and should not be used) then leverage the `buildapp-select.command` from ProperTree's `Scripts` directory to build a .app bundle that will leverage that python version.  An example of the output of that script is below (I would select option `3` or `C` to use the non-system python install):
+
+```
+ - Currently Available Python Versions -
+
+1. /usr/bin/python 2.7.16 - tk 8.5 (8.6+ recommended)
+2. /usr/bin/python3 3.8.2 - tk 8.5 (8.6+ recommended)
+3. /Library/Frameworks/Python.framework/Versions/3.9/bin/python3 3.9.1 - tk 8.6
+4. /usr/bin/env python
+5. /usr/bin/env python3
+
+C: Current (/Library/Frameworks/Python.framework/Versions/3.9/bin/python3)
+Q. Quit
+
+Please select the python version to use:  
+```
   
   If you already have python 3 installed via `brew` or another package manager - it is likely still linking to the system `tk` version, which will still have issues unless linked against a newer version. 
+
+  As of macOS 11.2 (20D5029f), the system's `tk` install appears to be fixed, and works correctly.  As such, it should not require an external python version to function.
