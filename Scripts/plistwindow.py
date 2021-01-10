@@ -1330,9 +1330,8 @@ class PlistWindow(tk.Toplevel):
             self.bell()
             # Nothing to undo/redo
             return
-        # Retain the selection bounding box
-        selected = self._tree.focus()
-        pre_nodes = self.iter_nodes()
+        # Retain the original selection
+        selected,nodes = self.preselect()
         task_list = u.pop(-1)
         r_task_list = []
         # Iterate in reverse to undo the last thing first
@@ -1387,15 +1386,24 @@ class PlistWindow(tk.Toplevel):
             self.edited = True
             self.title(self.title()+" - Edited")
         # Change selection if needed
-        nodes = self.iter_nodes()
-        if selected in nodes:
-            self.select(selected)
-        else:
-            # Our item no longer exists, let's adjust our selection
-            index = pre_nodes.index(selected)
-            self.select(nodes[index] if index < len(nodes) else nodes[-1])
         self.update_all_children()
-        self.alternate_colors()
+        self.reselect((selected,nodes))
+
+    def preselect(self):
+        # Returns a tuple of the selected item and current visible nodes
+        return (self._tree.focus(),self.iter_nodes())
+
+    def reselect(self, selection_tuple = None):
+        # Select the node or index that was last selected
+        if not selection_tuple or not isinstance(selection_tuple,tuple):
+            # Just select the root
+            return self.select(self.get_root_node())
+        selected,original_nodes = selection_tuple
+        nodes = self.iter_nodes()
+        if selected in nodes: return self.select(selected)
+        # Our item no longer exists, let's adjust our selection
+        index = original_nodes.index(selected)
+        self.select(nodes[index] if index < len(nodes) else nodes[-1])
 
     def got_focus(self, event=None):
         # Lift us to the top of the stack order
@@ -1523,8 +1531,11 @@ class PlistWindow(tk.Toplevel):
         # Strips out any values attached to keys beginning with the prefix
         nodes = self.iter_nodes(False)
         removedlist = []
+        selected = self.preselect()
         # Find out if we should ignore case
         ignore_case = True if self.controller.comment_ignore_case.get() else False
+        # Check if we should strip string values too
+        check_string = True if self.controller.comment_check_string.get() else False
         # Get the current prefix - and default to "#" if needed
         prefix = self.controller.comment_prefix_text.get()
         # Normalize the case if needed as well
@@ -1533,7 +1544,11 @@ class PlistWindow(tk.Toplevel):
             if node == self.get_root_node(): continue # Can't strip the root node
             name = self._tree.item(node,"text")
             name = name.lower() if ignore_case else name # Normalize case if needed
-            if str(name).startswith(prefix):
+            if check_string and self.get_check_type(node).lower() == "string":
+                val = self.get_padded_values(node)[1]
+                names = (name,val)
+            else: names = (name)
+            if any((str(x).startswith(prefix)) for x in names):
                 # Found one, remove it
                 removedlist.append({
                     "type":"remove",
@@ -1552,12 +1567,13 @@ class PlistWindow(tk.Toplevel):
             self.edited = True
             self.title(self.title()+" - Edited")
         self.update_all_children()
-        self.alternate_colors()
+        self.reselect(selected)
 
     def strip_disabled(self, event=None):
         # Strips out dicts if they contain Enabled = False, or Disabled = True
         nodes = self.iter_nodes(False)
         root = self.get_root_node()
+        selected = self.preselect()
         removedlist = []
         for node in nodes:
             name = str(self._tree.item(node,"text")).lower()
@@ -1587,7 +1603,7 @@ class PlistWindow(tk.Toplevel):
             self.edited = True
             self.title(self.title()+" - Edited")
         self.update_all_children()
-        self.alternate_colors()
+        self.reselect(selected)
 
     ###                       ###
     # Save/Load Plist Functions #
