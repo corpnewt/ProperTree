@@ -2379,7 +2379,7 @@ class PlistWindow(tk.Toplevel):
     def do_sort(self, cell, recursive = False):
         undo_tasks = []
         children = self._tree.get_children(cell)
-        sorted_children = sorted([(x,self._tree.item(x,"text")) for x in children],key=lambda x:x[1])
+        sorted_children = sorted([(x,self._tree.item(x,"text")) for x in children],key=lambda x:x[1].lower())
         for index,child in enumerate(sorted_children):
             if self.get_check_type(child[0]).lower() in ("dictionary","array"):
                 undo_tasks.extend(self.do_sort(child[0],recursive))
