@@ -1542,13 +1542,13 @@ class PlistWindow(tk.Toplevel):
         prefix = "#" if not prefix else prefix.lower() if ignore_case else prefix
         for node in nodes:
             if node == self.get_root_node(): continue # Can't strip the root node
-            name = self._tree.item(node,"text")
+            name = str(self._tree.item(node,"text"))
             name = name.lower() if ignore_case else name # Normalize case if needed
             if check_string and self.get_check_type(node).lower() == "string":
                 val = self.get_padded_values(node)[1]
                 names = (name,val)
-            else: names = (name)
-            if any((str(x).startswith(prefix)) for x in names):
+            else: names = (name,)
+            if any((x.startswith(prefix)) for x in names):
                 # Found one, remove it
                 removedlist.append({
                     "type":"remove",
