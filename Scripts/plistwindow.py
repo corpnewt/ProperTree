@@ -1656,20 +1656,30 @@ class PlistWindow(tk.Toplevel):
                     plist.dump(plist_data,f,sort_keys=self.controller.settings.get("sort_dict",False))
             else:
                 # Dump to a string first
-                plist_text = plist.dumps(plist_data,sort_keys=self.controller.settings.get("sort_dict",False))
+                plist_text = plist.dumps(plist_data,sort_keys=self.controller.settings.get("sort_dict",False)).split("\n")
                 new_plist = []
                 data_tag = ""
-                for x in plist_text.split("\n"):
-                    if x.strip() == "<data>":
+                types = ("</array>","</dict>")
+                for i,x in enumerate(plist_text):
+                    x_stripped = x.strip()
+                    try:
+                        type_check = types[types.index(x_stripped)].replace("</","<")
+                        if plist_text[i-1].strip() == type_check:
+                            new_plist[-1] = x.replace("</","<").replace(">","/>")
+                            data_tag = ""
+                            continue
+                    except (ValueError, IndexError) as e:
+                        pass
+                    if x_stripped == "<data>":
                         data_tag = x
                         continue
                     if not len(data_tag):
                         # Not primed, and wasn't <data>
                         new_plist.append(x)
                         continue
-                    data_tag += x.strip()
+                    data_tag += x_stripped
                     # Check for the end
-                    if x.strip() == "</data>":
+                    if x_stripped == "</data>":
                         # Found the end, append it and reset
                         new_plist.append(data_tag)
                         data_tag = ""
@@ -1680,31 +1690,18 @@ class PlistWindow(tk.Toplevel):
                     if sys.version_info >= (3,0):
                         temp_string = temp_string.encode("utf-8")
                     f.write(temp_string)
-        except Exception as e:
-            try:
-                shutil.rmtree(temp,ignore_errors=True)
-            except:
-                pass
-            # Had an issue, throw up a display box
-            self.bell()
-            mb.showerror("An Error Occurred While Saving", str(e), parent=self)
-            return None
-        try:
             # Copy the temp over
             shutil.copy(temp_file,path)
         except Exception as e:
-            try:
-                shutil.rmtree(temp,ignore_errors=True)
-            except:
-                pass
             # Had an issue, throw up a display box
             self.bell()
             mb.showerror("An Error Occurred While Saving", str(e), parent=self)
             return None
-        try:
-            shutil.rmtree(temp,ignore_errors=True)
-        except:
-            pass
+        finally:
+            try:
+                shutil.rmtree(temp,ignore_errors=True)
+            except:
+                pass
         # Retain the new path if the save worked correctly
         self.current_plist = path
         # Set the window title to the path
