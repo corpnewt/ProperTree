@@ -215,6 +215,7 @@ class PlistWindow(tk.Toplevel):
         self.redo_stack = []
         self.drag_undo = None
         self.clicked_drag = False
+        self.saving = False
         self.data_display = "hex" # hex or base64
         # self.xcode_data = self.controller.xcode_data # keep <data>xxxx</data> in one line when true
         # self.sort_dict = self.controller.sort_dict # Preserve key ordering in dictionaries when loading/saving
@@ -1619,8 +1620,10 @@ class PlistWindow(tk.Toplevel):
     def check_save(self):
         if not self.edited:
             return True # No changes, all good
+        self.saving = True # Lock saving status
         # Post a dialog asking if we want to save the current plist
         answer = mb.askyesnocancel("Unsaved Changes", "Save changes to {}?".format(self.get_title()))
+        self.saving = False # Reset saving status
         if answer == True:
             return self.save_plist()
         return answer
@@ -1734,7 +1737,7 @@ class PlistWindow(tk.Toplevel):
 
     def close_window(self, event=None):
         # Check if we need to save first, then quit if we didn't cancel
-        if self.check_save() == None:
+        if self.saving or self.check_save() == None:
             # User cancelled or we failed to save, bail
             return None
         # See if we're the only window left, and close the session after
