@@ -692,13 +692,14 @@ class ProperTree:
         number = 0
         final_title = "Untitled.plist"
         while True:
-            temp = "Untitled{}.plist".format("" if number == 0 else "-"+str(number))
-            if not temp.lower() in titles:
+            temp = "untitled{}.plist".format("" if number == 0 else "-"+str(number))
+            temp_edit = temp + " - edited"
+            if not any((x in titles for x in (temp,temp_edit))):
                 final_title = temp
                 break
             number += 1
         window = plistwindow.PlistWindow(self, self.tk)
-        window.open_plist(final_title,{}) # Created an empty root
+        window.open_plist(final_title.capitalize(),{}) # Created an empty root
         window.current_plist = None # Ensure it's initialized as new
         # Ensure our default plist and data types are reflected
         window.plist_type_string.set(self.plist_type_string.get())
@@ -774,12 +775,8 @@ class ProperTree:
     def quit(self, event=None):
         # Check if we need to save first, then quit if we didn't cancel
         for window in self.stackorder(self.tk)[::-1]:
-            if window in self.default_windows:
-                continue
-            if window.check_save() == None:
-                # User cancelled or we failed to save, bail
-                return
-            window.destroy()
+            if window in self.default_windows: continue
+            if not window.close_window(): return # User cancelled or we failed to save, bail
         # Make sure we retain any non-event updated settings
         prefix = self.comment_prefix_text.get()
         prefix = "#" if not prefix else prefix
