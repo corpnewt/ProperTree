@@ -776,7 +776,7 @@ class ProperTree:
         # Check if we need to save first, then quit if we didn't cancel
         for window in self.stackorder(self.tk)[::-1]:
             if window in self.default_windows: continue
-            if not window.close_window(): return # User cancelled or we failed to save, bail
+            if not window.close_window(check_close=False): return # User cancelled or we failed to save, bail
         # Make sure we retain any non-event updated settings
         prefix = self.comment_prefix_text.get()
         prefix = "#" if not prefix else prefix
