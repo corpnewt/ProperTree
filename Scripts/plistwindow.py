@@ -15,6 +15,10 @@ except ImportError:
     from tkinter import filedialog as fd
     from tkinter import messagebox as mb
     from itertools import zip_longest as izip
+try:
+    from tkinter.font import Font
+except:
+    from tkFont import Font
 from . import plist
 
 try:
@@ -276,6 +280,11 @@ class PlistWindow(tk.Toplevel):
         self.style = ttk.Style()
         # Treeview theming is horribly broken in Windows for whatever reasons...
         self.style_name = "Corp.TLabel" if os.name=="nt" else "Corp.Treeview"
+
+        # Fix font height for High-DPI displays
+        font = Font(font='TkTextFont')
+        fontheight = font.metrics()['linespace']
+        self.style.configure(self.style_name, font=font, rowheight=fontheight)
 
         # Create the treeview
         self._tree_frame = tk.Frame(self)
