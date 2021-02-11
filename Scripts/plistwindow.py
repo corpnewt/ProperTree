@@ -284,7 +284,7 @@ class PlistWindow(tk.Toplevel):
         # Fix font height for High-DPI displays
         font = Font(font='TkTextFont')
         fontheight = font.metrics()['linespace']
-        self.style.configure(self.style_name, font=font, rowheight=fontheight)
+        self.style.configure(self.style_name, font=font, rowheight=int(math.ceil(fontheight*1.125)))
 
         # Create the treeview
         self._tree_frame = tk.Frame(self)
