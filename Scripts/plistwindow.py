@@ -1266,10 +1266,9 @@ class PlistWindow(tk.Toplevel):
         self.clicked_drag = False
         if not event:
             return
-        column = self._tree.identify_column(event.x)
-        rowid  = self._tree.identify_row(event.y)
-        if rowid: # and column == "#3":
-            # Mouse down in the drag column
+        rowid = self._tree.identify_row(event.y)
+        if rowid and self._tree.bbox(rowid):
+            # Mouse down in a valid node
             self.clicked_drag = True
 
     def change_data_display(self, new_display = "hex"):
@@ -2560,8 +2559,8 @@ class PlistWindow(tk.Toplevel):
         # what row and column was clicked on
         rowid = self._tree.identify_row(event.y)
         column = self._tree.identify_column(event.x)
-        if rowid == "" or column == "#3":
-            # Nothing (or drag handles) double clicked, bail
+        if not rowid or not self._tree.bbox(rowid):
+            # Nothing double clicked, bail
             return "break"
         # clicked row parent id
         parent = self._tree.parent(rowid)
