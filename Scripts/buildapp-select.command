@@ -80,7 +80,7 @@ def select_py(py_versions,min_tk,pt_current):
                 x[0],
                 " {}".format(x[1]) if x[1] else "",
                 " - tk {}".format(x[2]) if x[2] else "",
-                "" if x[2]==None or x[2] >= min_tk else " ({}+ recommended)".format(min_tk),
+                "" if x[2]==None or min_tk!=None and x[2] >= min_tk else " ({}+ recommended)".format(min_tk),
             ))
         print("")
         if current: print("C. Current ({})".format(current))
