@@ -2684,27 +2684,15 @@ class PlistWindow(tk.Toplevel):
         # Call the actual alternate_colors function
         self.alternate_colors(event)
 
-    def text_color(self, hex_color):
-        hex_color = hex_color.lower()
-        if hex_color.startswith("0x"): hex_color = hex_color[2:]
-        if hex_color.startswith("#"): hex_color = hex_color[1:]
-        # Check for bogus hex and return "black" by default
-        if len(hex_color) != 6 or not all((x in "0123456789abcdef" for x in hex_color)): return "black"
-        # Get the r, g, and b values and determine our fake luminance
-        r = float(int(hex_color[0:2],16))
-        g = float(int(hex_color[2:4],16))
-        b = float(int(hex_color[4:6],16))
-        return "black" if (r*0.299 + g*0.587 + b*0.114) > 186 else "white"
-
     def set_colors(self, event = None):
         # Setup the colors and styles
         self.r1 = self.controller.r1_canvas["background"]
         self.r2 = self.controller.r2_canvas["background"]
         self.hl = self.controller.hl_canvas["background"]
         self.bg = self.controller.bg_canvas["background"]
-        self.r1t = self.text_color(self.r1)
-        self.r2t = self.text_color(self.r2)
-        self.hlt = self.text_color(self.hl)
+        self.r1t = self.controller.text_color(self.r1,invert=self.controller.r1_inv_check.get())
+        self.r2t = self.controller.text_color(self.r2,invert=self.controller.r2_inv_check.get())
+        self.hlt = self.controller.text_color(self.hl,invert=self.controller.hl_inv_check.get())
         self.style.configure(self.style_name, background=self.bg, fieldbackground=self.bg)
         self.style.map(self.style_name, background=[("selected", self.hl)], foreground=[("selected", self.hlt)])
         self._tree.tag_configure('even', foreground=self.r1t, background=self.r1)
