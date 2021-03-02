@@ -2387,10 +2387,12 @@ class PlistWindow(tk.Toplevel):
     def do_sort(self, cell, recursive = False, reverse = False):
         undo_tasks = []
         children = self._tree.get_children(cell)
-        sorted_children = sorted([(x,self._tree.item(x,"text")) for x in children],key=lambda x:x[1].lower(), reverse=reverse)
+        sorted_children = [(x,self._tree.item(x,"text")) for x in children]
+        if self.get_check_type(cell).lower() == "dictionary":
+            sorted_children = sorted(sorted_children,key=lambda x:x[1].lower(), reverse=reverse)
         for index,child in enumerate(sorted_children):
-            if self.get_check_type(child[0]).lower() in ("dictionary","array"):
-                undo_tasks.extend(self.do_sort(child[0],recursive))
+            if self.get_check_type(child[0]).lower() in ("dictionary","array") and recursive:
+                undo_tasks.extend(self.do_sort(child[0],recursive=recursive,reverse=reverse))
             if child[0] == children[index]: continue # They're the same, nothing to do here
             # Add the move command
             undo_tasks.append({
