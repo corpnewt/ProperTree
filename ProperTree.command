@@ -35,16 +35,9 @@ class ProperTree:
         # Create the settings window
         self.settings_window = tk.Toplevel(self.tk)
         self.settings_window.title("ProperTree Settings")
-        w = 500
-        h = 610
-        self.settings_window.minsize(width=w,height=h)
         self.settings_window.resizable(False, False)
         self.settings_window.columnconfigure(0,weight=1)
         self.settings_window.columnconfigure(1,weight=1)
-        # Let's also center the window
-        x = self.settings_window.winfo_screenwidth() // 2 - w // 2
-        y = self.settings_window.winfo_screenheight() // 2 - h // 2
-        self.settings_window.geometry("{}x{}+{}+{}".format(w,h, x, y))
         # Let's add some checkboxes and stuffs
         self.expand_on_open = tk.IntVar()
         self.use_xcode_data = tk.IntVar()
@@ -121,7 +114,7 @@ class ProperTree:
         default_dark = tk.Button(self.settings_window,text="Dark Mode Defaults",command=lambda:self.swap_colors("dark"))
         default_dark.grid(row=20,column=1,sticky="we",padx=10)
         reset_settings = tk.Button(self.settings_window,text="Reset All To Defaults",command=self.reset_settings)
-        reset_settings.grid(row=21,column=1,sticky="e",padx=10,pady=10)
+        reset_settings.grid(row=21,column=1,sticky="we",padx=10,pady=10)
 
         # Setup the color picker click methods
         self.r1_canvas.bind("<ButtonRelease-1>",lambda x:self.pick_color("alternating_color_1",self.r1_canvas))
@@ -190,7 +183,7 @@ class ProperTree:
             # Remap the quit function to our own
             self.tk.createcommand('::tk::mac::Quit', self.quit)
             self.tk.createcommand("::tk::mac::OpenDocument", self.open_plist_from_app)
-            self.tk.createcommand("::tk::mac::ShowPreferences", self.show_settings)
+            self.tk.createcommand("::tk::mac::ShowPreferences", lambda:self.show_window(self.settings_window))
             # Import the needed modules to change the bundle name and force focus
             try:
                 from Foundation import NSBundle
@@ -230,11 +223,11 @@ class ProperTree:
             file_menu.add_command(label="OC Snapshot (Cmd+R)", command=self.oc_snapshot)
             file_menu.add_command(label="OC Clean Snapshot (Cmd+Shift+R)", command=self.oc_clean_snapshot)
             file_menu.add_separator()
-            file_menu.add_command(label="Convert Window (Cmd+T)", command=self.show_convert)
+            file_menu.add_command(label="Convert Window (Cmd+T)", command=lambda:self.show_window(self.tk))
             file_menu.add_command(label="Strip Comments (Cmd+M)", command=self.strip_comments)
             file_menu.add_command(label="Strip Disabled Entries (Cmd+E)", command=self.strip_disabled)
             file_menu.add_separator()
-            file_menu.add_command(label="Settings (Cmd+,)",command=self.show_settings)
+            file_menu.add_command(label="Settings (Cmd+,)",command=lambda:self.show_window(self.settings_window))
             file_menu.add_separator()
             file_menu.add_command(label="Toggle Find/Replace Pane (Cmd+F)",command=self.hide_show_find)
             file_menu.add_command(label="Toggle Plist/Data Type Pane (Cmd+P)",command=self.hide_show_type)
@@ -251,7 +244,7 @@ class ProperTree:
         self.tk.bind_all("<{}-s>".format(key), self.save_plist)
         self.tk.bind_all("<Shift-{}-s>".format(key) if tk.TkVersion >= 8.6 and str(sys.platform)=="darwin" else "<{}-S>".format(key), self.save_plist_as)
         self.tk.bind_all("<{}-d>".format(key), self.duplicate_plist)
-        self.tk.bind_all("<{}-t>".format(key), self.show_convert)
+        self.tk.bind_all("<{}-t>".format(key), lambda event, x=self.tk: self.show_window(x))
         self.tk.bind_all("<{}-z>".format(key), self.undo)
         self.tk.bind_all("<Shift-{}-z>".format(key) if tk.TkVersion >= 8.6 and str(sys.platform)=="darwin" else "<{}-Z>".format(key), self.redo)
         self.tk.bind_all("<{}-m>".format(key), self.strip_comments)
@@ -262,7 +255,7 @@ class ProperTree:
         if not str(sys.platform) == "darwin":
             # Rewrite the default Command-Q command
             self.tk.bind_all("<{}-q>".format(key), self.quit)
-            self.tk.bind_all("<{}-comma>".format(key), self.show_settings)
+            self.tk.bind_all("<{}-comma>".format(key), lambda event, x=self.settings_window:self.show_window(x))
         
         cwd = os.getcwd()
         os.chdir(os.path.dirname(os.path.realpath(__file__)))
@@ -620,11 +613,22 @@ class ProperTree:
     def change_from_type(self, value):
         self.from_type = value
 
-    def show_settings(self, event = None):
-        self.settings_window.deiconify()
-
-    def show_convert(self, event = None):
-        self.tk.deiconify()
+    def show_window(self, window, event = None):
+        if not window.winfo_viewable():
+            # Let's center the window
+            w = window.winfo_width()
+            h = window.winfo_height()
+            if w==1==h: # Request width as we haven't drawn yet
+                if window == self.tk: # Use the defaults
+                    w, h = 640, 130
+                else: # Try to approximate
+                    w = window.winfo_reqwidth()
+                    h = window.winfo_reqheight()
+            x = window.winfo_screenwidth() // 2 - w // 2
+            y = window.winfo_screenheight() // 2 - h // 2
+            window.geometry("+{}+{}".format(x, y))
+            window.deiconify()
+        window.lift()
 
     def convert_values(self, event = None):
         from_value = self.f_text.get()
