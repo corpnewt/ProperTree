@@ -486,7 +486,6 @@ class ProperTree:
                 if w==1==h: # Request width as we haven't drawn yet
                     w = self.settings_window.winfo_reqwidth()
                     h = c.winfo_reqheight()
-                print(w,h)
                 self.canvas_connect[c]["text_id"] = c.create_text((w-20)/2,h/2,text="Sample Text")
             # Set the color
             c.itemconfig(self.canvas_connect[c]["text_id"], fill=color)
