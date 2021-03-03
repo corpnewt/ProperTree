@@ -121,6 +121,13 @@ class ProperTree:
         self.r2_canvas.bind("<ButtonRelease-1>",lambda x:self.pick_color("alternating_color_2",self.r2_canvas))
         self.hl_canvas.bind("<ButtonRelease-1>",lambda x:self.pick_color("highlight_color",self.hl_canvas))
         self.bg_canvas.bind("<ButtonRelease-1>",lambda x:self.pick_color("background_color",self.bg_canvas))
+
+        # Setup some canvas connections
+        self.canvas_connect = {
+            self.r1_canvas: {"invert":self.r1_inv_check},
+            self.r2_canvas: {"invert":self.r2_inv_check},
+            self.hl_canvas: {"invert":self.hl_inv_check}
+        }
         
         self.default_dark  = {
             "alternating_color_1":"#161616",
@@ -464,7 +471,28 @@ class ProperTree:
         self.hl_inv_check.set(self.settings.get("invert_hl_text_color",False))
         self.update_colors()
 
+    def update_canvas_text(self, canvas = None):
+        if canvas == None: # Update all
+            canvas = (self.r1_canvas,self.r2_canvas,self.hl_canvas)
+        if not isinstance(canvas, (tuple,list)): canvas = (canvas,)
+        for c in canvas:
+            if not c in self.canvas_connect: continue # Not a recognized canvas - skip
+            # Update each canvas as needed - but mind the text color
+            color = self.text_color(c["background"],self.canvas_connect[c]["invert"].get())
+            if self.canvas_connect[c].get("text_id",None) == None: # We haven't drawn it yet - try to
+                # Get the size
+                w = self.settings_window.winfo_width()
+                h = c.winfo_height()
+                if w==1==h: # Request width as we haven't drawn yet
+                    w = self.settings_window.winfo_reqwidth()
+                    h = c.winfo_reqheight()
+                print(w,h)
+                self.canvas_connect[c]["text_id"] = c.create_text((w-20)/2,h/2,text="Sample Text")
+            # Set the color
+            c.itemconfig(self.canvas_connect[c]["text_id"], fill=color)
+
     def update_colors(self):
+        self.update_canvas_text()
         # Update all windows' colors
         windows = self.stackorder(self.tk)
         if not len(windows):
