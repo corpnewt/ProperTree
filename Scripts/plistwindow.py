@@ -917,7 +917,8 @@ class PlistWindow(tk.Toplevel):
         self.oc_snapshot(event,True)
 
     def oc_snapshot(self, event = None, clean = False):
-        oc_folder = fd.askdirectory(title="Select OC Folder:")
+        target_dir = os.path.dirname(self.current_plist) if self.current_plist and os.path.exists(os.path.dirname(self.current_plist)) else None
+        oc_folder = fd.askdirectory(title="Select OC Folder:",initialdir=target_dir)
         if not len(oc_folder):
             return
 
