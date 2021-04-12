@@ -15,7 +15,7 @@ except:
     from tkinter.colorchooser import askcolor as ac
 # Add this script's dir to the local PATH var - may improve import consistency
 sys.path.append(os.path.abspath(os.path.dirname(os.path.realpath(__file__))))
-from Scripts import *
+from Scripts import plist, plistwindow
 
 class ProperTree:
     def __init__(self, plists = []):
@@ -69,52 +69,57 @@ class ProperTree:
         data_label = tk.Label(self.settings_window,text="Data Display Default:")
         data_label.grid(row=7,column=0,sticky="w",padx=10)
         self.data_type_menu.grid(row=7,column=1,sticky="we",padx=10)
+        self.int_type_string = tk.StringVar(self.settings_window)
+        self.int_type_menu = tk.OptionMenu(self.settings_window, self.int_type_string, "Decimal", "Hex", command=self.change_int_type)
+        int_label = tk.Label(self.settings_window,text="Integer Display Default:")
+        int_label.grid(row=8,column=0,sticky="w",padx=10)
+        self.int_type_menu.grid(row=8,column=1,sticky="we",padx=10)
         self.snapshot_string = tk.StringVar(self.settings_window)
         self.snapshot_menu = tk.OptionMenu(self.settings_window, self.snapshot_string, "Latest", command=self.change_snapshot_version)
         snapshot_label = tk.Label(self.settings_window,text="Snapshot OC Version:")
-        snapshot_label.grid(row=8,column=0,sticky="w",padx=10)
-        self.snapshot_menu.grid(row=8,column=1,sticky="we",padx=10)
+        snapshot_label.grid(row=9,column=0,sticky="w",padx=10)
+        self.snapshot_menu.grid(row=9,column=1,sticky="we",padx=10)
         self.schema_check = tk.Checkbutton(self.settings_window,text="Force Update Snapshot Schema",variable=self.force_schema,command=self.schema_command)
-        self.schema_check.grid(row=9,column=0,columnspan=2,sticky="w",padx=10)
+        self.schema_check.grid(row=10,column=0,columnspan=2,sticky="w",padx=10)
         sep = ttk.Separator(self.settings_window,orient="horizontal")
-        sep.grid(row=10,column=0,columnspan=2,sticky="we",padx=10,pady=10)
+        sep.grid(row=11,column=0,columnspan=2,sticky="we",padx=10,pady=10)
         r1_label = tk.Label(self.settings_window,text="Alternating Row Color #1:")
-        r1_label.grid(row=11,column=0,sticky="w",padx=10)
+        r1_label.grid(row=12,column=0,sticky="w",padx=10)
         self.r1_canvas = tk.Canvas(self.settings_window, height=20, width=30, background="black", relief="groove", bd=2)
-        self.r1_canvas.grid(row=11,column=1,sticky="we",padx=10)
+        self.r1_canvas.grid(row=12,column=1,sticky="we",padx=10)
         r2_label = tk.Label(self.settings_window,text="Alternating Row Color #2:")
-        r2_label.grid(row=12,column=0,sticky="w",padx=10)
+        r2_label.grid(row=13,column=0,sticky="w",padx=10)
         self.r2_canvas = tk.Canvas(self.settings_window, height=20, width=30, background="black", relief="groove", bd=2)
-        self.r2_canvas.grid(row=12,column=1,sticky="we",padx=10)
+        self.r2_canvas.grid(row=13,column=1,sticky="we",padx=10)
         r3_label = tk.Label(self.settings_window,text="Background Color:")
-        r3_label.grid(row=13,column=0,sticky="w",padx=10)
+        r3_label.grid(row=14,column=0,sticky="w",padx=10)
         self.bg_canvas = tk.Canvas(self.settings_window, height=20, width=30, background="black", relief="groove", bd=2)
-        self.bg_canvas.grid(row=13,column=1,sticky="we",padx=10)
+        self.bg_canvas.grid(row=14,column=1,sticky="we",padx=10)
         r4_label = tk.Label(self.settings_window,text="Highlight Color:")
-        r4_label.grid(row=14,column=0,sticky="w",padx=10)
+        r4_label.grid(row=15,column=0,sticky="w",padx=10)
         self.hl_canvas = tk.Canvas(self.settings_window, height=20, width=30, background="black", relief="groove", bd=2)
-        self.hl_canvas.grid(row=14,column=1,sticky="we",padx=10)
+        self.hl_canvas.grid(row=15,column=1,sticky="we",padx=10)
         self.r1_inv_check = tk.IntVar()
         self.r1_inv = tk.Checkbutton(self.settings_window,text="Invert Row #1 Text Color",variable=self.r1_inv_check,command=self.check_r1_invert_command)
-        self.r1_inv.grid(row=15,column=1,sticky="w",padx=10)
+        self.r1_inv.grid(row=16,column=1,sticky="w",padx=10)
         self.r2_inv_check = tk.IntVar()
         self.r2_inv = tk.Checkbutton(self.settings_window,text="Invert Row #2 Text Color",variable=self.r2_inv_check,command=self.check_r2_invert_command)
-        self.r2_inv.grid(row=16,column=1,sticky="w",padx=10)
+        self.r2_inv.grid(row=17,column=1,sticky="w",padx=10)
         self.hl_inv_check = tk.IntVar()
         self.hl_inv = tk.Checkbutton(self.settings_window,text="Invert Highlight Text Color",variable=self.hl_inv_check,command=self.check_hl_invert_command)
-        self.hl_inv.grid(row=17,column=1,sticky="w",padx=10)
+        self.hl_inv.grid(row=18,column=1,sticky="w",padx=10)
         sep_theme = ttk.Separator(self.settings_window,orient="horizontal")
-        sep_theme.grid(row=18,column=0,columnspan=2,sticky="we",padx=10,pady=10)
+        sep_theme.grid(row=19,column=0,columnspan=2,sticky="we",padx=10,pady=10)
         r5_label = tk.Label(self.settings_window,text="Default Theme Options:")
-        r5_label.grid(row=19,column=0,sticky="w",padx=10)
+        r5_label.grid(row=20,column=0,sticky="w",padx=10)
         default_high = tk.Button(self.settings_window,text="Reset Highlight",command=lambda:self.swap_colors("highlight"))
-        default_high.grid(row=20,column=0,sticky="we",padx=10)
+        default_high.grid(row=21,column=0,sticky="we",padx=10)
         default_light = tk.Button(self.settings_window,text="Light Mode Defaults",command=lambda:self.swap_colors("light"))
-        default_light.grid(row=19,column=1,sticky="we",padx=10)
+        default_light.grid(row=20,column=1,sticky="we",padx=10)
         default_dark = tk.Button(self.settings_window,text="Dark Mode Defaults",command=lambda:self.swap_colors("dark"))
-        default_dark.grid(row=20,column=1,sticky="we",padx=10)
+        default_dark.grid(row=21,column=1,sticky="we",padx=10)
         reset_settings = tk.Button(self.settings_window,text="Reset All To Defaults",command=self.reset_settings)
-        reset_settings.grid(row=21,column=1,sticky="we",padx=10,pady=10)
+        reset_settings.grid(row=22,column=1,sticky="we",padx=10,pady=10)
 
         # Setup the color picker click methods
         self.r1_canvas.bind("<ButtonRelease-1>",lambda x:self.pick_color("alternating_color_1",self.r1_canvas))
@@ -237,7 +242,7 @@ class ProperTree:
             file_menu.add_command(label="Settings (Cmd+,)",command=lambda:self.show_window(self.settings_window))
             file_menu.add_separator()
             file_menu.add_command(label="Toggle Find/Replace Pane (Cmd+F)",command=self.hide_show_find)
-            file_menu.add_command(label="Toggle Plist/Data Type Pane (Cmd+P)",command=self.hide_show_type)
+            file_menu.add_command(label="Toggle Plist/Data/Int Type Pane (Cmd+P)",command=self.hide_show_type)
             file_menu.add_separator()
             file_menu.add_command(label="Quit (Cmd+Q)", command=self.quit)
             self.tk.config(menu=main_menu)
@@ -279,6 +284,7 @@ class ProperTree:
         # comment_strip_check_string: bool, true = consider string values as well as keys
         # new_plist_default_type:     string, XML/Binary
         # display_data_as:            string, Hex/Base64
+        # display_int_as:             string, Decimal/Hex
         # snapshot_version:           string, X.X.X version number, or Latest
         # force_snapshot_schema:      bool
         # alternating_color_1:        string, Dark: #161616 - Light: #F0F1F1
@@ -310,6 +316,7 @@ class ProperTree:
 
         self.allowed_types = ("XML","Binary")
         self.allowed_data  = ("Hex","Base64")
+        self.allowed_int   = ("Decimal","Hex")
         self.update_settings()
         
         # Wait before opening a new document to see if we need to.
@@ -398,6 +405,9 @@ class ProperTree:
     def change_data_type(self, event = None):
         self.settings["display_data_as"] = self.data_type_string.get()
 
+    def change_int_type(self, event = None):
+        self.settings["display_int_as"] = self.int_type_string.get()
+
     def change_snapshot_version(self, event = None):
         self.settings["snapshot_version"] = self.snapshot_string.get().split(" ")[0]
 
@@ -442,6 +452,8 @@ class ProperTree:
         self.plist_type_string.set(def_type if def_type in self.allowed_types else self.allowed_types[0])
         dat_type = self.settings.get("display_data_as",self.allowed_data[0])
         self.data_type_string.set(dat_type if dat_type in self.allowed_data else self.allowed_data[0])
+        int_type = self.settings.get("display_int_as",self.allowed_int[0])
+        self.int_type_string.set(int_type if int_type in self.allowed_int else self.allowed_int[0])
         self.snapshot_menu["menu"].delete(0,"end")
         snapshot_versions = ["{} -> {}".format(x["min_version"],x.get("max_version","Current")) for x in self.snapshot_data if "min_version" in x and len(x["min_version"])]
         snapshot_choices = ["Latest"] + sorted(snapshot_versions,reverse=True)
@@ -510,8 +522,6 @@ class ProperTree:
                 window = self.open_plist_with_path(None,p,None)
                 if not window: continue
                 at_least_one = True
-                # Ensure our default data type is reflected
-                window.change_data_type(self.data_type_string.get())
                 if self.start_window == None:
                     self.start_window = window
             if not at_least_one: # Check if we have any other windows open - and close as needed
@@ -520,8 +530,6 @@ class ProperTree:
         elif not len(self.stackorder(self.tk)):
             # create a fresh plist to start
             self.start_window = self.new_plist()
-            # Ensure our default data type is reflected
-            self.start_window.change_data_type(self.data_type_string.get())
 
     def open_plist_from_app(self, *args):
         if isinstance(args, str):
@@ -532,9 +540,7 @@ class ProperTree:
             # Verify that no other window has that file selected already
             existing_window = next((window for window in windows if not window in self.default_windows and window.current_plist==arg),None)
             if existing_window:
-                existing_window.focus_force()
-                existing_window._tree.focus_force()
-                existing_window.update()
+                self.lift_window(existing_window)
                 continue
             if len(windows) == 1 and windows[0] == self.start_window and windows[0].edited == False and windows[0].current_plist == None:
                 # Fresh window - replace the contents
@@ -543,8 +549,6 @@ class ProperTree:
                 current_window = None
             # Let's load the plist
             window = self.open_plist_with_path(None,arg,current_window)
-            # Ensure our default data type is reflected
-            window.change_data_type(self.data_type_string.get())
             if self.start_window == None: self.start_window = window
 
     def change_hd_type(self, value):
@@ -777,23 +781,20 @@ class ProperTree:
                 break
             number += 1
         window = plistwindow.PlistWindow(self, self.tk)
-        window.open_plist(final_title.capitalize(),{}) # Created an empty root
-        window.current_plist = None # Ensure it's initialized as new
         # Ensure our default plist and data types are reflected
         window.plist_type_string.set(self.plist_type_string.get())
-        window.change_data_type(self.data_type_string.get())
-        window.focus_force()
-        window._tree.focus_force()
-        window.update()
+        window.data_type_string.set(self.data_type_string.get())
+        window.int_type_string.set(self.int_type_string.get())
+        window.open_plist(final_title.capitalize(),{}) # Created an empty root
+        window.current_plist = None # Ensure it's initialized as new
+        self.lift_window(window)
         return window
 
     def open_plist(self, event=None):
         # Prompt the user to open a plist, attempt to load it, and if successful,
         # set its path as our current_plist value
         path = fd.askopenfilename(title = "Select plist file") # ,parent=current_window) # Apparently parent here breaks on 10.15?
-        if not len(path):
-            # User cancelled - bail
-            return None
+        if not len(path): return # User cancelled - bail
         path = os.path.realpath(os.path.expanduser(path))
         current_window = None
         windows = self.stackorder(self.tk)
@@ -802,22 +803,19 @@ class ProperTree:
             current_window = windows[0]
         # Verify that no other window has that file selected already
         for window in windows:
-            if window in self.default_windows:
-                continue
+            if window in self.default_windows: continue
             if window.current_plist == path:
                 # found one - just make this focus instead
-                window.focus_force()
-                window._tree.focus_force()
-                window.update()
+                self.lift_window(window)
                 window.bell()
                 mb.showerror("File Already Open", "{} is already open here.".format(path)) # , parent=window)
-                return None
+                return
         return self.open_plist_with_path(event,path,current_window)
 
     def open_plist_with_path(self, event = None, path = None, current_window = None, plist_type = "XML"):
         if path == None:
             # Uh... wut?
-            return None
+            return
         path = os.path.realpath(os.path.expanduser(path))
         # Let's try to load the plist
         try:
@@ -828,19 +826,16 @@ class ProperTree:
             # Had an issue, throw up a display box
             self.tk.bell()
             mb.showerror("An Error Occurred While Opening {}".format(os.path.basename(path)), str(e)) # ,parent=current_window)
-            return None
+            return
         # Opened it correctly - let's load it, and set our values
-        if current_window:
-            current_window.open_plist(path,plist_data,plist_type,self.settings.get("expand_all_items_on_open",True))
-        else:
+        if not current_window:
             # Need to create one first
             current_window = plistwindow.PlistWindow(self, self.tk)
-            current_window.open_plist(path,plist_data,plist_type,self.settings.get("expand_all_items_on_open",True))
         # Ensure our default data type is reflected
-        current_window.change_data_type(self.data_type_string.get())
-        current_window.focus_force()
-        current_window._tree.focus_force()
-        current_window.update()
+        current_window.data_type_string.set(self.data_type_string.get())
+        current_window.int_type_string.set(self.int_type_string.get())
+        current_window.open_plist(path,plist_data,plist_type,self.settings.get("expand_all_items_on_open",True))
+        self.lift_window(current_window)
         return current_window
 
     def stackorder(self, root):
@@ -849,6 +844,14 @@ class ProperTree:
         s = root.tk.eval('wm stackorder {}'.format(root))
         L = [x.lstrip('.') for x in s.split()]
         return [(c[x] if x else root) for x in L]
+
+    def lift_window(self, window):
+        window.lift()
+        window.focus_force()
+        try: window._tree.focus_force()
+        except: pass
+        window.attributes("-topmost",True)
+        self.tk.after_idle(window.attributes,"-topmost",False)
 
     def quit(self, event=None):
         # Check if we need to save first, then quit if we didn't cancel
