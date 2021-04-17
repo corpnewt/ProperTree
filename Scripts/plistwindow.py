@@ -520,7 +520,7 @@ class PlistWindow(tk.Toplevel):
                         value = float(value)
                     except:
                         return (False,"Invalid Number Data","Couldn't convert to an integer or float.")
-            if self.int_type_string.get().lower() == "hex" and not isinstance(value,float):
+            if self.int_type_string.get().lower() == "hex" and not isinstance(value,float) and value >= 0:
                 value = hex(value).upper()[2:]
                 if len(value) % 2: value = "0"+value # Pad to an even number of chars
                 value = "0x"+value
@@ -1299,7 +1299,10 @@ class PlistWindow(tk.Toplevel):
             value = values[1]
             if t == "number":
                 if new_display.lower() == "hex":
-                    try: value = "0x"+hex(int(value)).upper()[2:].rjust(2,"0")
+                    try:
+                        value = int(value)
+                        assert value >= 0
+                        value = "0x"+hex(value).upper()[2:].rjust(2,"0")
                     except: pass
                 else:
                     if value.lower().startswith("0x"):
@@ -1952,7 +1955,10 @@ class PlistWindow(tk.Toplevel):
             self._tree.item(i, values=(self.get_type(value),value.strftime("%b %d, %Y %I:%M:%S %p"),"" if parentNode == "" else self.drag_code,))
         elif isinstance(value, (int,long)) and not isinstance(value, bool) and self.int_type_string.get().lower() == "hex":
             v_type = self.get_type(value)
-            try: value = "0x"+hex(int(value)).upper()[2:].rjust(2,"0")
+            try:
+                value = int(value)
+                assert value >= 0
+                value = "0x"+hex(value).upper()[2:].rjust(2,"0")
             except: value = "0x00" # Default to 0
             self._tree.item(i, values=(v_type,value,"" if parentNode == "" else self.drag_code,))
         else:
