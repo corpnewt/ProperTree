@@ -2437,22 +2437,24 @@ class PlistWindow(tk.Toplevel):
     def do_sort(self, cell, recursive = False, reverse = False):
         undo_tasks = []
         children = self._tree.get_children(cell)
-        sorted_children = [(x,self._tree.item(x,"text")) for x in children]
+        if not len(children): return undo_tasks # bail early, nothing to check
+        sorted_children = [x for x in children]
         if self.get_check_type(cell).lower() == "dictionary":
-            sorted_children = sorted(sorted_children,key=lambda x:x[1].lower(), reverse=reverse)
+            sorted_children = sorted(sorted_children,key=lambda x:self._tree.item(x,"text").lower(), reverse=reverse)
+        skip_sort = all((children[x]==sorted_children[x] for x in range(len(children))))
         for index,child in enumerate(sorted_children):
-            if self.get_check_type(child[0]).lower() in ("dictionary","array") and recursive:
-                undo_tasks.extend(self.do_sort(child[0],recursive=recursive,reverse=reverse))
-            if child[0] == children[index]: continue # They're the same, nothing to do here
+            if self.get_check_type(child).lower() in ("dictionary","array") and recursive:
+                undo_tasks.extend(self.do_sort(child,recursive=recursive,reverse=reverse))
+            if skip_sort: continue # No change - skip sorting
             # Add the move command
             undo_tasks.append({
                 "type":"move",
-                "cell":child[0],
+                "cell":child,
                 "from":cell,
                 "to":cell,
-                "index":self._tree.index(child[0])
+                "index":self._tree.index(child)
             })
-            self._tree.move(child[0], cell, index)
+            self._tree.move(child, cell, index)
         return undo_tasks
 
     def sort_keys(self, cell, recursive = False, reverse = False):
