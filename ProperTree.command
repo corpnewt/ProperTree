@@ -108,18 +108,22 @@ class ProperTree:
         self.hl_inv_check = tk.IntVar()
         self.hl_inv = tk.Checkbutton(self.settings_window,text="Invert Highlight Text Color",variable=self.hl_inv_check,command=self.check_hl_invert_command)
         self.hl_inv.grid(row=18,column=1,sticky="w",padx=10)
+        self.drag_label = tk.Label(self.settings_window,text="Drag Dead Zone (1-100 pixels):")
+        self.drag_label.grid(row=19,column=0,sticky="w",padx=10)
+        self.drag_scale = tk.Scale(self.settings_window,from_=1,to=100,orient=tk.HORIZONTAL)
+        self.drag_scale.grid(row=19,column=1,sticky="we",padx=10)
         sep_theme = ttk.Separator(self.settings_window,orient="horizontal")
-        sep_theme.grid(row=19,column=0,columnspan=2,sticky="we",padx=10,pady=10)
+        sep_theme.grid(row=20,column=0,columnspan=2,sticky="we",padx=10,pady=10)
         r5_label = tk.Label(self.settings_window,text="Default Theme Options:")
-        r5_label.grid(row=20,column=0,sticky="w",padx=10)
+        r5_label.grid(row=21,column=0,sticky="w",padx=10)
         default_high = tk.Button(self.settings_window,text="Reset Highlight",command=lambda:self.swap_colors("highlight"))
-        default_high.grid(row=21,column=0,sticky="we",padx=10)
+        default_high.grid(row=22,column=0,sticky="we",padx=10)
         default_light = tk.Button(self.settings_window,text="Light Mode Defaults",command=lambda:self.swap_colors("light"))
-        default_light.grid(row=20,column=1,sticky="we",padx=10)
+        default_light.grid(row=21,column=1,sticky="we",padx=10)
         default_dark = tk.Button(self.settings_window,text="Dark Mode Defaults",command=lambda:self.swap_colors("dark"))
-        default_dark.grid(row=21,column=1,sticky="we",padx=10)
+        default_dark.grid(row=22,column=1,sticky="we",padx=10)
         reset_settings = tk.Button(self.settings_window,text="Reset All To Defaults",command=self.reset_settings)
-        reset_settings.grid(row=22,column=1,sticky="we",padx=10,pady=10)
+        reset_settings.grid(row=23,column=1,sticky="we",padx=10,pady=10)
 
         # Setup the color picker click methods
         self.r1_canvas.bind("<ButtonRelease-1>",lambda x:self.pick_color("alternating_color_1",self.r1_canvas))
@@ -294,6 +298,7 @@ class ProperTree:
         # invert_row1_text_color:     bool
         # invert_row2_text_color:     bool
         # invert_hl_text_color:       bool
+        # drag_dead_zone:             pixel distance before drag starts (default is 20)
         #
 
         self.settings = {}
@@ -481,6 +486,7 @@ class ProperTree:
         self.r1_inv_check.set(self.settings.get("invert_row1_text_color",False))
         self.r2_inv_check.set(self.settings.get("invert_row2_text_color",False))
         self.hl_inv_check.set(self.settings.get("invert_hl_text_color",False))
+        self.drag_scale.set(self.settings.get("drag_dead_zone",20))
         self.update_colors()
 
     def update_canvas_text(self, canvas = None):
@@ -862,6 +868,7 @@ class ProperTree:
         prefix = self.comment_prefix_text.get()
         prefix = "#" if not prefix else prefix
         self.settings["comment_strip_prefix"] = prefix
+        self.settings["drag_dead_zone"] = self.drag_scale.get()
         # Actually quit the tkinter session
         self.tk.destroy()
         # Attempt to save the settings
