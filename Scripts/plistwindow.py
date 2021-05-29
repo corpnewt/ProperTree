@@ -2095,13 +2095,12 @@ class PlistWindow(tk.Toplevel):
     def new_row(self,target=None,force_sibling=False):
         if target == None or isinstance(target, tk.Event):
             target = "" if not len(self._tree.selection()) else self._tree.selection()[0]
-        target = self.get_root_node() if target == "" else target # Force the Root node if need be
         if target == self.get_root_node() and not self.get_check_type(self.get_root_node()).lower() in ("array","dictionary"):
             return # Can't add to a non-collection!
-        values = self.get_padded_values(target, 1)
         new_cell = None
         if not self.get_check_type(target).lower() in ("dictionary","array") or force_sibling or (not self._tree.item(target,"open") and len(self._tree.get_children(target))):
             target = self._tree.parent(target)
+        target = self.get_root_node() if target == "" else target # Force the Root node if need be
         # create a unique name
         name = ""
         if self.get_check_type(target).lower() == "dictionary":
