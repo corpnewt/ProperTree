@@ -255,7 +255,6 @@ class PlistWindow(tk.Toplevel):
         self.edited = False
         self.dragging = False
         self.drag_start = None
-        self.drag_distance = 20
         self.show_find_replace = False
         self.show_type = False
         self.type_menu = tk.Menu(self, tearoff=0)
@@ -1469,7 +1468,7 @@ class PlistWindow(tk.Toplevel):
         if not self.dragging:
             x, y = self.drag_start
             drag_distance = math.sqrt((event.x - x)**2 + (event.y - y)**2)
-            if drag_distance < self.drag_distance:
+            if drag_distance < self.controller.drag_scale.get():
                 # Not drug enough
                 return
         move_to = self._tree.index(self._tree.identify_row(event.y))
