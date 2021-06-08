@@ -7,6 +7,7 @@ try:
     import ttk
     import tkFileDialog as fd
     import tkMessageBox as mb
+    from tkFont import Font
     from itertools import izip_longest as izip
 except ImportError:
     # Python 3
@@ -14,11 +15,8 @@ except ImportError:
     import tkinter.ttk as ttk
     from tkinter import filedialog as fd
     from tkinter import messagebox as mb
-    from itertools import zip_longest as izip
-try:
     from tkinter.font import Font
-except:
-    from tkFont import Font
+    from itertools import zip_longest as izip
 from . import plist
 
 try:
@@ -282,9 +280,8 @@ class PlistWindow(tk.Toplevel):
         self.style_name = "Corp.TLabel" if os.name=="nt" else "Corp.Treeview"
 
         # Fix font height for High-DPI displays
-        font = Font(font='TkTextFont')
-        fontheight = font.metrics()['linespace']
-        self.style.configure(self.style_name, font=font, rowheight=int(math.ceil(fontheight*(1.125 if str(sys.platform)=="darwin" else 1.3))))
+        self.font = Font(font='TkTextFont')
+        self.set_font_size()
 
         # Create the treeview
         self._tree_frame = tk.Frame(self)
@@ -446,6 +443,10 @@ class PlistWindow(tk.Toplevel):
         self._tree.pack(side="bottom",fill="both",expand=True)
         self.draw_frames()
         self.entry_popup = None
+
+    def set_font_size(self):
+        self.font["size"] = self.controller.font_string.get() if self.controller.custom_font.get() else self.controller.default_font["size"]
+        self.style.configure(self.style_name, font=self.font, rowheight=int(math.ceil(self.font.metrics()['linespace']*(1.125 if str(sys.platform)=="darwin" else 1.3))))
 
     def window_resize(self, event=None, obj=None):
         if not event or not obj: return
