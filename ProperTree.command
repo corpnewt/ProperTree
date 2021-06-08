@@ -436,6 +436,7 @@ class ProperTree:
             self.settings["use_custom_font_size"] = False
             self.font_spinbox.configure(state="disabled")
             self.font_string.set(self.default_font["size"])
+            self.settings.pop("font_size",None)
         self.update_font()
 
     def update_font(self, var = None, blank = None, trace_mode = None):
