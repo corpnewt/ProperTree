@@ -6,12 +6,14 @@ try:
     import ttk
     import tkFileDialog as fd
     import tkMessageBox as mb
+    from tkFont import Font
     from tkColorChooser import askcolor as ac
 except:
     import tkinter as tk
     import tkinter.ttk as ttk
     from tkinter import filedialog as fd
     from tkinter import messagebox as mb
+    from tkinter.font import Font
     from tkinter.colorchooser import askcolor as ac
 # Add this script's dir to the local PATH var - may improve import consistency
 sys.path.append(os.path.abspath(os.path.dirname(os.path.realpath(__file__))))
@@ -112,18 +114,28 @@ class ProperTree:
         self.drag_label.grid(row=19,column=0,sticky="w",padx=10)
         self.drag_scale = tk.Scale(self.settings_window,from_=1,to=100,orient=tk.HORIZONTAL)
         self.drag_scale.grid(row=19,column=1,sticky="we",padx=10)
+
+        self.default_font = Font(font='TkTextFont')
+        self.custom_font = tk.IntVar()
+        self.font_check = tk.Checkbutton(self.settings_window,text="Use Custom Font Size",variable=self.custom_font,command=self.font_command)
+        self.font_string = tk.StringVar()
+        self.font_spinbox = tk.Spinbox(self.settings_window,from_=1,to=128,textvariable=self.font_string)
+        self.font_string.trace("w",self.update_font)
+        self.font_check.grid(row=20,column=0,sticky="w",padx=10)
+        self.font_spinbox.grid(row=20,column=1,sticky="we",padx=10)
+        
         sep_theme = ttk.Separator(self.settings_window,orient="horizontal")
-        sep_theme.grid(row=20,column=0,columnspan=2,sticky="we",padx=10,pady=10)
+        sep_theme.grid(row=21,column=0,columnspan=2,sticky="we",padx=10,pady=10)
         r5_label = tk.Label(self.settings_window,text="Default Theme Options:")
-        r5_label.grid(row=21,column=0,sticky="w",padx=10)
+        r5_label.grid(row=22,column=0,sticky="w",padx=10)
         default_high = tk.Button(self.settings_window,text="Reset Highlight",command=lambda:self.swap_colors("highlight"))
-        default_high.grid(row=22,column=0,sticky="we",padx=10)
+        default_high.grid(row=23,column=0,sticky="we",padx=10)
         default_light = tk.Button(self.settings_window,text="Light Mode Defaults",command=lambda:self.swap_colors("light"))
-        default_light.grid(row=21,column=1,sticky="we",padx=10)
+        default_light.grid(row=22,column=1,sticky="we",padx=10)
         default_dark = tk.Button(self.settings_window,text="Dark Mode Defaults",command=lambda:self.swap_colors("dark"))
-        default_dark.grid(row=22,column=1,sticky="we",padx=10)
+        default_dark.grid(row=23,column=1,sticky="we",padx=10)
         reset_settings = tk.Button(self.settings_window,text="Reset All To Defaults",command=self.reset_settings)
-        reset_settings.grid(row=23,column=1,sticky="we",padx=10,pady=10)
+        reset_settings.grid(row=24,column=1,sticky="we",padx=10,pady=10)
 
         # Setup the color picker click methods
         self.r1_canvas.bind("<ButtonRelease-1>",lambda x:self.pick_color("alternating_color_1",self.r1_canvas))
@@ -416,6 +428,22 @@ class ProperTree:
     def change_snapshot_version(self, event = None):
         self.settings["snapshot_version"] = self.snapshot_string.get().split(" ")[0]
 
+    def font_command(self, event = None):
+        if self.custom_font.get():
+            self.settings["use_custom_font_size"] = True
+            self.font_spinbox.configure(state="normal")
+        else:
+            self.settings["use_custom_font_size"] = False
+            self.font_spinbox.configure(state="disabled")
+            self.font_string.set(self.default_font["size"])
+        self.update_font()
+
+    def update_font(self, var = None, blank = None, trace_mode = None):
+        try: font_size = int(self.font_string.get())
+        except: return
+        self.settings["font_size"] = font_size
+        self.update_fonts()
+
     def pick_color(self, color_name = None, canvas = None):
         if not color_name or not canvas: return # uh wut?
         _,color = ac(color=canvas["background"])
@@ -431,14 +459,11 @@ class ProperTree:
             self.settings.pop("highlight_color",None)
             self.settings.pop("invert_hl_text_color",None)
             return self.update_settings()
-        self.use_dark = self.get_dark()
         # Find out if we're setting it to light or dark mode - and if on macOS/Windows + using the system's current settings,
         # remove them to use defaults
+        self.use_dark = self.get_dark()
         color_dict = self.default_light if color_type == "light" else self.default_dark
         to_remove = (self.use_dark and color_type == "dark") or (not self.use_dark and color_type != "dark")
-        if str(sys.platform)=="darwin":
-            self.use_dark = self.get_dark()
-            to_remove = (self.use_dark and color_type == "dark") or (not self.use_dark and color_type != "dark")
         for x in color_dict:
             if color_type != "highlight" and x.lower() == "highlight_color": continue
             if to_remove: self.settings.pop(x,None)
@@ -487,6 +512,9 @@ class ProperTree:
         self.r2_inv_check.set(self.settings.get("invert_row2_text_color",False))
         self.hl_inv_check.set(self.settings.get("invert_hl_text_color",False))
         self.drag_scale.set(self.settings.get("drag_dead_zone",20))
+        self.font_string.set(self.settings.get("font_size",self.default_font["size"]))
+        self.custom_font.set(self.settings.get("use_custom_font_size",False))
+        self.font_command()
         self.update_colors()
 
     def update_canvas_text(self, canvas = None):
@@ -507,6 +535,13 @@ class ProperTree:
                 self.canvas_connect[c]["text_id"] = c.create_text((w-20)/2,h/2,text="Sample Text")
             # Set the color
             c.itemconfig(self.canvas_connect[c]["text_id"], fill=color)
+
+    def update_fonts(self):
+        windows = self.stackorder(self.tk)
+        if not len(windows): return
+        for window in windows:
+            if window in self.default_windows: continue
+            window.set_font_size()
 
     def update_colors(self):
         self.update_canvas_text()
