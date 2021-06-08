@@ -4,7 +4,9 @@
 <array>
 	<dict>
 		<key>debug_hashes</key>
-		<array/>
+		<array>
+			<string>26f6d78711ec93afededcee86abe7c8d</string>
+		</array>
 		<key>kext_add</key>
 		<dict>
 			<key>Arch</key>
@@ -17,7 +19,9 @@
 		<key>min_version</key>
 		<string>0.7.0</string>
 		<key>release_hashes</key>
-		<array/>
+		<array>
+			<string>67406c9656c353aa8919c8930c897c3c</string>
+		</array>
 		<key>tool_add</key>
 		<dict>
 			<key>Arguments</key>
