@@ -842,7 +842,7 @@ class PlistWindow(tk.Toplevel):
         except Exception as e:
             # Had an issue, throw up a display box
             self.bell()
-            mb.showerror("An Error Occurred While Opening {}".format(os.path.basename(self.current_plist)), str(e),parent=self)
+            mb.showerror("An Error Occurred While Opening {}".format(os.path.basename(self.current_plist)), repr(e),parent=self)
             return
         # We should have the plist data now
         self.open_plist(self.current_plist,plist_data,self.plist_type_string.get())
@@ -1742,7 +1742,7 @@ class PlistWindow(tk.Toplevel):
         except Exception as e:
             # Had an issue, throw up a display box
             self.bell()
-            mb.showerror("An Error Occurred While Saving", str(e), parent=self)
+            mb.showerror("An Error Occurred While Saving", repr(e), parent=self)
             return None
         finally:
             try:
@@ -1860,7 +1860,7 @@ class PlistWindow(tk.Toplevel):
             except Exception as e:
                 # Let's throw an error
                 self.bell()
-                mb.showerror("An Error Occurred While Pasting", str(e),parent=self)
+                mb.showerror("An Error Occurred While Pasting", repr(e),parent=self)
                 return 'break'
         if plist_data == None:
             if len(clip):
