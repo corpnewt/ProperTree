@@ -23,7 +23,7 @@ ProperTree is a cross-platform GUI plist editor written using Python *(compatibl
 
 ### Downloading The Repo As A ZIP File
 
-On any system you can choose the `Clone or download` button, followed by the `Download ZIP` button to download the entire repo as a zip file (note, this does not allow you to update via `git pull` - any updates would require you to download the repo again in the same fashion).
+On any system you can choose the green `Code` button, followed by the `Download ZIP` button (or click [here](https://github.com/corpnewt/ProperTree/archive/refs/heads/master.zip)) to download the entire repo as a zip file (note, this does not allow you to update via `git pull` - any updates would require you to download the repo again in the same fashion).
 
 ### Cloning The Repo Via Git
 
