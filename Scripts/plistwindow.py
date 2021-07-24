@@ -253,6 +253,7 @@ class PlistWindow(tk.Toplevel):
         self.edited = False
         self.dragging = False
         self.drag_start = None
+        self.drag_open = None
         self.show_find_replace = False
         self.show_type = False
         self.type_menu = tk.Menu(self, tearoff=0)
@@ -1466,12 +1467,10 @@ class PlistWindow(tk.Toplevel):
         move_to = self._tree.index(self._tree.identify_row(event.y))
         tv_item = self._tree.identify('item', event.x, event.y)
         tv_item = self.get_root_node() if tv_item == "" else tv_item # Force Root node as needed
-        self._tree.item(tv_item,open=True)
-        if not self.get_check_type(tv_item).lower() in ("dictionary","array"):
-            # Allow adding as child
+        if not self.get_check_type(tv_item).lower() in ("dictionary","array") or not self._tree.item(tv_item,"open"):
+            # Keep it a sibling
             if not tv_item == self.get_root_node():
                 tv_item = self._tree.parent(tv_item)
-                self._tree.item(tv_item,open=True)
         # Let's get the bounding box for the target, and if we're in the lower half,
         # we'll add as a child, uper half will add as a sibling
         else:
@@ -1482,17 +1481,17 @@ class PlistWindow(tk.Toplevel):
             except:
                 # We drug outside the possible bounds - ignore this
                 return
-            if event.y >= y+height/2 and event.y < y+height and not self._tree.parent(tv_item) == "":
+            if y+(height/2)<=event.y<y+height and self._tree.parent(tv_item) != "":
                 # Just above should add as a sibling
                 tv_item = self._tree.parent(tv_item)
-                self._tree.item(tv_item,open=True)
             else:
                 # Just below should add it at item 0
                 move_to = 0
         target = self.get_root_node() if not len(self._tree.selection()) else self._tree.selection()[0]
         if target == self.get_root_node(): return # Nothing to do here as we can't drag it
-        # Make sure the selected node is closed
-        self._tree.item(target,open=False)
+        # Retain the open state, and make sure the selected node is closed
+        if self.drag_open == None: self.drag_open = self._tree.item(target,"open")
+        if self._tree.item(target,"open"): self._tree.item(target,open=False)
         if self._tree.index(target) == move_to and tv_item == target:
             # Already the same
             return
@@ -1507,7 +1506,6 @@ class PlistWindow(tk.Toplevel):
         except:
             pass
         else:
-            self._tree.item(target,open=False)
             if not self.edited:
                 self.edited = True
                 self.title(self.title()+" - Edited")
@@ -1520,7 +1518,8 @@ class PlistWindow(tk.Toplevel):
         self.dragging = False
         self.drag_start = None
         target = self.get_root_node() if not len(self._tree.selection()) else self._tree.selection()[0]
-        self._tree.item(target,open=True)
+        self._tree.item(target,open=self.drag_open)
+        self.drag_open = None
         node = self._tree.parent(target)
         # Finalize the drag undo
         undo_tasks = []
