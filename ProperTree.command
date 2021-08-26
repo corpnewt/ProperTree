@@ -128,7 +128,7 @@ class ProperTree:
         self.font_var = tk.IntVar()
         self.font_family  = tk.StringVar(self.settings_window)
         self.font_custom_check = tk.Checkbutton(self.settings_window,text="Use Custom Font",variable=self.font_var,command=self.font_select)
-        self.font_custom = ttk.Combobox(self.settings_window,textvariable=self.font_family,values=sorted(families()))
+        self.font_custom = ttk.Combobox(self.settings_window,state="readonly",textvariable=self.font_family,values=sorted(families()))
         self.font_custom.bind('<<ComboboxSelected>>',self.font_pick)
         self.font_family.trace("w",self.update_font_family)
         self.font_custom_check.grid(row=21,column=0,stick="w",padx=10)
@@ -453,7 +453,7 @@ class ProperTree:
         if self.font_var.get():
             self.settings["use_custom_font"] = True
             self.settings["font_family"] = self.font_family.get()
-            self.font_custom.configure(state='normal')
+            self.font_custom.configure(state='readonly')
         else:
             self.settings["use_custom_font"] = False
             self.font_custom.configure(state='disabled')
@@ -461,10 +461,11 @@ class ProperTree:
         self.update_font_family()
 
     def font_pick(self, event = None):
-        if self.settings["font_family"] == event.widget.get():
+        font_family = self.font_family.get()
+        if self.settings["font_family"] == font_family:
             return
-        self.settings["font_family"] = event.widget.get()
-        self.font_family.set(event.widget.get())
+        self.settings["font_family"] = font_family
+        # self.font_family.set(font_family)
         self.update_font_family()
 
     def update_font(self, var = None, blank = None, trace_mode = None):
