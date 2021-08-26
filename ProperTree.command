@@ -465,7 +465,6 @@ class ProperTree:
         if self.settings["font_family"] == font_family:
             return
         self.settings["font_family"] = font_family
-        # self.font_family.set(font_family)
         self.update_font_family()
 
     def update_font(self, var = None, blank = None, trace_mode = None):
