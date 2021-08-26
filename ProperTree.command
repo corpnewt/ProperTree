@@ -6,14 +6,14 @@ try:
     import ttk
     import tkFileDialog as fd
     import tkMessageBox as mb
-    from tkFont import Font
+    from tkFont import Font, families
     from tkColorChooser import askcolor as ac
 except:
     import tkinter as tk
     import tkinter.ttk as ttk
     from tkinter import filedialog as fd
     from tkinter import messagebox as mb
-    from tkinter.font import Font
+    from tkinter.font import Font, families
     from tkinter.colorchooser import askcolor as ac
 # Add this script's dir to the local PATH var - may improve import consistency
 sys.path.append(os.path.abspath(os.path.dirname(os.path.realpath(__file__))))
@@ -123,19 +123,29 @@ class ProperTree:
         self.font_string.trace("w",self.update_font)
         self.font_check.grid(row=20,column=0,sticky="w",padx=10)
         self.font_spinbox.grid(row=20,column=1,sticky="we",padx=10)
-        
+
+        # Custom font picker - wacky implementation.
+        self.font_var = tk.IntVar()
+        self.font_family  = tk.StringVar(self.settings_window)
+        self.font_custom_check = tk.Checkbutton(self.settings_window,text="Use Custom Font",variable=self.font_var,command=self.font_select)
+        self.font_custom = ttk.Combobox(self.settings_window,textvariable=self.font_family,values=sorted(families()))
+        self.font_custom.bind('<<ComboboxSelected>>',self.font_pick)
+        self.font_family.trace("w",self.update_font_family)
+        self.font_custom_check.grid(row=21,column=0,stick="w",padx=10)
+        self.font_custom.grid(row=21,column=1,sticky="we",padx=10)
+
         sep_theme = ttk.Separator(self.settings_window,orient="horizontal")
-        sep_theme.grid(row=21,column=0,columnspan=2,sticky="we",padx=10,pady=10)
+        sep_theme.grid(row=22,column=0,columnspan=2,sticky="we",padx=10,pady=10)
         r5_label = tk.Label(self.settings_window,text="Default Theme Options:")
-        r5_label.grid(row=22,column=0,sticky="w",padx=10)
+        r5_label.grid(row=23,column=0,sticky="w",padx=10)
         default_high = tk.Button(self.settings_window,text="Reset Highlight",command=lambda:self.swap_colors("highlight"))
-        default_high.grid(row=23,column=0,sticky="we",padx=10)
+        default_high.grid(row=24,column=0,sticky="we",padx=10)
         default_light = tk.Button(self.settings_window,text="Light Mode Defaults",command=lambda:self.swap_colors("light"))
-        default_light.grid(row=22,column=1,sticky="we",padx=10)
+        default_light.grid(row=23,column=1,sticky="we",padx=10)
         default_dark = tk.Button(self.settings_window,text="Dark Mode Defaults",command=lambda:self.swap_colors("dark"))
-        default_dark.grid(row=23,column=1,sticky="we",padx=10)
+        default_dark.grid(row=24,column=1,sticky="we",padx=10)
         reset_settings = tk.Button(self.settings_window,text="Reset All To Defaults",command=self.reset_settings)
-        reset_settings.grid(row=24,column=1,sticky="we",padx=10,pady=10)
+        reset_settings.grid(row=25,column=1,sticky="we",padx=10,pady=10)
 
         # Setup the color picker click methods
         self.r1_canvas.bind("<ButtonRelease-1>",lambda x:self.pick_color("alternating_color_1",self.r1_canvas))
@@ -439,11 +449,36 @@ class ProperTree:
             self.settings.pop("font_size",None)
         self.update_font()
 
+    def font_select(self, event = None):
+        if self.font_var.get():
+            self.settings["use_custom_font"] = True
+            self.settings["font_family"] = self.font_family.get()
+            self.font_custom.configure(state='normal')
+        else:
+            self.settings["use_custom_font"] = False
+            self.font_custom.configure(state='disabled')
+            self.settings.pop("font_family",None)
+        self.update_font_family()
+
+    def font_pick(self, event = None):
+        if self.settings["font_family"] == event.widget.get():
+            return
+        self.settings["font_family"] = event.widget.get()
+        self.font_family.set(event.widget.get())
+        self.update_font_family()
+
     def update_font(self, var = None, blank = None, trace_mode = None):
         try: font_size = int(self.font_string.get())
         except: return
         self.settings["font_size"] = font_size
         self.update_fonts()
+
+    def update_font_family(self, event = None, blank = None, trace_mode = None):
+        windows = self.stackorder(self.tk)
+        if not len(windows): return
+        for window in windows:
+            if window in self.default_windows: continue
+            window.set_font_family()
 
     def pick_color(self, color_name = None, canvas = None):
         if not color_name or not canvas: return # uh wut?
@@ -515,7 +550,10 @@ class ProperTree:
         self.drag_scale.set(self.settings.get("drag_dead_zone",20))
         self.font_string.set(self.settings.get("font_size",self.default_font["size"]))
         self.custom_font.set(self.settings.get("use_custom_font_size",False))
+        self.font_family.set(self.settings.get("font_family",self.default_font.actual()["family"]))
+        self.font_var.set(self.settings.get("use_custom_font",False))
         self.font_command()
+        self.font_select()
         self.update_colors()
 
     def update_canvas_text(self, canvas = None):
@@ -885,6 +923,9 @@ class ProperTree:
         c = root.children
         s = root.tk.eval('wm stackorder {}'.format(root))
         L = [x.lstrip('.') for x in s.split()]
+        for x in L:
+            if x == '!toplevel.!combobox.popdown':
+                L.remove('!toplevel.!combobox.popdown')
         return [(c[x] if x else root) for x in L]
 
     def lift_window(self, window):
