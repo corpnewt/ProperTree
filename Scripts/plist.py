@@ -2,10 +2,15 @@
 # Imports #
 ###     ###
 
-import datetime, os, plistlib, struct, sys, itertools
+import datetime
+import os
+import plistlib
+import struct
+import sys
+import itertools
 from io import BytesIO
 
-if sys.version_info < (3,0):
+if sys.version_info < (3, 0):
     # Force use of StringIO instead of cStringIO as the latter
     # has issues with Unicode strings
     from StringIO import StringIO
@@ -28,16 +33,22 @@ except AttributeError:
 # Helper Methods #
 ###            ###
 
+
 def wrap_data(value):
-    if not _check_py3(): return plistlib.Data(value)
+    if not _check_py3():
+        return plistlib.Data(value)
     return value
 
+
 def extract_data(value):
-    if not _check_py3() and isinstance(value,plistlib.Data): return value.data
+    if not _check_py3() and isinstance(value, plistlib.Data):
+        return value.data
     return value
+
 
 def _check_py3():
     return sys.version_info >= (3, 0)
+
 
 def _is_binary(fp):
     if isinstance(fp, basestring):
@@ -50,11 +61,13 @@ def _is_binary(fp):
 # Deprecated Functions - Remapped #
 ###                             ###
 
+
 def readPlist(pathOrFile):
     if not isinstance(pathOrFile, basestring):
         return load(pathOrFile)
     with open(pathOrFile, "rb") as f:
         return load(f)
+
 
 def writePlist(value, pathOrFile):
     if not isinstance(pathOrFile, basestring):
@@ -66,10 +79,11 @@ def writePlist(value, pathOrFile):
 # Remapped Functions #
 ###                ###
 
+
 def load(fp, fmt=None, use_builtin_types=None, dict_type=dict):
     if _check_py3():
-        use_builtin_types = True if use_builtin_types == None else use_builtin_types
-        # We need to monkey patch this to allow for hex integers - code taken/modified from 
+        use_builtin_types = True if use_builtin_types is None else use_builtin_types
+        # We need to monkey patch this to allow for hex integers - code taken/modified from
         # https://github.com/python/cpython/blob/3.8/Lib/plistlib.py
         if fmt is None:
             header = fp.read(32)
@@ -87,11 +101,12 @@ def load(fp, fmt=None, use_builtin_types=None, dict_type=dict):
         except:
             # Python 3.9 removed use_builtin_types
             p = P(dict_type=dict_type)
-        if isinstance(p,plistlib._PlistParser):
+        if isinstance(p, plistlib._PlistParser):
             # Monkey patch!
             def end_integer():
                 d = p.get_data()
-                p.add_object(int(d,16) if d.lower().startswith("0x") else int(d))
+                p.add_object(
+                    int(d, 16) if d.lower().startswith("0x") else int(d))
             p.end_integer = end_integer
         return p.parse(fp)
     elif not _is_binary(fp):
@@ -104,13 +119,15 @@ def load(fp, fmt=None, use_builtin_types=None, dict_type=dict):
         # the values and parse.
         p = plistlib.PlistParser()
         # We also need to monkey patch this to allow for other dict_types
+
         def begin_dict(attrs):
             d = dict_type()
             p.addObject(d)
             p.stack.append(d)
+
         def end_integer():
             d = p.getData()
-            p.addObject(int(d,16) if d.lower().startswith("0x") else int(d))
+            p.addObject(int(d, 16) if d.lower().startswith("0x") else int(d))
         p.begin_dict = begin_dict
         p.end_integer = end_integer
         parser = ParserCreate()
@@ -127,31 +144,37 @@ def load(fp, fmt=None, use_builtin_types=None, dict_type=dict):
         parser.ParseFile(fp)
         return p.root
     else:
-        use_builtin_types = False if use_builtin_types == None else use_builtin_types
+        use_builtin_types = False if use_builtin_types is None else use_builtin_types
         try:
-            p = _BinaryPlistParser(use_builtin_types=use_builtin_types, dict_type=dict_type)
+            p = _BinaryPlistParser(
+                use_builtin_types=use_builtin_types, dict_type=dict_type)
         except:
             # Python 3.9 removed use_builtin_types
             p = _BinaryPlistParser(dict_type=dict_type)
         return p.parse(fp)
+
 
 def loads(value, fmt=None, use_builtin_types=None, dict_type=dict):
     if _check_py3() and isinstance(value, basestring):
         # If it's a string - encode it
         value = value.encode()
     try:
-        return load(BytesIO(value),fmt=fmt,use_builtin_types=use_builtin_types,dict_type=dict_type)
+        return load(BytesIO(value), fmt=fmt, use_builtin_types=use_builtin_types, dict_type=dict_type)
     except:
-       # Python 3.9 removed use_builtin_types
-       return load(BytesIO(value),fmt=fmt,dict_type=dict_type)
+        # Python 3.9 removed use_builtin_types
+        return load(BytesIO(value), fmt=fmt, dict_type=dict_type)
+
+
 def dump(value, fp, fmt=FMT_XML, sort_keys=True, skipkeys=False):
     if _check_py3():
-        plistlib.dump(value, fp, fmt=fmt, sort_keys=sort_keys, skipkeys=skipkeys)
+        plistlib.dump(value, fp, fmt=fmt,
+                      sort_keys=sort_keys, skipkeys=skipkeys)
     else:
         if fmt == FMT_XML:
             # We need to monkey patch a bunch here too in order to avoid auto-sorting
             # of keys
             writer = plistlib.PlistWriter(fp)
+
             def writeDict(d):
                 if d:
                     writer.beginElement("dict")
@@ -172,12 +195,14 @@ def dump(value, fp, fmt=FMT_XML, sort_keys=True, skipkeys=False):
             writer.writeln("</plist>")
         elif fmt == FMT_BINARY:
             # Assume binary at this point
-            writer = _BinaryPlistWriter(fp, sort_keys=sort_keys, skipkeys=skipkeys)
+            writer = _BinaryPlistWriter(
+                fp, sort_keys=sort_keys, skipkeys=skipkeys)
             writer.write(value)
         else:
             # Not a proper format
             raise ValueError("Unsupported format: {}".format(fmt))
-    
+
+
 def dumps(value, fmt=FMT_XML, skipkeys=False, sort_keys=True):
     if _check_py3():
         return plistlib.dumps(value, fmt=fmt, skipkeys=skipkeys, sort_keys=sort_keys).decode("utf-8")
@@ -195,13 +220,16 @@ def dumps(value, fmt=FMT_XML, skipkeys=False, sort_keys=True):
 # From the python 3 plistlib.py source:  https://github.com/python/cpython/blob/3.7/Lib/plistlib.py
 # Tweaked to function on Python 2
 
+
 class InvalidFileException (ValueError):
     def __init__(self, message="Invalid file"):
         ValueError.__init__(self, message)
 
+
 _BINARY_FORMAT = {1: 'B', 2: 'H', 4: 'L', 8: 'Q'}
 
 _undefined = object()
+
 
 class _BinaryPlistParser:
     """
@@ -210,6 +238,7 @@ class _BinaryPlistParser:
     root object.
     see also: http://opensource.apple.com/source/CF/CF-744.18/CFBinaryPList.c
     """
+
     def __init__(self, use_builtin_types, dict_type):
         self._use_builtin_types = use_builtin_types
         self._dict_type = dict_type
@@ -276,19 +305,19 @@ class _BinaryPlistParser:
         token = ord(self._fp.read(1)[0])
         tokenH, tokenL = token & 0xF0, token & 0x0F
 
-        if token == 0: # \x00 or 0x00
+        if token == 0:  # \x00 or 0x00
             result = None
 
-        elif token == 8: # \x08 or 0x08
+        elif token == 8:  # \x08 or 0x08
             result = False
 
-        elif token == 9: # \x09 or 0x09
+        elif token == 9:  # \x09 or 0x09
             result = True
 
         # The referenced source code also mentions URL (0x0c, 0x0d) and
         # UUID (0x0e), but neither can be generated using the Cocoa libraries.
 
-        elif token == 15: # \x0f or 0x0f
+        elif token == 15:  # \x0f or 0x0f
             result = b''
 
         elif tokenH == 0x10:  # int
@@ -298,10 +327,10 @@ class _BinaryPlistParser:
             # result = int.from_bytes(self._fp.read(1 << tokenL),
             #                        'big', signed=tokenL >= 3)
 
-        elif token == 0x22: # real
+        elif token == 0x22:  # real
             result = struct.unpack('>f', self._fp.read(4))[0]
 
-        elif token == 0x23: # real
+        elif token == 0x23:  # real
             result = struct.unpack('>d', self._fp.read(8))[0]
 
         elif token == 0x33:  # date
@@ -320,7 +349,7 @@ class _BinaryPlistParser:
 
         elif tokenH == 0x50:  # ascii string
             s = self._get_size(tokenL)
-            result =  self._fp.read(s).decode('ascii')
+            result = self._fp.read(s).decode('ascii')
             result = result
 
         elif tokenH == 0x60:  # unicode string
@@ -361,6 +390,7 @@ class _BinaryPlistParser:
         self._objects[ref] = result
         return result
 
+
 def _count_to_size(count):
     if count < 1 << 8:
         return 1
@@ -374,7 +404,9 @@ def _count_to_size(count):
     else:
         return 8
 
+
 _scalars = (str, int, float, datetime.datetime, bytes)
+
 
 class _BinaryPlistWriter (object):
     def __init__(self, fp, sort_keys, skipkeys):
@@ -516,7 +548,7 @@ class _BinaryPlistWriter (object):
                 try:
                     self._fp.write(struct.pack('>Bq', 0x13, value))
                 except struct.error:
-                    raise OverflowError(value) # from None
+                    raise OverflowError(value)  # from None
             elif value < 1 << 8:
                 self._fp.write(struct.pack('>BB', 0x10, value))
             elif value < 1 << 16:
@@ -526,7 +558,8 @@ class _BinaryPlistWriter (object):
             elif value < 1 << 63:
                 self._fp.write(struct.pack('>BQ', 0x13, value))
             elif value < 1 << 64:
-                self._fp.write(b'\x14' + value.to_bytes(16, 'big', signed=True))
+                self._fp.write(
+                    b'\x14' + value.to_bytes(16, 'big', signed=True))
             else:
                 raise OverflowError(value)
 
@@ -549,7 +582,7 @@ class _BinaryPlistWriter (object):
                 t = value.encode('utf-16be')
                 self._write_size(0x60, len(t) // 2)
             self._fp.write(t)
-        
+
         elif isinstance(value, (bytes, bytearray)):
             self._write_size(0x40, len(value))
             self._fp.write(value)

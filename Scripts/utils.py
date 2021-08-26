@@ -1,15 +1,22 @@
-import sys, os, time, re, json, datetime, ctypes, subprocess
+import ctypes
+import datetime
+import json
+import os
+import subprocess
+import sys
+import time
 
 if os.name == "nt":
     # Windows
     import msvcrt
 else:
-    # Not Windows \o/
+    # not Windows \o/
     import select
+
 
 class Utils:
 
-    def __init__(self, name = "Python Script"):
+    def __init__(self, name="Python Script"):
         self.name = name
         # Init our colors before we need to print anything
         cwd = os.getcwd()
@@ -33,39 +40,43 @@ class Utils:
         if self.check_admin():
             return
         if os.name == "nt":
-            ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, file, None, 1)
+            ctypes.windll.shell32.ShellExecuteW(
+                None, "runas", sys.executable, file, None, 1)
         else:
             try:
-                p = subprocess.Popen(["which", "sudo"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                c = p.communicate()[0].decode("utf-8", "ignore").replace("\n", "")
-                os.execv(c, [ sys.executable, 'python'] + sys.argv)
+                p = subprocess.Popen(
+                    ["which", "sudo"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                c = p.communicate()[0].decode(
+                    "utf-8", "ignore").replace("\n", "")
+                os.execv(c, [sys.executable, 'python'] + sys.argv)
             except:
                 exit(1)
-                
+
     def compare_versions(self, vers1, vers2, **kwargs):
         # Helper method to compare ##.## strings
         #
         # vers1 < vers2 = True
         # vers1 = vers2 = None
         # vers1 > vers2 = False
-        
+
         # Sanitize the pads
         pad = str(kwargs.get("pad", ""))
         sep = str(kwargs.get("separator", "."))
 
         ignore_case = kwargs.get("ignore_case", True)
-        
+
         # Cast as strings
         vers1 = str(vers1)
         vers2 = str(vers2)
-        
+
         if ignore_case:
             vers1 = vers1.lower()
             vers2 = vers2.lower()
 
         # Split and pad lists
-        v1_parts, v2_parts = self.pad_length(vers1.split(sep), vers2.split(sep))
-        
+        v1_parts, v2_parts = self.pad_length(
+            vers1.split(sep), vers2.split(sep))
+
         # Iterate and compare
         for i in range(len(v1_parts)):
             # Remove non-numeric
@@ -81,7 +92,7 @@ class Utils:
         # Never differed - return None, must be equal
         return None
 
-    def pad_length(self, var1, var2, pad = "0"):
+    def pad_length(self, var1, var2, pad="0"):
         # Pads the vars on the left side to make them equal length
         pad = "0" if len(str(pad)) < 1 else str(pad)[0]
         if not type(var1) == type(var2):
@@ -91,29 +102,31 @@ class Utils:
             if type(var1) is list:
                 var1.extend([str(pad) for x in range(len(var2) - len(var1))])
             else:
-                var1 = "{}{}".format((pad*(len(var2)-len(var1))), var1)
+                var1 = "{}{}".format((pad * (len(var2) - len(var1))), var1)
         elif len(var2) < len(var1):
             if type(var2) is list:
                 var2.extend([str(pad) for x in range(len(var1) - len(var2))])
             else:
-                var2 = "{}{}".format((pad*(len(var1)-len(var2))), var2)
+                var2 = "{}{}".format((pad * (len(var1) - len(var2))), var2)
         return (var1, var2)
-        
+
     def check_path(self, path):
         # Let's loop until we either get a working path, or no changes
         test_path = path
         last_path = None
         while True:
             # Bail if we've looped at least once and the path didn't change
-            if last_path != None and last_path == test_path: return None
+            if last_path != None and last_path == test_path:
+                return None
             last_path = test_path
             # Check if we stripped everything out
-            if not len(test_path): return None
+            if not len(test_path):
+                return None
             # Check if we have a valid path
             if os.path.exists(test_path):
                 return os.path.abspath(test_path)
             # Check for quotes
-            if test_path[0] == test_path[-1] and test_path[0] in ('"',"'"):
+            if test_path[0] == test_path[-1] and test_path[0] in ('"', "'"):
                 test_path = test_path[1:-1]
                 continue
             # Check for a tilde and expand if needed
@@ -124,14 +137,15 @@ class Utils:
                     test_path = tilde_expanded
                     continue
             # Let's check for spaces - strip from the left first, then the right
-            if test_path[0] in (" ","\t"):
+            if test_path[0] in (" ", "\t"):
                 test_path = test_path[1:]
                 continue
-            if test_path[-1] in (" ","\t"):
+            if test_path[-1] in (" ", "\t"):
                 test_path = test_path[:-1]
                 continue
             # Maybe we have escapes to handle?
-            test_path = "\\".join([x.replace("\\", "") for x in test_path.split("\\\\")])
+            test_path = "\\".join([x.replace("\\", "")
+                                   for x in test_path.split("\\\\")])
 
     def grab(self, prompt, **kwargs):
         # Takes a prompt, a default, and a timeout and shows it with that timeout
@@ -153,14 +167,14 @@ class Utils:
             while True:
                 if msvcrt.kbhit():
                     c = msvcrt.getche()
-                    if ord(c) == 13: # enter_key
+                    if ord(c) == 13:  # enter_key
                         break
-                    elif ord(c) >= 32: #space_char
+                    elif ord(c) >= 32:  # space_char
                         i += c
                 if len(i) == 0 and (time.time() - start_time) > timeout:
                     break
         else:
-            i, o, e = select.select( [sys.stdin], [], [], timeout )
+            i, o, e = select.select([sys.stdin], [], [], timeout)
             if i:
                 i = sys.stdin.readline().strip()
         print('')  # needed to move to next line
@@ -170,7 +184,7 @@ class Utils:
             return default
 
     def cls(self):
-    	os.system('cls' if os.name=='nt' else 'clear')
+        os.system('cls' if os.name == 'nt' else 'clear')
 
     def cprint(self, message, **kwargs):
         strip_colors = kwargs.get("strip_colors", False)
@@ -215,14 +229,15 @@ class Utils:
         print("#"*width)'''
 
     # Header drawing method
-    def head(self, text = None, width = 55):
+    def head(self, text=None, width=55):
         if text == None:
             text = self.name
         self.cls()
-        print("  {}".format("#"*width))
-        mid_len = int(round(width/2-len(text)/2)-2)
-        middle = " #{}{}{}#".format(" "*mid_len, text, " "*((width - mid_len - len(text))-2))
-        if len(middle) > width+1:
+        print("  {}".format("#" * width))
+        mid_len = int(round(width / 2 - len(text) / 2) - 2)
+        middle = " #{}{}{}#".format(
+            " " * mid_len, text, " " * ((width - mid_len - len(text)) - 2))
+        if len(middle) > width + 1:
             # Get the difference
             di = len(middle) - width
             # Add the padding for the ...#
@@ -230,7 +245,7 @@ class Utils:
             # Trim the string
             middle = middle[:-di] + "...#"
         print(middle)
-        print("#"*width)
+        print("#" * width)
 
     def resize(self, width, height):
         print('\033[8;{};{}t'.format(height, width))
