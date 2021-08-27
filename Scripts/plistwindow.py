@@ -42,6 +42,7 @@ class EntryPopup(tk.Entry):
         self.column = column
         self.parent = parent
         self.master = master
+        self['font'] = Font(font=self.master.font)
 
         self.focus_force()
         
@@ -292,7 +293,7 @@ class PlistWindow(tk.Toplevel):
         self._tree.heading("#0", text="Key")
         self._tree.heading("#1", text="Type")
         self._tree.heading("#2", text="Value")
-        self._tree.column("Type",width=100,stretch=False)
+        self._tree.column("Type",width=round(self._tree.winfo_reqwidth()/4),stretch=False)
         # self._tree.column("Drag",minwidth=40,width=40,stretch=False,anchor="center")
 
         # Setup the initial colors
