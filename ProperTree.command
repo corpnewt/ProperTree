@@ -126,7 +126,7 @@ class ProperTree:
 
         # Custom font picker - wacky implementation.
         self.font_var = tk.IntVar()
-        self.font_family  = tk.StringVar(self.settings_window)
+        self.font_family  = tk.StringVar()
         self.font_custom_check = tk.Checkbutton(self.settings_window,text="Use Custom Font",variable=self.font_var,command=self.font_select)
         self.font_custom = ttk.Combobox(self.settings_window,state="readonly",textvariable=self.font_family,values=sorted(families()))
         self.font_custom.bind('<<ComboboxSelected>>',self.font_pick)
@@ -923,10 +923,7 @@ class ProperTree:
         c = root.children
         s = root.tk.eval('wm stackorder {}'.format(root))
         L = [x.lstrip('.') for x in s.split()]
-        for x in L:
-            if x == '!toplevel.!combobox.popdown':
-                L.remove('!toplevel.!combobox.popdown')
-        return [(c[x] if x else root) for x in L]
+        return [(c[x] if x else root) for x in L if x in c or not x]
 
     def lift_window(self, window):
         window.lift()
