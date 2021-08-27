@@ -293,7 +293,7 @@ class PlistWindow(tk.Toplevel):
         self._tree.heading("#0", text="Key")
         self._tree.heading("#1", text="Type")
         self._tree.heading("#2", text="Value")
-        self._tree.column("Type",width=round(self._tree.winfo_reqwidth()/4),stretch=False)
+        self._tree.column("Type",width=int(self._tree.winfo_reqwidth()/4),stretch=False)
         # self._tree.column("Drag",minwidth=40,width=40,stretch=False,anchor="center")
 
         # Setup the initial colors
