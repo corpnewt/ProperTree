@@ -42,6 +42,7 @@ class EntryPopup(tk.Entry):
         self.column = column
         self.parent = parent
         self.master = master
+        self['font'] = Font(font=self.master.font)
 
         self.focus_force()
         
@@ -283,6 +284,7 @@ class PlistWindow(tk.Toplevel):
         # Fix font height for High-DPI displays
         self.font = Font(font='TkTextFont')
         self.set_font_size()
+        self.set_font_family()
 
         # Create the treeview
         self._tree_frame = tk.Frame(self)
@@ -291,7 +293,7 @@ class PlistWindow(tk.Toplevel):
         self._tree.heading("#0", text="Key")
         self._tree.heading("#1", text="Type")
         self._tree.heading("#2", text="Value")
-        self._tree.column("Type",width=100,stretch=False)
+        self._tree.column("Type",width=int(self._tree.winfo_reqwidth()/4),stretch=False)
         # self._tree.column("Drag",minwidth=40,width=40,stretch=False,anchor="center")
 
         # Setup the initial colors
@@ -448,6 +450,15 @@ class PlistWindow(tk.Toplevel):
     def set_font_size(self):
         self.font["size"] = self.controller.font_string.get() if self.controller.custom_font.get() else self.controller.default_font["size"]
         self.style.configure(self.style_name, font=self.font, rowheight=int(math.ceil(self.font.metrics()['linespace']*(1.125 if str(sys.platform)=="darwin" else 1.3))))
+
+    def set_font_family(self):
+        if self.controller.font_var.get() == 0:
+            self.font = Font(font="TkTextFont")
+        elif len(self.controller.font_family.get()) > 0:
+            self.font = Font(family=self.controller.font_family.get())
+
+        self.style.configure(self.style_name, font=self.font)
+        self.set_font_size() # Necessary because turning off 'custom font' option seems to fallback to font_size of '9'.
 
     def window_resize(self, event=None, obj=None):
         if not event or not obj: return
