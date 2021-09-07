@@ -965,9 +965,10 @@ class PlistWindow(tk.Toplevel):
                 # We want to change for this snapshot
                 select_snap = target_snap
         # Apply our snapshot values
-        acpi_add = select_snap.get("acpi_add",{})
-        kext_add = select_snap.get("kext_add",{})
-        tool_add = select_snap.get("tool_add",{})
+        acpi_add   = select_snap.get("acpi_add",{})
+        kext_add   = select_snap.get("kext_add",{})
+        tool_add   = select_snap.get("tool_add",{})
+        driver_add = select_snap.get("driver_add",{})
 
         # ACPI is first, we'll iterate the .aml files we have and add what is missing
         # while also removing what exists in the plist and not in the folder.
@@ -1214,22 +1215,52 @@ class PlistWindow(tk.Toplevel):
             tree_dict["UEFI"] = {"Drivers":[]}
         if not "Drivers" in tree_dict["UEFI"] or not isinstance(tree_dict["UEFI"]["Drivers"],list):
             tree_dict["UEFI"]["Drivers"] = []
-        # Now we walk the existing values
-        new_efi = [x for x in os.listdir(oc_drivers) if x.lower().endswith(".efi") and not x.startswith(".")]
-        add = [] if clean else tree_dict["UEFI"]["Drivers"]
-        for efi in sorted(new_efi,key=lambda x:x.lower()):
-            if efi.lower() in [x.lower() for x in add]:
-                # Found it - skip
-                continue
-            # Doesn't exist, add it
-            add.append(efi)
-        new_add = []
-        for efi in add:
-            if not efi.lower() in [x.lower() for x in new_efi]:
-                # Not there, skip
-                continue
-            new_add.append(efi)
-        tree_dict["UEFI"]["Drivers"] = new_add
+        if os.path.exists(oc_drivers) and os.path.isdir(oc_drivers):
+            drivers_list = []
+            # We need to gather a list of all the files inside that and with .efi
+            for path, subdirs, files in os.walk(oc_drivers):
+                for name in files:
+                    if not name.startswith(".") and name.lower().endswith(".efi"):
+                        # Check if we're using the new approach - or just listing the paths
+                        if not driver_add:
+                            drivers_list.append(os.path.join(path,name)[len(oc_drivers):].replace("\\", "/").lstrip("/")) # Strip the /Volumes/EFI/
+                        else:
+                            new_driver_entry = {
+                                # "Arguments": "",
+                                "Enabled":True,
+                                "Path":os.path.join(path,name)[len(oc_drivers):].replace("\\", "/").lstrip("/") # Strip the /Volumes/EFI/
+                            }
+                            # Add our snapshot custom entries, if any
+                            for x in driver_add: new_driver_entry[x] = driver_add[x]
+                            drivers_list.append(new_driver_entry)
+            drivers = [] if clean else tree_dict["UEFI"]["Drivers"]
+            for driver in sorted(drivers_list, key=lambda x: x.get("Path","").lower() if driver_add else x):
+                if not driver_add: # Old way
+                    if not isinstance(driver,(str,unicode)) or driver.lower() in [x.lower() for x in drivers if isinstance(x,(str,unicode))]:
+                        continue
+                else:
+                    if driver["Path"].lower() in [x.get("Path","").lower() for x in drivers if isinstance(x,dict)]:
+                        # Already have it, skip
+                        continue
+                # We need it, it seems
+                drivers.append(driver)
+            new_drivers = []
+            for driver in drivers:
+                if not driver_add: # Old way
+                    if not isinstance(driver,(str,unicode)) or not driver.lower() in [x.lower() for x in drivers_list if isinstance(x,(str,unicode))]:
+                        continue
+                else:
+                    if not isinstance(driver,dict):
+                        # Not a dict - skip it
+                        continue
+                    if not driver.get("Path","").lower() in [x["Path"].lower() for x in drivers_list]:
+                        # Not there, skip it
+                        continue
+                new_drivers.append(driver)
+            tree_dict["UEFI"]["Drivers"] = new_drivers
+        else:
+            # Make sure our Drivers list is empty
+            tree_dict["UEFI"]["Drivers"] = []
 
         # Check if we're forcing schema - and ensure values line up
         if self.controller.settings.get("force_snapshot_schema",False):
