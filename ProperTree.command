@@ -521,7 +521,7 @@ class ProperTree:
         int_type = self.settings.get("display_int_as",self.allowed_int[0])
         self.int_type_string.set(int_type if int_type in self.allowed_int else self.allowed_int[0])
         self.snapshot_menu["menu"].delete(0,"end")
-        snapshot_versions = ["{} -> {}".format(x["min_version"],x.get("max_version","Current")) for x in self.snapshot_data if "min_version" in x and len(x["min_version"])]
+        snapshot_versions = ["{} -> {}".format(x["min_version"],x.get("max_version","Current")) if x["min_version"]!=x.get("max_version","Current") else x["min_version"] for x in self.snapshot_data if "min_version" in x and len(x["min_version"])]
         snapshot_choices = ["Latest"] + sorted(snapshot_versions,reverse=True)
         for choice in snapshot_choices:
             self.snapshot_menu["menu"].add_command(label=choice,command=tk._setit(self.snapshot_string,choice,self.change_snapshot_version))
