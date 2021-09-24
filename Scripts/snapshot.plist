@@ -4,6 +4,43 @@
 <array>
 	<dict>
 		<key>debug_hashes</key>
+		<array/>
+		<key>kext_add</key>
+		<dict>
+			<key>Arch</key>
+			<string>Any</string>
+			<key>MaxKernel</key>
+			<string></string>
+			<key>MinKernel</key>
+			<string></string>
+		</dict>
+		<key>min_version</key>
+		<string>0.7.4</string>
+		<key>release_hashes</key>
+		<array/>
+		<key>tool_add</key>
+		<dict>
+			<key>Arguments</key>
+			<string></string>
+			<key>Auxiliary</key>
+			<true/>
+			<key>Flavour</key>
+			<string>Auto</string>
+			<key>RealPath</key>
+			<false/>
+			<key>TextMode</key>
+			<false/>
+		</dict>
+		<key>driver_add</key>
+		<dict>
+			<key>Arguments</key>
+			<string></string>
+			<key>Comment</key>
+			<string></string>
+		</dict>
+	</dict>
+	<dict>
+		<key>debug_hashes</key>
 		<array>
 			<string>bda0fed36bdb3301c1b788f8259c74fe</string>
 		</array>
@@ -17,6 +54,8 @@
 			<string></string>
 		</dict>
 		<key>min_version</key>
+		<string>0.7.3</string>
+		<key>max_version</key>
 		<string>0.7.3</string>
 		<key>release_hashes</key>
 		<array>

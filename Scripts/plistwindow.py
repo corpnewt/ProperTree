@@ -1169,9 +1169,9 @@ class PlistWindow(tk.Toplevel):
                     continue
                 kdict = {
                     # "Arch":"Any",
-                    "BundlePath": os.path.join(path, name)[len(oc_kexts):].replace("\\", "/").lstrip("/"),
-                    "Comment": "",
-                    "Enabled": True,
+                    "BundlePath":os.path.join(path,name)[len(oc_kexts):].replace("\\", "/").lstrip("/"),
+                    "Comment":name,
+                    "Enabled":True,
                     # "MaxKernel":"",
                     # "MinKernel":"",
                     "ExecutablePath": ""
@@ -1402,9 +1402,8 @@ class PlistWindow(tk.Toplevel):
                                 # Strip the /Volumes/EFI/
                                 "Path": os.path.join(path, name)[len(oc_drivers):].replace("\\", "/").lstrip("/")
                             }
-                            # Add our snapshot custom entries, if any
-                            for x in driver_add:
-                                new_driver_entry[x] = driver_add[x]
+                            # Add our snapshot custom entries, if any - include the name of the .efi driver if the Comment
+                            for x in driver_add: new_driver_entry[x] = name if x.lower() == "comment" else driver_add[x]
                             drivers_list.append(new_driver_entry)
             drivers = [] if clean else tree_dict["UEFI"]["Drivers"]
             for driver in sorted(drivers_list, key=lambda x: x.get("Path", "").lower() if driver_add else x):
@@ -1436,20 +1435,16 @@ class PlistWindow(tk.Toplevel):
             tree_dict["UEFI"]["Drivers"] = []
 
         # Check if we're forcing schema - and ensure values line up
-        if self.controller.settings.get("force_snapshot_schema", False):
-            ignored = ["Comment", "Enabled", "Path", "BundlePath",
-                       "ExecutablePath", "PlistPath", "Name"]
-            for entries, values in ((tree_dict["ACPI"]["Add"], acpi_add), (tree_dict["Kernel"]["Add"], kext_add), (tree_dict["Misc"]["Tools"], tool_add)):
+        if self.controller.settings.get("force_snapshot_schema",False):
+            ignored = ["Comment","Enabled","Path","BundlePath","ExecutablePath","PlistPath","Name"]
+            for entries,values in ((tree_dict["ACPI"]["Add"],acpi_add),(tree_dict["Kernel"]["Add"],kext_add),(tree_dict["Misc"]["Tools"],tool_add),(tree_dict["UEFI"]["Drivers"],driver_add)):
+                if not values: continue # Skip if nothing to check
                 for entry in entries:
-                    to_remove = [
-                        x for x in entry if not x in values and not x in ignored]
-                    to_add = [
-                        x for x in values if not x in entry and not x in ignored]
-                    for add in to_add:
-                        entry[add] = values[add]
-                    for rem in to_remove:
-                        entry.pop(rem, None)
-
+                    to_remove = [x for x in entry if not x in values and not x in ignored]
+                    to_add =    [x for x in values if not x in entry]
+                    for add in to_add:    entry[add] = os.path.basename(entry.get("Path",values[add])) if add.lower() == "comment" else values[add]
+                    for rem in to_remove: entry.pop(rem,None)
+        
         # Now we remove the original tree - then replace it
         undo_list = []
         for x in self._tree.get_children():
