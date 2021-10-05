@@ -956,8 +956,10 @@ class PlistWindow(tk.Toplevel):
         if user_snap.lower() == "latest" or not select_snap:
             select_snap = latest_snap
         if target_snap and target_snap != select_snap: # Version mismatch - warn
-            found_ver  = "{} -> {}".format(target_snap.get("min_version","0.0.0"),target_snap.get("max_version","Current"))
-            select_ver = "{} -> {}".format(select_snap.get("min_version","0.0.0"),select_snap.get("max_version","Current"))
+            tar_min,tar_max = target_snap.get("min_version","0.0.0"),target_snap.get("max_version","Current")
+            sel_min,sel_max = select_snap.get("min_version","0.0.0"),select_snap.get("max_version","Current")
+            found_ver  = tar_min if tar_min==tar_max else "{} -> {}".format(tar_min,tar_max)
+            select_ver = sel_min if sel_min==sel_max else "{} -> {}".format(sel_min,sel_max)
             if mb.askyesno("Snapshot Version Mismatch","Found OC version: {}\nTarget snapshot version: {}\n\nWould you like to snapshot for {} instead?".format(
                 found_ver,
                 select_ver,
