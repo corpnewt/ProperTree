@@ -49,7 +49,11 @@ git clone https://github.com/corpnewt/ProperTree
 
 * **ProperTree opens a black window on macOS Monterey (12.x)**
 
-  It appears the default tk implementation that ships with macOS Monterey doesn't display correctly.  A workaround is to download and install python from [python.org](https://www.python.org/) (which has a compatible tk bundled), then use the `buildapp-select.command` located in ProperTree's `Scripts` directory to build an application bundle targeting the installed python's path.
+  It appears the default tk implementation that ships with macOS Monterey doesn't display correctly.  A workaround is to download and install the intel build (not "universal") of python 3.9.7 from python.org (direct link [here](https://www.python.org/ftp/python/3.9.7/python-3.9.7-macosx10.9.pkg)) which has a compatible tk bundled, then use the `buildapp-select.command` located in ProperTree's `Scripts` directory to build an application bundle targeting the installed python's path.
+  
+* **ProperTree cannot open or save plist files on macOS Monterey (12.x)**
+
+  This appears to be an issue with the "universal" installers from python.org.  The solution is to use the intel-only build.  The latest of which is 3.9.7, direct linked [here](https://www.python.org/ftp/python/3.9.7/python-3.9.7-macosx10.9.pkg).  After installing, use the `buildapp-select.command` located in ProperTree's `Scripts` directory to build an application bundle targeting the installed python's path.
 
 * **How can I have ProperTree open when I double-click a .plist file?**
 
