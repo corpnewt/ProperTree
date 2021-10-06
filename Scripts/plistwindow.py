@@ -221,6 +221,7 @@ class PlistWindow(tk.Toplevel):
         self.saving = False
         self.last_data = None
         self.last_int  = None
+        self.last_bool = None
         # self.xcode_data = self.controller.xcode_data # keep <data>xxxx</data> in one line when true
         # self.sort_dict = self.controller.sort_dict # Preserve key ordering in dictionaries when loading/saving
         self.menu_code = u"\u21D5"
@@ -271,11 +272,6 @@ class PlistWindow(tk.Toplevel):
         self.root_type_menu = tk.Menu(self, tearoff=0)
         self.root_type_menu.add_command(label="Dictionary", command=lambda:self.change_type(self.menu_code + " Dictionary"))
         self.root_type_menu.add_command(label="Array", command=lambda:self.change_type(self.menu_code + " Array"))
-        
-        # Set up the boolean selection menu
-        self.bool_menu = tk.Menu(self, tearoff=0)
-        self.bool_menu.add_command(label="True", command=lambda:self.set_bool("True"))
-        self.bool_menu.add_command(label="False", command=lambda:self.set_bool("False"))
 
         self.style = ttk.Style()
         # Treeview theming is horribly broken in Windows for whatever reasons...
@@ -382,26 +378,32 @@ class PlistWindow(tk.Toplevel):
 
         # Create our type/data view
         self.display_frame = tk.Frame(self,height=20)
-        for x in (2,4,6):
+        for x in (2,4,6,8):
             self.display_frame.columnconfigure(x,weight=1)
         pt_label = tk.Label(self.display_frame,text="Plist Type:")
         dt_label = tk.Label(self.display_frame,text="Display Data as:")
         in_label = tk.Label(self.display_frame,text="Display Integers as:")
+        bl_label = tk.Label(self.display_frame,text="Display Booleans as:")
         self.plist_type_string = tk.StringVar(self.display_frame)
-        self.plist_type_menu = tk.OptionMenu(self.display_frame, self.plist_type_string, "XML","Binary", command=self.change_plist_type)
-        self.plist_type_string.set("XML")
+        self.plist_type_menu = tk.OptionMenu(self.display_frame, self.plist_type_string, *self.controller.allowed_types, command=self.change_plist_type)
+        self.plist_type_string.set(self.controller.allowed_types[0])
         self.data_type_string = tk.StringVar(self.display_frame)
-        self.data_type_menu = tk.OptionMenu(self.display_frame, self.data_type_string, "Hex","Base64", command=self.change_data_type)
-        self.data_type_string.set("Hex")
+        self.data_type_menu = tk.OptionMenu(self.display_frame, self.data_type_string, *self.controller.allowed_data, command=self.change_data_type)
+        self.data_type_string.set(self.controller.allowed_data[0])
         self.int_type_string = tk.StringVar(self.display_frame)
-        self.int_type_menu = tk.OptionMenu(self.display_frame, self.int_type_string, "Decimal","Hex", command=self.change_int_type)
-        self.int_type_string.set("Decimal")
+        self.int_type_menu = tk.OptionMenu(self.display_frame, self.int_type_string, *self.controller.allowed_int, command=self.change_int_type)
+        self.int_type_string.set(self.controller.allowed_int[0])
+        self.bool_type_string = tk.StringVar(self.display_frame)
+        self.bool_type_menu = tk.OptionMenu(self.display_frame, self.bool_type_string, *self.controller.allowed_bool, command=self.change_bool_type)
+        self.bool_type_string.set(self.controller.allowed_bool[0])
         pt_label.grid(row=1,column=1,padx=10,pady=(0,5),sticky="w")
         dt_label.grid(row=1,column=3,padx=10,pady=(0,5),sticky="w")
         in_label.grid(row=1,column=5,padx=10,pady=(0,5),sticky="w")
+        bl_label.grid(row=1,column=7,padx=10,pady=(0,5),sticky="w")
         self.plist_type_menu.grid(row=1,column=2,padx=10,pady=10,sticky="we")
         self.data_type_menu.grid(row=1,column=4,padx=10,pady=10,sticky="we")
         self.int_type_menu.grid(row=1,column=6,padx=10,pady=10,sticky="we")
+        self.bool_type_menu.grid(row=1,column=8,padx=10,pady=10,sticky="we")
         
         # Create our find/replace view
         self.find_frame = tk.Frame(self,height=20)
@@ -481,6 +483,28 @@ class PlistWindow(tk.Toplevel):
         self.change_int_display(value)
         self.last_int = value
 
+    def change_bool_type(self, value):
+        self.change_bool_display(value)
+        self.last_bool = value
+
+    def b_true(self,lower=False):
+        return self.bool_type_string.get().split("/")[0].lower() if lower else self.bool_type_string.get().split("/")[0]
+
+    def all_b_true(self,lower=False):
+        return [x.split("/")[0].lower() if lower else x.split("/")[0] for x in self.controller.allowed_bool]
+    
+    def b_false(self,lower=False):
+        return self.bool_type_string.get().split("/")[-1].lower() if lower else self.bool_type_string.get().split("/")[-1]
+
+    def all_b_false(self,lower=False):
+        return [x.split("/")[-1].lower() if lower else x.split("/")[-1] for x in self.controller.allowed_bool]
+
+    def all_b(self,lower=False):
+        b = []
+        for x in self.controller.allowed_bool:
+            b.extend([a.lower() if lower else a for a in x.split("/")])
+        return b
+
     def change_find_type(self, value):
         self.find_type = value
 
@@ -538,9 +562,9 @@ class PlistWindow(tk.Toplevel):
                 value = "0x"+value
             value = str(value)
         elif value_type == "boolean":
-            if not value.lower() in ("true","false"):
-                return (False,"Invalid Boolean Data","Booleans can only be True/False.")
-            value = "True" if value.lower() == "true" else "False"
+            if not value.lower() in self.all_b(lower=True):
+                return (False,"Invalid Boolean Data","Booleans can only be {}.".format(", ".join(self.all_b())))
+            value = self.b_true() if value.lower() in self.all_b_true(lower=True) else self.b_false()
         return (True,value)
 
     def draw_frames(self, event=None, changed=None):
@@ -1326,16 +1350,15 @@ class PlistWindow(tk.Toplevel):
             # Mouse down in a valid node
             self.clicked_drag = True
 
-    def change_int_display(self, new_display = "Decimal"):
+    def change_int_display(self, new_display="Decimal"):
         if new_display == self.last_int: return
         self.int_type_string.set(new_display[0].upper()+new_display[1:])
         nodes = self.iter_nodes(False)
-        removedlist = []
         for node in nodes:
-            values = self.get_padded_values(node,3)
             t = self.get_check_type(node).lower()
-            value = values[1]
             if t == "number":
+                values = self.get_padded_values(node,3)
+                value = values[1]
                 if new_display.lower() == "hex":
                     try:
                         value = int(value)
@@ -1348,13 +1371,25 @@ class PlistWindow(tk.Toplevel):
                 values[1] = value
                 self._tree.item(node,values=values)
 
-    def change_data_display(self, new_display = "Hex"):
+    def change_bool_display(self,new_display="True/False"):
+        if new_display == self.last_bool: return
+        self.bool_type_string.set(new_display)
+        nodes = self.iter_nodes(False)
+        on,off = new_display.split("/")
+        on_list = [x.split("/")[0] for x in self.controller.allowed_bool]
+        for node in nodes:
+            values = self.get_padded_values(node,3)
+            t = self.get_check_type(node).lower()
+            if t == "boolean":
+                values[1] = on if values[1] in on_list else off
+                self._tree.item(node,values=values)
+
+    def change_data_display(self,new_display="Hex"):
         if new_display == self.last_data: return
         self.data_type_string.set(new_display[0].upper()+new_display[1:])
         # This will change how data is displayed - we do this by converting all our existing
         # data values to bytes, then reconverting and displaying appropriately
         nodes = self.iter_nodes(False)
-        removedlist = []
         for node in nodes:
             values = self.get_padded_values(node,3)
             t = self.get_check_type(node).lower()
@@ -1661,7 +1696,7 @@ class PlistWindow(tk.Toplevel):
             values = self.get_padded_values(node, 3)
             value = values[1]
             check_type = self.get_check_type(node).lower()
-            if check_type=="boolean" and (name=="enabled" and value=="False") or (name=="disabled" and value=="True"):
+            if check_type=="boolean" and (name=="enabled" and value==self.b_false()) or (name=="disabled" and value==self.b_true()):
                 # Found one, remove its parent
                 rem_node = self._tree.parent(node)
                 if root in (node, rem_node):
@@ -2011,7 +2046,7 @@ class PlistWindow(tk.Toplevel):
         elif check_type == "array":
             value = []
         elif check_type == "boolean":
-            value = True if values[1].lower() == "true" else False
+            value = True if values[1].lower() in self.all_b_true(lower=True) else False
         elif check_type == "number":
             if self.int_type_string.get().lower() == "hex" and value.lower().startswith("0x"):
                 try:
@@ -2269,7 +2304,7 @@ class PlistWindow(tk.Toplevel):
         if value.lower() == "number":
             values[1] = "0" if self.int_type_string.get().lower() == "decimal" else "0x00"
         elif value.lower() == "boolean":
-            values[1] = "True"
+            values[1] = self.b_true()
         elif value.lower() == "array":
             self._tree.item(cell,open=True)
             values[1] = "0 children"
@@ -2662,7 +2697,6 @@ class PlistWindow(tk.Toplevel):
         # Get the actual text
         index = int(column.replace("#",""))
         try:
-            # t = self._tree.item(rowid,"values")[0]
             t = self.get_check_type(rowid)
         except:
             t = ""
@@ -2684,11 +2718,16 @@ class PlistWindow(tk.Toplevel):
                 # Can't edit the "value" directly - should only show the number of children
                 return 'break'
             elif t.lower() == "boolean":
+                # Set up the boolean selection menu
+                print(self.b_true(),self.b_false())
+                bool_menu = tk.Menu(self, tearoff=0)
+                bool_menu.add_command(label=self.b_true(), command=lambda:self.set_bool(self.b_true()))
+                bool_menu.add_command(label=self.b_false(), command=lambda:self.set_bool(self.b_false()))
                 # Bool change
                 try:
-                    self.bool_menu.tk_popup(event.x_root, event.y_root, 0)
+                    bool_menu.tk_popup(event.x_root, event.y_root, 0)
                 finally:
-                    self.bool_menu.grab_release()
+                    bool_menu.grab_release()
                 return 'break'
         if index == 0:
             if pt.lower() == "array":
@@ -2704,7 +2743,6 @@ class PlistWindow(tk.Toplevel):
         if index ==2 and t.lower() == "data":
             # Special formatting of hex values
             text = text.replace("<","").replace(">","")
-        cell = self._tree.item("" if not len(self._tree.selection()) else self._tree.selection()[0])
         # place Entry popup properly
         self.entry_popup = EntryPopup(self._tree, self, text, tv_item, column)
         self.entry_popup.place( x=x, y=y+pady, anchor="w", width=width)
