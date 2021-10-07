@@ -926,6 +926,7 @@ class ProperTree:
         # Ensure our default data type is reflected
         current_window.data_type_string.set(self.data_type_string.get())
         current_window.int_type_string.set(self.int_type_string.get())
+        current_window.bool_type_string.set(self.bool_type_string.get())
         current_window.open_plist(path,plist_data,plist_type,self.settings.get("expand_all_items_on_open",True))
         self.lift_window(current_window)
         return current_window
