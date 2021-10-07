@@ -2032,6 +2032,8 @@ class PlistWindow(tk.Toplevel):
                 value = "0x"+hex(value).upper()[2:].rjust(2,"0")
             except: value = "0x00" # Default to 0
             self._tree.item(i, values=(v_type,value,"" if parentNode == "" else self.drag_code,))
+        elif isinstance(value, bool):
+            self._tree.item(i, values=(self.get_type(value),self.b_true() if value else self.b_false(),"" if parentNode == "" else self.drag_code,))
         else:
             self._tree.item(i, values=(self.get_type(value),value,"" if parentNode == "" else self.drag_code,))
         return i
