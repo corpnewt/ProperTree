@@ -2721,7 +2721,6 @@ class PlistWindow(tk.Toplevel):
                 return 'break'
             elif t.lower() == "boolean":
                 # Set up the boolean selection menu
-                print(self.b_true(),self.b_false())
                 bool_menu = tk.Menu(self, tearoff=0)
                 bool_menu.add_command(label=self.b_true(), command=lambda:self.set_bool(self.b_true()))
                 bool_menu.add_command(label=self.b_false(), command=lambda:self.set_bool(self.b_false()))
