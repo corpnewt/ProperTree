@@ -360,6 +360,13 @@ class ProperTree:
         # Start our run loop
         tk.mainloop()
 
+    def yes_no_command(self, event = None):
+        windows = self.stackorder(self.tk)
+        if not len(windows): return
+        for window in windows:
+            if window in self.default_windows: continue
+            window.change_bool_type(self.bool_type_string.get())
+
     def check_dark_mode(self):
         check_dark = self.get_dark()
         if check_dark != self.use_dark and any((x not in self.settings for x in ("alternating_color_1","alternating_color_2","background_color"))):
@@ -443,6 +450,7 @@ class ProperTree:
 
     def change_bool_type(self, event = None):
         self.settings["display_bool_as"] = self.bool_type_string.get()
+        self.yes_no_command()
 
     def change_snapshot_version(self, event = None):
         self.settings["snapshot_version"] = self.snapshot_string.get().split(" ")[0]
@@ -565,6 +573,7 @@ class ProperTree:
         self.font_var.set(self.settings.get("use_custom_font",False))
         self.font_command()
         self.font_select()
+        self.yes_no_command()
         self.update_colors()
 
     def update_canvas_text(self, canvas = None):
