@@ -293,7 +293,7 @@ class ProperTree:
         self.tk.bind_all("<{}-m>".format(key), self.strip_comments)
         self.tk.bind_all("<{}-e>".format(key), self.strip_disabled)
         self.tk.bind_all("<{}-r>".format(key), self.oc_snapshot)
-        self.tk.bind_all("<Shift-{}-R>".format(key) if tk.TkVersion >= 8.6 and str(sys.platform)=="darwin" else "<{}-R>".format(key), self.oc_clean_snapshot)
+        self.tk.bind_all("<Shift-{}-r>".format(key) if tk.TkVersion >= 8.6 and str(sys.platform)=="darwin" else "<{}-R>".format(key), self.oc_clean_snapshot)
         self.tk.bind_all("<{}-l>".format(key), self.reload_from_disk)
         if not str(sys.platform) == "darwin":
             # Rewrite the default Command-Q command
