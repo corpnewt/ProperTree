@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys, os, plist, shutil, tempfile, subprocess
+import sys, os, plist, shutil, tempfile, subprocess, argparse
 if 2/3==0: input = raw_input
 
 min_tk_version = {
@@ -27,26 +27,28 @@ def get_min_tk_version():
         if os_ver <= curr_os: curr_min = min_tk_version[os_ver]
     return curr_min
 
-def gather_python(show_all=False):
+def gather_python(show_all=False,path_list=None):
     # Let's find the available python installs, check their tk version
     # and try to pick the latest one supported - or throw an error if
     # we're on macOS 11.x+ and using Tk 8.5 or older.
-    pypaths = []
+    pypaths = (path_list if isinstance(path_list,(list,tuple)) else [path_list]) if path_list else []
     envpaths = []
-    for py in ("python","python3"):
-        p = subprocess.Popen(["which",py], shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        c = p.communicate()
-        binpath = "/usr/bin/{}".format(py)
-        envpath = "/usr/bin/env {}".format(py)
-        avail = [x for x in _decode(c[0]).split("\n") if len(x) and not x in pypaths and not x == binpath]
-        if os.path.exists(binpath): avail.insert(0,binpath)
-        if len(avail): # Only add paths that we found and verified
-            pypaths.extend(avail)
-            if not envpath in envpaths: envpaths.append((envpath,None,None))
+    if not pypaths:
+        for py in ("python","python3"):
+            p = subprocess.Popen(["which",py], shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            c = p.communicate()
+            binpath = "/usr/bin/{}".format(py)
+            envpath = "/usr/bin/env {}".format(py)
+            avail = [x for x in _decode(c[0]).split("\n") if len(x) and not x in pypaths and not x == binpath]
+            if os.path.exists(binpath): avail.insert(0,binpath)
+            if len(avail): # Only add paths that we found and verified
+                pypaths.extend(avail)
+                if not envpath in envpaths: envpaths.append((envpath,None,None))
     py_tk = []
     for path in pypaths:
         # Get the version of python first
         path = path.strip()
+        if not os.path.isfile(path): continue
         p = subprocess.Popen([path,"-V"], shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         c = p.communicate()
         pv = (_decode(c[0]) + _decode(c[1])).strip().split(" ")[-1]
@@ -96,17 +98,12 @@ def select_py(py_versions,min_tk,pt_current):
         if not 0 < menu <= len(py_versions): continue
         return py_versions[menu-1]
 
-def main():
+def main(use_current=False,path_list=None):
     # Let's check for an existing app - remove it if it exists,
     # then create and format a new bundle
     os.chdir(os.path.dirname(os.path.realpath(__file__)))
     os.chdir("../")
     temp = None
-    print("Locating python versions...")
-    py_versions = gather_python(min_only_suggestion)
-    if not py_versions:
-        print(" - No python installs with functioning tk found!  Aborting!")
-        exit(1)
     pt_current = None
     if os.path.exists("ProperTree.app/Contents/MacOS/ProperTree.command"):
         # Let's try to read the shebang
@@ -117,6 +114,16 @@ def main():
                     # Got a shebang - save it
                     pt_current = pt[0][2:]
         except: pass
+    print("Locating python versions...")
+    if use_current: # Override any passed path_list with our current if needed
+        if not pt_current:
+            print(" - No current ProperTree python version detected!  Aborting!")
+            exit(1)
+        path_list = pt_current
+    py_versions = gather_python(min_only_suggestion,path_list)
+    if not py_versions:
+        print(" - No python installs with functioning tk found!  Aborting!")
+        exit(1)
     min_tk = get_min_tk_version()
     py_version = py_versions[0] if len(py_versions) == 1 else select_py(py_versions,min_tk,pt_current)
     os.system("clear")
@@ -196,8 +203,13 @@ if __name__ == '__main__':
     if not str(sys.platform) == "darwin":
         print("Can only be run on macOS")
         exit(1)
+    # Setup the cli args
+    parser = argparse.ArgumentParser(prog="buildapp-select.command", description="BuildAppSelect - a py script that builds ProperTree.app")
+    parser.add_argument("-c", "--use-current", help="Use the current shebang in the ProperTree.app (assumes the app is in the parent dir of this script)",action="store_true")
+    parser.add_argument("-p", "--python-path", help="The python path to use in the shebang of the ProperTree.app (-c overrides this)")
+    args = parser.parse_args()
     try:
-        main()
+        main(use_current=args.use_current,path_list=args.python_path)
     except Exception as e:
         print("An error occurred!")
         print(str(e))
