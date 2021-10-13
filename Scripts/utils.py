@@ -7,6 +7,12 @@ else:
     # Not Windows \o/
     import select
 
+try:  # Python 2
+    raw_input
+except NameError:  # Python 3
+    raw_input = input
+
+
 class Utils:
 
     def __init__(self, name = "Python Script"):
@@ -140,10 +146,7 @@ class Utils:
         default = kwargs.get("default", None)
         # If we don't have a timeout - then skip the timed sections
         if timeout <= 0:
-            if sys.version_info >= (3, 0):
-                return input(prompt)
-            else:
-                return str(raw_input(prompt))
+            return str(raw_input(prompt))
         # Write our prompt
         sys.stdout.write(prompt)
         sys.stdout.flush()
