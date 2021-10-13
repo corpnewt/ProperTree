@@ -1162,7 +1162,7 @@ class PlistWindow(tk.Toplevel):
             # Shallow copy the kext entry to avoid changing it in ordered_kexts
             for x in kext: temp_kext[x] = kext[x]
             duplicates_disabled.append(temp_kext)
-            # Ignore if alreday disabled
+            # Ignore if already disabled
             if not temp_kext.get("Enabled",False): continue
             # Get the original info
             info = next((x for x in kext_list if x[0].get("BundlePath","") == temp_kext.get("BundlePath","")),None)
@@ -1994,9 +1994,9 @@ class PlistWindow(tk.Toplevel):
         L = [x.lstrip('.') for x in s.split()]
         return [(c[x] if x else root) for x in L]
 
-    ###                                             ###
-    # Converstion to/from Dict and Treeview Functions #
-    ###                                             ###
+    ###                                            ###
+    # Conversion to/from Dict and Treeview Functions #
+    ###                                            ###
 
     def add_node(self, value, parentNode="", key=None):
         if key is None:
