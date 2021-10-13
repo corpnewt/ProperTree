@@ -5,6 +5,13 @@
 import datetime, os, plistlib, struct, sys, itertools
 from io import BytesIO
 
+try:  # Python 2
+    unicode
+    xrange
+except NameError:  # Python 3
+    unicode = str
+    xrange = range
+
 if sys.version_info < (3,0):
     # Force use of StringIO instead of cStringIO as the latter
     # has issues with Unicode strings
