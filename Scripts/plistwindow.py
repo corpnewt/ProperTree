@@ -755,7 +755,7 @@ class PlistWindow(tk.Toplevel):
                 found.append((nodes.index(node),node))
         return found
 
-    def find_prev(self, event=None):
+    def find_prev(self, event=None, replacing=False):
         find  = self.f_text.get()
         if not len(find):
             self.bell()
