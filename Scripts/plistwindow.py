@@ -19,13 +19,11 @@ except ImportError:
     from itertools import zip_longest as izip
 from . import plist
 
-try:  # Python 2
+try:
     long
-    raw_input
     unicode
 except NameError:  # Python 3
     long = int
-    raw_input = input
     unicode = str
 
 
