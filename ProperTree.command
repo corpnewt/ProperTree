@@ -183,14 +183,10 @@ class ProperTree:
         }
 
         # Setup the from/to option menus
-        f_title = tk.StringVar(self.tk)
-        t_title = tk.StringVar(self.tk)
-        f_title.set("Base64")
-        t_title.set("Hex")
-        f_option = tk.OptionMenu(self.tk, f_title, "Ascii", "Base64", "Decimal", "Hex", command=self.change_from_type)
-        t_option = tk.OptionMenu(self.tk, t_title, "Ascii", "Base64", "Decimal", "Hex", command=self.change_to_type)
-        self.from_type = "Base64"
-        self.to_type   = "Hex"
+        self.f_title = tk.StringVar(self.tk)
+        self.t_title = tk.StringVar(self.tk)
+        f_option = tk.OptionMenu(self.tk, self.f_title, "Ascii", "Base64", "Decimal", "Hex", command=self.change_from_type)
+        t_option = tk.OptionMenu(self.tk, self.t_title, "Ascii", "Base64", "Decimal", "Hex", command=self.change_to_type)
         f_option.grid(row=0,column=1,sticky="we")
         t_option.grid(row=1,column=1,sticky="we")
 
@@ -350,6 +346,7 @@ class ProperTree:
         self.allowed_data  = ("Hex","Base64")
         self.allowed_int   = ("Decimal","Hex")
         self.allowed_bool  = ("True/False","YES/NO","On/Off","1/0")
+        self.allowed_conv  = ("Ascii","Base64","Decimal","Hex")
         self.update_settings()
         
         # Wait before opening a new document to see if we need to.
@@ -531,6 +528,10 @@ class ProperTree:
         self.int_type_string.set(int_type if int_type in self.allowed_int else self.allowed_int[0])
         bool_type = self.settings.get("display_bool_as",self.allowed_bool[0])
         self.bool_type_string.set(bool_type if bool_type in self.allowed_bool else self.allowed_bool[0])
+        conv_f_type = self.settings.get("convert_from_type",self.allowed_conv[1])
+        self.f_title.set(conv_f_type if conv_f_type in self.allowed_conv else self.allowed_conv[1])
+        conv_t_type = self.settings.get("convert_to_type",self.allowed_conv[-1])
+        self.t_title.set(conv_t_type if conv_t_type in self.allowed_conv else self.allowed_conv[-1])
         self.snapshot_menu["menu"].delete(0,"end")
         snapshot_versions = ["{} -> {}".format(x["min_version"],x.get("max_version","Current")) if x["min_version"]!=x.get("max_version","Current") else x["min_version"] for x in self.snapshot_data if "min_version" in x and len(x["min_version"])]
         snapshot_choices = ["Latest"] + sorted(snapshot_versions,reverse=True)
@@ -729,11 +730,11 @@ class ProperTree:
         window.strip_disabled(event)
 
     def change_to_type(self, value):
-        self.to_type = value
+        self.settings["convert_to_type"] = value
         self.convert_values()
 
     def change_from_type(self, value):
-        self.from_type = value
+        self.settings["convert_from_type"] = value
 
     def show_window(self, window, event = None):
         if not window.winfo_viewable():
@@ -758,7 +759,9 @@ class ProperTree:
             # Empty - nothing to convert
             return
         # Pre-check for hex potential issues
-        if self.from_type.lower() == "hex":
+        from_type = self.f_title.get().lower()
+        to_type   = self.t_title.get().lower()
+        if from_type == "hex":
             if from_value.lower().startswith("0x"):
                 from_value = from_value[2:]
             from_value = from_value.replace(" ","").replace("<","").replace(">","")
@@ -767,7 +770,7 @@ class ProperTree:
                 mb.showerror("Invalid Hex Data","Invalid character in passed hex data.") # ,parent=self.tk)
                 return
         try:
-            if self.from_type.lower() == "decimal":
+            if from_type == "decimal":
                 # Convert to hex bytes
                 from_value = "{:x}".format(int(from_value))
                 if len(from_value) % 2:
@@ -776,22 +779,22 @@ class ProperTree:
             if sys.version_info >= (3,0):
                 # Convert to bytes
                 from_value = from_value.encode("utf-8")
-            if self.from_type.lower() == "base64":
+            if from_type == "base64":
                 from_value = base64.b64decode(from_value)
-            elif self.from_type.lower() in ["hex","decimal"]:
+            elif from_type in ["hex","decimal"]:
                 from_value = binascii.unhexlify(from_value)
             # Let's get the data converted
             to_value = from_value
-            if self.to_type.lower() == "base64":
+            if to_type == "base64":
                 to_value = base64.b64encode(from_value)
-            elif self.to_type.lower() == "hex":
+            elif to_type == "hex":
                 to_value = binascii.hexlify(from_value)
-            elif self.to_type.lower() == "decimal":
+            elif to_type == "decimal":
                 to_value = str(int(binascii.hexlify(from_value),16))
-            if sys.version_info >= (3,0) and not self.to_type.lower() == "decimal":
+            if sys.version_info >= (3,0) and not to_type == "decimal":
                 # Convert to bytes
                 to_value = to_value.decode("utf-8")
-            if self.to_type.lower() == "hex":
+            if to_type == "hex":
                 # Capitalize it, and pad with spaces
                 to_value = "{}".format(" ".join((to_value[0+i:8+i] for i in range(0, len(to_value), 8))).upper())
             # Set the text box
@@ -800,6 +803,10 @@ class ProperTree:
             self.t_text.insert(0,to_value)
             self.t_text.configure(state='readonly')
         except Exception as e:
+            # Clear the text box
+            self.t_text.configure(state='normal')
+            self.t_text.delete(0,tk.END)
+            self.t_text.configure(state='readonly')
             self.tk.bell()
             mb.showerror("Conversion Error",str(e)) # ,parent=self.tk)
 
