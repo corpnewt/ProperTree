@@ -15,6 +15,10 @@ except:
     from tkinter import messagebox as mb
     from tkinter.font import Font, families
     from tkinter.colorchooser import askcolor as ac
+try:
+    unicode
+except NameError:  # Python 3
+    unicode = str
 # Add this script's dir to the local PATH var - may improve import consistency
 sys.path.append(os.path.abspath(os.path.dirname(os.path.realpath(__file__))))
 from Scripts import plist, plistwindow
@@ -752,6 +756,19 @@ class ProperTree:
             window.geometry("+{}+{}".format(x, y))
             window.deiconify()
         window.lift()
+        self.f_text.focus_set()
+
+    def get_bytes(self, value):
+        if sys.version_info >= (3,0) and not isinstance(value,bytes):
+            # Convert to bytes
+            value = value.encode("utf-8")
+        return value
+
+    def get_string(self, value):
+        if sys.version_info >= (3,0) and not isinstance(value,(str,unicode)):
+            # Convert from bytes
+            value = value.decode("utf-8")
+        return value
 
     def convert_values(self, event = None):
         from_value = self.f_text.get()
@@ -776,24 +793,29 @@ class ProperTree:
                 if len(from_value) % 2:
                     from_value = "0"+from_value
             # Handle the from data
-            if sys.version_info >= (3,0):
-                # Convert to bytes
-                from_value = from_value.encode("utf-8")
             if from_type == "base64":
-                from_value = base64.b64decode(from_value)
+                padded_from = from_value
+                from_stripped = from_value.rstrip("=")
+                if len(from_stripped) % 4 > 1: # Pad to a multiple of 4
+                    padded_from = from_stripped + "="*(4-len(from_stripped)%4)
+                if padded_from != from_value:
+                    # Changed it - update the from box, and set the from value
+                    from_value = padded_from
+                    self.f_text.delete(0,tk.END)
+                    self.f_text.insert(0,from_value)
+                from_value = base64.b64decode(self.get_bytes(from_value))
             elif from_type in ["hex","decimal"]:
-                from_value = binascii.unhexlify(from_value)
+                from_value = binascii.unhexlify(self.get_bytes(from_value))
             # Let's get the data converted
-            to_value = from_value
+            to_value = self.get_bytes(from_value)
             if to_type == "base64":
-                to_value = base64.b64encode(from_value)
+                to_value = base64.b64encode(self.get_bytes(from_value))
             elif to_type == "hex":
-                to_value = binascii.hexlify(from_value)
+                to_value = binascii.hexlify(self.get_bytes(from_value))
             elif to_type == "decimal":
-                to_value = str(int(binascii.hexlify(from_value),16))
-            if sys.version_info >= (3,0) and not to_type == "decimal":
-                # Convert to bytes
-                to_value = to_value.decode("utf-8")
+                to_value = str(int(binascii.hexlify(self.get_bytes(from_value)),16))
+            if not to_type == "decimal":
+                to_value = self.get_string(to_value)
             if to_type == "hex":
                 # Capitalize it, and pad with spaces
                 to_value = "{}".format(" ".join((to_value[0+i:8+i] for i in range(0, len(to_value), 8))).upper())
