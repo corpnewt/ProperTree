@@ -1941,9 +1941,10 @@ class PlistWindow(tk.Toplevel):
             # Nothing to paste
             return 'break'
         node = "" if not len(self._tree.selection()) else self._tree.selection()[0]
+        to_open = self._tree.item(node,"open")
         # Verify the type - or get the parent
         t = self.get_check_type(node).lower()
-        if not node == "" and not t in ("dictionary","array"):
+        if not node == "" and not (t in ("dictionary","array") and self._tree.item(node,"open")):
             node = self._tree.parent(node)
         node = self.get_root_node() if node == "" else node # Force Root node if need be
         t = self.get_check_type(node).lower()
@@ -1978,7 +1979,7 @@ class PlistWindow(tk.Toplevel):
                     names.append(key)
                 last = self.add_node(val, node, key)
                 add_list.append({"type":"add","cell":last})
-                self._tree.item(last,open=True)
+                self._tree.item(last,open=to_open)
         first = self.get_root_node() if not len(add_list) else add_list[0].get("cell")
         self.add_undo(add_list)
         if not self.edited:
