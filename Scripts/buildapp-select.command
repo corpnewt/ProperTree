@@ -89,8 +89,10 @@ def select_py(py_versions,min_tk,pt_current):
         if current: print("C. Current ({})".format(current))
         print("Q. Quit")
         print("")
-        menu = input("Please select the python version to use:  ").lower()
-        if not len(menu): return
+        menu = input("Please select the python version to use{}:  ".format(" (default is C)" if current else "")).lower()
+        if not len(menu):
+            if current: menu = "c"
+            else: continue
         if menu == "q": exit()
         if menu == "c" and current: return next((x for x in py_versions if x[0] == current))
         try: menu = int(menu)
