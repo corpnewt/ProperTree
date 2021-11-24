@@ -251,13 +251,16 @@ class ProperTree:
 
         self.default_windows = (self.tk,self.settings_window)
 
+        self.recent_menu = None
         if str(sys.platform) == "darwin":
             # Setup the top level menu
             file_menu = tk.Menu(self.tk)
             main_menu = tk.Menu(self.tk)
+            self.recent_menu = tk.Menu(self, tearoff=0)
             main_menu.add_cascade(label="File", menu=file_menu)
             file_menu.add_command(label="New (Cmd+N)", command=self.new_plist)
             file_menu.add_command(label="Open (Cmd+O)", command=self.open_plist)
+            file_menu.add_cascade(label="Open Recent", menu=self.recent_menu)
             file_menu.add_command(label="Save (Cmd+S)", command=self.save_plist)
             file_menu.add_command(label="Save As... (Cmd+Shift+S)", command=self.save_plist_as)
             file_menu.add_command(label="Duplicate (Cmd+D)", command=self.duplicate_plist)
@@ -326,6 +329,8 @@ class ProperTree:
         # invert_row2_text_color:     bool
         # invert_hl_text_color:       bool
         # drag_dead_zone:             pixel distance before drag starts (default is 20)
+        # open_recent:                list, paths recently opened
+        # recent_max:                 int, max number of recent items
         #
 
         self.settings = {}
@@ -352,6 +357,9 @@ class ProperTree:
         self.allowed_bool  = ("True/False","YES/NO","On/Off","1/0")
         self.allowed_conv  = ("Ascii","Base64","Decimal","Hex")
         self.update_settings()
+
+        # Normalize the pathing for Open Recents
+        self.normpath_recents()
         
         # Wait before opening a new document to see if we need to.
         # This was annoying to debug, but seems to work.
@@ -609,13 +617,59 @@ class ProperTree:
             if window in self.default_windows: continue
             window.set_colors()
 
+    def normpath_recents(self):
+        normalized = [os.path.normpath(x) for x in self.settings.get("open_recent",[])]
+        new_paths = []
+        for path in normalized:
+            if path in new_paths: continue # Don't add duplicates
+            new_paths.append(path)
+        self.settings["open_recent"] = new_paths
+
+    def update_recents(self):
+        # Helper to figure out which menu(s) to update, and actually update them
+        targets = [self] if str(sys.platform) == "darwin" else [w for w in self.stackorder(self.tk) if not w in self.default_windows]
+        for target in targets:
+            self.update_recents_for_target(target)
+
+    def update_recents_for_target(self,target):
+        if not hasattr(target,"recent_menu"): return # Invalid target?
+        # Helper to setup the Open Resent menu for the target menu
+        recents = self.settings.get("open_recent",[])
+        target.recent_menu.delete(0,tk.END)
+        if not len(recents):
+            target.recent_menu.add_command(label="No Recently Opened Files", state=tk.DISABLED)
+        else:
+            for recent in recents:
+                target.recent_menu.add_command(label=recent, command=lambda x=recent:self.open_recent(x))
+        # Add the separator and clear option
+        target.recent_menu.add_separator()
+        target.recent_menu.add_command(label="Clear Recently Opened", command=self.clear_recents)
+
+    def add_recent(self,recent):
+        # Add a new item to our Open Recent list, and make sure our list
+        # doesn't grow beyond the recent_max value
+        recent = os.path.normpath(recent) # Normalize the pathing
+        recents = [x for x in self.settings.get("open_recent",[]) if not x == recent]
+        recents.insert(0,recent)
+        recent_max = self.settings.get("recent_max",10)
+        recents = recents[:recent_max]
+        self.settings["open_recent"] = recents
+        self.update_recents()
+
+    def clear_recents(self):
+        self.settings.pop("open_recent",None)
+        self.update_recents()
+
+    def open_recent(self, path):
+        return self.pre_open_with_path(path)
+
     def check_open(self, plists = []):
         plists = [x for x in plists if not self.regexp.search(x)]
         if isinstance(plists, list) and len(plists):
             at_least_one = False
             # Iterate the passed plists and open them
             for p in set(plists):
-                window = self.open_plist_with_path(None,p,None)
+                window = self.pre_open_with_path(p)
                 if not window: continue
                 at_least_one = True
                 if self.start_window == None:
@@ -644,7 +698,7 @@ class ProperTree:
             else:
                 current_window = None
             # Let's load the plist
-            window = self.open_plist_with_path(None,arg,current_window)
+            window = self.pre_open_with_path(arg,current_window)
             if self.start_window == None: self.start_window = window
 
     def change_hd_type(self, value):
@@ -845,7 +899,9 @@ class ProperTree:
         if window in self.default_windows:
             return
         plist_data = window.nodes_to_values()
-        plistwindow.PlistWindow(self, self.tk).open_plist(None,plist_data)
+        new_window = plistwindow.PlistWindow(self, self.tk).open_plist(None,plist_data)
+        # Update the Open Recent menu
+        if str(sys.platform) != "darwin": self.update_recents_for_target(new_window)
 
     def save_plist(self, event = None):
         windows = self.stackorder(self.tk)
@@ -855,7 +911,9 @@ class ProperTree:
         window = windows[-1] # Get the last item (most recent)
         if window in self.default_windows:
             return
-        window.save_plist(event)
+        if window.save_plist(event):
+            # Saved correctly, let's ensure the path is saved in recents
+            self.add_recent(window.current_plist)
     
     def save_plist_as(self, event = None):
         windows = self.stackorder(self.tk)
@@ -865,7 +923,9 @@ class ProperTree:
         window = windows[-1] # Get the last item (most recent)
         if window in self.default_windows:
             return
-        window.save_plist_as(event)
+        if window.save_plist_as(event):
+            # Saved correctly, let's ensure the path is saved in recents
+            self.add_recent(window.current_plist)
 
     def undo(self, event = None):
         windows = self.stackorder(self.tk)
@@ -901,6 +961,8 @@ class ProperTree:
                 break
             number += 1
         window = plistwindow.PlistWindow(self, self.tk)
+        # Update the Open Recent menu
+        if str(sys.platform) != "darwin": self.update_recents_for_target(window)
         # Ensure our default plist and data types are reflected
         window.plist_type_string.set(self.plist_type_string.get())
         window.data_type_string.set(self.data_type_string.get())
@@ -917,9 +979,13 @@ class ProperTree:
         path = fd.askopenfilename(title = "Select plist file") # ,parent=current_window) # Apparently parent here breaks on 10.15?
         if not len(path): return # User cancelled - bail
         path = os.path.realpath(os.path.expanduser(path))
-        current_window = None
+        return self.pre_open_with_path(path)
+
+    def pre_open_with_path(self, path, current_window = None):
+        if not path: return # Hmmm... shouldn't happen, but just in case
+        path = os.path.realpath(os.path.expanduser(path))
         windows = self.stackorder(self.tk)
-        if len(windows) == 1 and windows[0] == self.start_window and windows[0].edited == False and windows[0].current_plist == None:
+        if current_window == None and len(windows) == 1 and windows[0] == self.start_window and windows[0].edited == False and windows[0].current_plist == None:
             # Fresh window - replace the contents
             current_window = windows[0]
         # Verify that no other window has that file selected already
@@ -930,13 +996,12 @@ class ProperTree:
                 self.lift_window(window)
                 window.bell()
                 mb.showerror("File Already Open", "{} is already open here.".format(path)) # , parent=window)
+                self.lift_window(window)
                 return
-        return self.open_plist_with_path(event,path,current_window)
+        return self.open_plist_with_path(None,path,current_window)
 
-    def open_plist_with_path(self, event = None, path = None, current_window = None, plist_type = "XML"):
-        if path == None:
-            # Uh... wut?
-            return
+    def open_plist_with_path(self, event = None, path = None, current_window = None):
+        if not path: return # Uh... wut?
         path = os.path.realpath(os.path.expanduser(path))
         # Let's try to load the plist
         try:
@@ -958,6 +1023,8 @@ class ProperTree:
         current_window.bool_type_string.set(self.bool_type_string.get())
         current_window.open_plist(path,plist_data,plist_type,self.settings.get("expand_all_items_on_open",True))
         self.lift_window(current_window)
+        # Add it to our Open Recent list
+        self.add_recent(path)
         return current_window
 
     def stackorder(self, root):
