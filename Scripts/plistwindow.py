@@ -336,14 +336,17 @@ class PlistWindow(tk.Toplevel):
         self._tree.bind("<Escape>", self.deselect)
         self.bind("<FocusIn>", self.got_focus)
 
+        self.recent_menu = None
         # Setup menu bar (hopefully per-window) - only happens on non-mac systems
         if not str(sys.platform) == "darwin":
             key="Control"
             main_menu = tk.Menu(self)
             file_menu = tk.Menu(self, tearoff=0)
+            self.recent_menu = tk.Menu(self, tearoff=0)
             main_menu.add_cascade(label="File", menu=file_menu)
             file_menu.add_command(label="New", command=self.controller.new_plist, accelerator="Ctrl+N")
             file_menu.add_command(label="Open", command=self.controller.open_plist, accelerator="Ctrl+O")
+            file_menu.add_cascade(label="Open Recent", menu=self.recent_menu)
             file_menu.add_command(label="Save", command=self.controller.save_plist, accelerator="Ctrl+S")
             file_menu.add_command(label="Save As...", command=self.controller.save_plist_as, accelerator="Ctrl+Shift+S")
             file_menu.add_command(label="Duplicate", command=self.controller.duplicate_plist, accelerator="Ctrl+D")
