@@ -256,7 +256,7 @@ class ProperTree:
             # Setup the top level menu
             file_menu = tk.Menu(self.tk)
             main_menu = tk.Menu(self.tk)
-            self.recent_menu = tk.Menu(self, tearoff=0)
+            self.recent_menu = tk.Menu(self.tk)
             main_menu.add_cascade(label="File", menu=file_menu)
             file_menu.add_command(label="New (Cmd+N)", command=self.new_plist)
             file_menu.add_command(label="Open (Cmd+O)", command=self.open_plist)
@@ -360,6 +360,7 @@ class ProperTree:
 
         # Normalize the pathing for Open Recents
         self.normpath_recents()
+        if str(sys.platform) == "darwin": self.update_recents()
         
         # Wait before opening a new document to see if we need to.
         # This was annoying to debug, but seems to work.
@@ -996,7 +997,6 @@ class ProperTree:
                 self.lift_window(window)
                 window.bell()
                 mb.showerror("File Already Open", "{} is already open here.".format(path)) # , parent=window)
-                self.lift_window(window)
                 return
         return self.open_plist_with_path(None,path,current_window)
 
