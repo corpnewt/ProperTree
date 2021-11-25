@@ -358,6 +358,7 @@ class ProperTree:
         self.allowed_conv  = ("Ascii","Base64","Decimal","Hex")
         self.update_settings()
 
+        self.case_insensitive = self.get_case_insensitive()
         # Normalize the pathing for Open Recents
         self.normpath_recents()
         if str(sys.platform) == "darwin": self.update_recents()
@@ -369,6 +370,18 @@ class ProperTree:
 
         # Start our run loop
         tk.mainloop()
+
+    def get_case_insensitive(self):
+        # Helper function to check our file path, change case, and see if os.path.exists() still works
+        our_path = os.path.realpath(__file__)
+        # Walk our chars and find the first alpha character
+        # then reverse it's case - and see if the path still exists
+        for i,x in enumerate(our_path):
+            if x.isalpha():
+                x = x.upper() if x.islower() else x.lower()
+                return os.path.exists(our_path[:i]+x+our_path[i+1:])
+        # If we got here - there were no alpha chars in the path - we'll just uh... return False to be safe
+        return False
 
     def check_dark_mode(self):
         check_dark = self.get_dark()
@@ -618,11 +631,18 @@ class ProperTree:
             if window in self.default_windows: continue
             window.set_colors()
 
+    def compare_paths(self,check,path):
+        if not isinstance(path,(str,unicode,list)): return False
+        if self.case_insensitive:
+            check = check.lower()
+            path = path.lower() if isinstance(path,(str,unicode)) else [x.lower() for x in path]
+        return check in path if isinstance(path,list) else check == path
+
     def normpath_recents(self):
         normalized = [os.path.normpath(x) for x in self.settings.get("open_recent",[])]
         new_paths = []
         for path in normalized:
-            if path in new_paths: continue # Don't add duplicates
+            if self.compare_paths(path,new_paths): continue # Don't add duplicates
             new_paths.append(path)
         self.settings["open_recent"] = new_paths
 
@@ -650,7 +670,7 @@ class ProperTree:
         # Add a new item to our Open Recent list, and make sure our list
         # doesn't grow beyond the recent_max value
         recent = os.path.normpath(recent) # Normalize the pathing
-        recents = [x for x in self.settings.get("open_recent",[]) if not x == recent]
+        recents = [x for x in self.settings.get("open_recent",[]) if not self.compare_paths(recent,x)]
         recents.insert(0,recent)
         recent_max = self.settings.get("recent_max",10)
         recents = recents[:recent_max]
