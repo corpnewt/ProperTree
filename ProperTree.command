@@ -657,11 +657,26 @@ class ProperTree:
         self.settings["open_recent"] = recents
         self.update_recents()
 
+    def rem_recent(self,recent):
+        # Removes a recent from the Open Recent list if it exists
+        recent = os.path.normpath(recent) # Normalize the pathing
+        recents = [x for x in self.settings.get("open_recent",[]) if not x == recent]
+        self.settings["open_recent"] = recents
+        self.update_recents()
+
     def clear_recents(self):
         self.settings.pop("open_recent",None)
         self.update_recents()
 
     def open_recent(self, path):
+        # First check if the file exists - if not, throw an error, and remove it
+        # from the recents menu
+        path = os.path.normpath(path)
+        if not (os.path.exists(path) and os.path.isfile(path)):
+            self.rem_recent(path)
+            self.tk.bell()
+            mb.showerror("An Error Occurred While Opening {}".format(os.path.basename(path)), "The path '{}' does not exist.".format(path))
+            return
         return self.pre_open_with_path(path)
 
     def check_open(self, plists = []):
