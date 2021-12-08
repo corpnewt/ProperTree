@@ -208,6 +208,8 @@ class ProperTree:
 
         self.c_button = tk.Button(self.tk, text="Convert", command=self.convert_values)
         self.c_button.grid(row=2,column=3,sticky="e",padx=10,pady=10)
+        self.s_button = tk.Button(self.tk, text="To <--> From", command=self.swap_convert)
+        self.s_button.grid(row=2,column=0,sticky="w",padx=10,pady=10)
 
         self.f_text.bind("<Return>", self.convert_values)
         self.f_text.bind("<KP_Enter>", self.convert_values)
@@ -859,6 +861,18 @@ class ProperTree:
             # Convert from bytes
             value = value.decode("utf-8")
         return value
+
+    def swap_convert(self, event = None):
+        # Swaps the values of the to and from conversion dropdown menus
+        t,f = self.t_title.get(),self.f_title.get()
+        self.settings["convert_to_type"] = f
+        self.settings["convert_from_type"] = t
+        self.t_title.set(f)
+        self.f_title.set(t)
+        # Move any data from the To to the From, and run the conversion
+        self.f_text.delete(0,tk.END)
+        self.f_text.insert(0,self.t_text.get())
+        self.convert_values()
 
     def convert_values(self, event = None):
         from_value = self.f_text.get()
