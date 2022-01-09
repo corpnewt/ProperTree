@@ -2640,6 +2640,7 @@ class PlistWindow(tk.Toplevel):
         # Get selected node
         cell = "" if not len(self._tree.selection()) else self._tree.selection()[0]
         self._tree.item(cell,open=True)
+        self.alternate_colors()
 
     def collapse_node(self):
         # Get selected node
