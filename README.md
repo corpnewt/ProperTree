@@ -51,11 +51,11 @@ git clone https://github.com/corpnewt/ProperTree
 
 * **ProperTree opens a black window on macOS Monterey (12.x)**
 
-  It appears the default tk implementation that ships with macOS Monterey doesn't display correctly.  A workaround is to download and install the intel build (not "universal") of python 3.9.10 from python.org (direct link [here](https://www.python.org/ftp/python/3.9.10/python-3.9.10-macosx10.9.pkg)) which has a compatible tk bundled, then use the `buildapp-select.command` located in ProperTree's `Scripts` directory to build an application bundle targeting the installed python's path.
+  It appears the default tk implementation that ships with macOS Monterey doesn't display correctly.  A workaround is to download and install the latest build of python 3 from python.org (found [here](https://www.python.org/downloads/macos/)) which has a compatible tk bundled, then use the `buildapp-select.command` located in ProperTree's `Scripts` directory to build an application bundle targeting the installed python's path.  You can then leverage the `ProperTree.app` bundle it creates.
   
 * **ProperTree cannot open or save plist files on macOS Monterey (12.x)**
 
-  This appears to be an issue with the "universal" installers from python.org.  The solution is to use the intel-only build.  The latest of which is 3.9.10, direct linked [here](https://www.python.org/ftp/python/3.9.10/python-3.9.10-macosx10.9.pkg).  After installing, use the `buildapp-select.command` located in ProperTree's `Scripts` directory to build an application bundle targeting the installed python's path.
+  This appears to be an issue with the built-in tk, and the earlier "universal" installers from python.org.  With at least python 3.10.2, this issue has been resolved in the universal builds.  You can get the latest python 3 installer [here](https://www.python.org/downloads/macos/).  After installing, use the `buildapp-select.command` located in ProperTree's `Scripts` directory to build an application bundle targeting the installed python's path.  You can then leverage the `ProperTree.app` bundle it creates.
 
 * **How can I have ProperTree open when I double-click a .plist file?**
 
