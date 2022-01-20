@@ -1383,7 +1383,6 @@ class PlistWindow(tk.Toplevel):
                 values = self.get_padded_values(node,3)
             t = self.get_check_type(cell=None,string=values[0]).lower()
             if t == "number":
-                values = self.get_padded_values(node,3)
                 value = values[1]
                 if new_display.lower() == "hex":
                     try:
