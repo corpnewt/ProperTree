@@ -1358,46 +1358,54 @@ class PlistWindow(tk.Toplevel):
         # the target funct accordingly
         target_funct(self.iter_nodes(False),new_display)
         for u in self.undo_stack:
-            target_funct(u,new_display,is_undo=True)
+            target_funct(u,new_display)
         for r in self.redo_stack:
             target_funct(r,new_display)
+
+    def _qualify_node(self,node,type_check):
+        # Helper function to qualify a passed node - or check if it's
+        # an undo/redo entry.  Returns (None,None,None) if it doesn't qualify,
+        # or a tuple of (node,task,values)
+        task = None
+        if isinstance(node,dict): # Should be an undo/redo action
+            if node.get("type") in ("move","add"): return (None,None,None) # Handled by the nodes loop
+            task = node
+            node = task.get("cell")
+        if not node: return (None,None,None) # Broken formatting?
+        if task and task.get("type") == "edit":
+            values = list(task.get("values",[]))
+            if len(values) < 2: return (None,None,None) # Broken :(
+        else:
+            values = self.get_padded_values(node,3)
+        t = self.get_check_type(cell=None,string=values[0]).lower()
+        if t != type_check: return (None,None,None)
+        return (node,task,values)
 
     def change_int_display(self,new_display="Decimal"):
         if new_display == self.last_int: return
         self.int_type_string.set(new_display[0].upper()+new_display[1:])
         self._change_display(new_display,self._change_int_display)
 
-    def _change_int_display(self,node_list,new_display="Decimal",is_undo=False):
+    def _change_int_display(self,node_list,new_display="Decimal"):
         if not isinstance(node_list,(list,tuple)): node_list = [node_list]
         for node in node_list:
-            task = None
-            if isinstance(node,dict): # Should be an undo/redo action
-                if node.get("type") in (("move","add") if is_undo else ("move",)): continue # Handled by the nodes loop
-                task = node
-                node = task.get("cell")
-            if not node: continue # Broken formatting?
-            if task and task.get("type") == "edit":
-                values = list(task.get("values",[]))
-                if len(values) < 2: continue # Broken :(
+            node,task,values = self._qualify_node(node,"number")
+            if task == False or values is None: continue # Didn't qualify
+            value = values[1]
+            if new_display.lower() == "hex":
+                try:
+                    value = int(value)
+                    assert value >= 0
+                    value = "0x"+hex(value).upper()[2:].rjust(2,"0")
+                except: pass
             else:
-                values = self.get_padded_values(node,3)
-            t = self.get_check_type(cell=None,string=values[0]).lower()
-            if t == "number":
-                value = values[1]
-                if new_display.lower() == "hex":
-                    try:
-                        value = int(value)
-                        assert value >= 0
-                        value = "0x"+hex(value).upper()[2:].rjust(2,"0")
-                    except: pass
-                else:
-                    if value.lower().startswith("0x"):
-                        value = str(int(value,16))
-                values[1] = value
-                if task and task.get("type") == "edit":
-                    task["values"] = values
-                else:
-                    self._tree.item(node,values=values)
+                if value.lower().startswith("0x"):
+                    value = str(int(value,16))
+            values[1] = value
+            if task and task.get("type") == "edit":
+                task["values"] = values
+            else:
+                self._tree.item(node,values=values)
 
     def change_bool_display(self,new_display="True/False"):
         if new_display == self.last_bool: return
@@ -1406,29 +1414,18 @@ class PlistWindow(tk.Toplevel):
         # all bool values are updated.
         self._change_display(new_display,self._change_bool_display)
 
-    def _change_bool_display(self,node_list,new_display="True/False",is_undo=False):
+    def _change_bool_display(self,node_list,new_display="True/False"):
         if not isinstance(node_list,(list,tuple)): node_list = [node_list]
         on,off = new_display.split("/")
         on_list = [x.split("/")[0] for x in self.controller.allowed_bool]
         for node in node_list:
-            task = None
-            if isinstance(node,dict): # Should be an undo/redo action
-                if node.get("type") in (("move","add") if is_undo else ("move",)): continue # Handled by the nodes loop
-                task = node
-                node = task.get("cell")
-            if not node: continue # Broken formatting?
+            node,task,values = self._qualify_node(node,"boolean")
+            if task == False or values is None: continue # Didn't qualify
+            values[1] = on if values[1] in on_list else off
             if task and task.get("type") == "edit":
-                values = list(task.get("values",[]))
-                if len(values) < 2: continue # Broken :(
+                task["values"] = values
             else:
-                values = self.get_padded_values(node,3)
-            t = self.get_check_type(cell=None,string=values[0]).lower()
-            if t == "boolean":
-                values[1] = on if values[1] in on_list else off
-                if task and task.get("type") == "edit":
-                    task["values"] = values
-                else:
-                    self._tree.item(node,values=values)
+                self._tree.item(node,values=values)
 
     def change_data_display(self,new_display="Hex"):
         if new_display == self.last_data: return
@@ -1437,43 +1434,32 @@ class PlistWindow(tk.Toplevel):
         # data values to bytes, then reconverting and displaying appropriately
         self._change_display(new_display,self._change_data_display)
 
-    def _change_data_display(self,node_list,new_display="Hex",is_undo=False):
+    def _change_data_display(self,node_list,new_display="Hex"):
         if not isinstance(node_list,(list,tuple)): node_list = [node_list]
         for node in node_list:
-            task = None
-            if isinstance(node,dict): # Should be an undo/redo action
-                if node.get("type") in (("move","add") if is_undo else ("move",)): continue # Handled by the nodes loop
-                task = node
-                node = task.get("cell")
-            if not node: continue # Broken formatting?
-            if task and task.get("type") == "edit":
-                values = list(task.get("values",[]))
-                if len(values) < 2: continue # Broken :(
+            node,task,values = self._qualify_node(node,"data")
+            if values is None: continue # Didn't qualify
+            value = values[1]
+            # We need to adjust how it is displayed, load the bytes first
+            if new_display.lower() == "hex":
+                # Convert to hex
+                if sys.version_info < (3,0):
+                    value = binascii.hexlify(base64.b64decode(value))
+                else:
+                    value = binascii.hexlify(base64.b64decode(value.encode("utf-8"))).decode("utf-8")
+                # format the hex
+                value = "<{}>".format(" ".join((value[0+i:8+i] for i in range(0, len(value), 8))).upper())
             else:
-                values = self.get_padded_values(node,3)
-            t = self.get_check_type(cell=None,string=values[0]).lower()
-            if t == "data":
-                value = values[1]
-                # We need to adjust how it is displayed, load the bytes first
-                if new_display.lower() == "hex":
-                    # Convert to hex
-                    if sys.version_info < (3,0):
-                        value = binascii.hexlify(base64.b64decode(value))
-                    else:
-                        value = binascii.hexlify(base64.b64decode(value.encode("utf-8"))).decode("utf-8")
-                    # format the hex
-                    value = "<{}>".format(" ".join((value[0+i:8+i] for i in range(0, len(value), 8))).upper())
+                # Assume base64
+                if sys.version_info < (3, 0):
+                    value = base64.b64encode(binascii.unhexlify(value.replace("<","").replace(">","").replace(" ","")))
                 else:
-                    # Assume base64
-                    if sys.version_info < (3, 0):
-                        value = base64.b64encode(binascii.unhexlify(value.replace("<","").replace(">","").replace(" ","")))
-                    else:
-                        value = base64.b64encode(binascii.unhexlify(value.replace("<","").replace(">","").replace(" ","").encode("utf-8"))).decode("utf-8")
-                values[1] = value
-                if task and task.get("type") == "edit":
-                    task["values"] = values
-                else:
-                    self._tree.item(node,values=values)
+                    value = base64.b64encode(binascii.unhexlify(value.replace("<","").replace(">","").replace(" ","").encode("utf-8"))).decode("utf-8")
+            values[1] = value
+            if task and task.get("type") == "edit":
+                task["values"] = values
+            else:
+                self._tree.item(node,values=values)
 
     def add_undo(self, action):
         if not isinstance(action,list):
