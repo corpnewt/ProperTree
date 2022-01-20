@@ -1352,13 +1352,36 @@ class PlistWindow(tk.Toplevel):
         if rowid and self._tree.bbox(rowid):
             # Mouse down in a valid node
             self.clicked_drag = True
+    
+    def _change_display(self,new_display,target_funct):
+        # Walks the nodes, undo, and redo stacks and runs
+        # the target funct accordingly
+        target_funct(self.iter_nodes(False),new_display)
+        for u in self.undo_stack:
+            target_funct(u,new_display,is_undo=True)
+        for r in self.redo_stack:
+            target_funct(r,new_display)
 
-    def change_int_display(self, new_display="Decimal"):
+    def change_int_display(self,new_display="Decimal"):
         if new_display == self.last_int: return
         self.int_type_string.set(new_display[0].upper()+new_display[1:])
-        nodes = self.iter_nodes(False)
-        for node in nodes:
-            t = self.get_check_type(node).lower()
+        self._change_display(new_display,self._change_int_display)
+
+    def _change_int_display(self,node_list,new_display="Decimal",is_undo=False):
+        if not isinstance(node_list,(list,tuple)): node_list = [node_list]
+        for node in node_list:
+            task = None
+            if isinstance(node,dict): # Should be an undo/redo action
+                if node.get("type") in (("move","add") if is_undo else ("move",)): continue # Handled by the nodes loop
+                task = node
+                node = task.get("cell")
+            if not node: continue # Broken formatting?
+            if task and task.get("type") == "edit":
+                values = list(task.get("values",[]))
+                if len(values) < 2: continue # Broken :(
+            else:
+                values = self.get_padded_values(node,3)
+            t = self.get_check_type(cell=None,string=values[0]).lower()
             if t == "number":
                 values = self.get_padded_values(node,3)
                 value = values[1]
@@ -1372,32 +1395,66 @@ class PlistWindow(tk.Toplevel):
                     if value.lower().startswith("0x"):
                         value = str(int(value,16))
                 values[1] = value
-                self._tree.item(node,values=values)
+                if task and task.get("type") == "edit":
+                    task["values"] = values
+                else:
+                    self._tree.item(node,values=values)
 
     def change_bool_display(self,new_display="True/False"):
         if new_display == self.last_bool: return
         self.bool_type_string.set(new_display)
-        nodes = self.iter_nodes(False)
+        # Walk all nodes, then walk the undo/redo stack to ensure
+        # all bool values are updated.
+        self._change_display(new_display,self._change_bool_display)
+
+    def _change_bool_display(self,node_list,new_display="True/False",is_undo=False):
+        if not isinstance(node_list,(list,tuple)): node_list = [node_list]
         on,off = new_display.split("/")
         on_list = [x.split("/")[0] for x in self.controller.allowed_bool]
-        for node in nodes:
-            values = self.get_padded_values(node,3)
-            t = self.get_check_type(node).lower()
+        for node in node_list:
+            task = None
+            if isinstance(node,dict): # Should be an undo/redo action
+                if node.get("type") in (("move","add") if is_undo else ("move",)): continue # Handled by the nodes loop
+                task = node
+                node = task.get("cell")
+            if not node: continue # Broken formatting?
+            if task and task.get("type") == "edit":
+                values = list(task.get("values",[]))
+                if len(values) < 2: continue # Broken :(
+            else:
+                values = self.get_padded_values(node,3)
+            t = self.get_check_type(cell=None,string=values[0]).lower()
             if t == "boolean":
                 values[1] = on if values[1] in on_list else off
-                self._tree.item(node,values=values)
+                if task and task.get("type") == "edit":
+                    task["values"] = values
+                else:
+                    self._tree.item(node,values=values)
 
     def change_data_display(self,new_display="Hex"):
         if new_display == self.last_data: return
         self.data_type_string.set(new_display[0].upper()+new_display[1:])
         # This will change how data is displayed - we do this by converting all our existing
         # data values to bytes, then reconverting and displaying appropriately
-        nodes = self.iter_nodes(False)
-        for node in nodes:
-            values = self.get_padded_values(node,3)
-            t = self.get_check_type(node).lower()
-            value = values[1]
+        self._change_display(new_display,self._change_data_display)
+
+    def _change_data_display(self,node_list,new_display="Hex",is_undo=False):
+        if not isinstance(node_list,(list,tuple)): node_list = [node_list]
+        for node in node_list:
+            task = None
+            if isinstance(node,dict): # Should be an undo/redo action
+                if node.get("type") in (("move","add") if is_undo else ("move",)): continue # Handled by the nodes loop
+                task = node
+                node = task.get("cell")
+            if not node: continue # Broken formatting?
+            if task and task.get("type") == "edit":
+                values = list(task.get("values",[]))
+                if len(values) < 2: continue # Broken :(
+            else:
+                values = self.get_padded_values(node,3)
+            t = self.get_check_type(cell=None,string=values[0]).lower()
             if t == "data":
+                value = values[1]
                 # We need to adjust how it is displayed, load the bytes first
                 if new_display.lower() == "hex":
                     # Convert to hex
@@ -1414,7 +1471,10 @@ class PlistWindow(tk.Toplevel):
                     else:
                         value = base64.b64encode(binascii.unhexlify(value.replace("<","").replace(">","").replace(" ","").encode("utf-8"))).decode("utf-8")
                 values[1] = value
-                self._tree.item(node,values=values)
+                if task and task.get("type") == "edit":
+                    task["values"] = values
+                else:
+                    self._tree.item(node,values=values)
 
     def add_undo(self, action):
         if not isinstance(action,list):
