@@ -51,9 +51,9 @@ class ProperTree:
         
         # Let's add some checkboxes and stuffs
         sep_func = ttk.Separator(self.settings_window,orient="horizontal")
-        sep_func.grid(row=0,column=1,columnspan=1,sticky="we",padx=10)
+        sep_func.grid(row=0,column=1,columnspan=1,sticky="we",padx=10,pady=10)
         func_label = tk.Label(self.settings_window,text="Functionality Options:")
-        func_label.grid(row=0,column=0,sticky="w",padx=10)
+        func_label.grid(row=0,column=0,sticky="w",padx=10,pady=10)
 
         self.expand_on_open = tk.IntVar()
         self.use_xcode_data = tk.IntVar()
@@ -113,9 +113,9 @@ class ProperTree:
 
         # Right side - theme elements:
         t_func = ttk.Separator(self.settings_window,orient="horizontal")
-        t_func.grid(row=0,column=4,columnspan=1,sticky="we",padx=10)
+        t_func.grid(row=0,column=4,columnspan=1,sticky="we",padx=10,pady=10)
         tfunc_label = tk.Label(self.settings_window,text="Appearance Options:")
-        tfunc_label.grid(row=0,column=3,sticky="w",padx=10)
+        tfunc_label.grid(row=0,column=3,sticky="w",padx=10,pady=10)
 
         r1_label = tk.Label(self.settings_window,text="Alternating Row Color #1:")
         r1_label.grid(row=1,column=3,sticky="w",padx=10)
