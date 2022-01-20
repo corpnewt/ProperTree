@@ -612,8 +612,14 @@ class ProperTree:
                 if w==1==h: # Request width as we haven't drawn yet
                     w = self.settings_window.winfo_reqwidth()
                     h = c.winfo_reqheight()
-                # Previous w was int((w-20)/2)
-                self.canvas_connect[c]["text_id"] = c.create_text(int(w/4)-10,int(h/2),text="Sample Text")
+                    cw = c.winfo_reqwidth()
+                    # Not drawn - estimate position and pad for macOS and Win/Linux with best-guess
+                    rw = int(w/2) if str(sys.platform)=="darwin" else int(w/2-cw/2)
+                else:
+                    # It's been drawn, calculate the new way - width of the widget/2 gives us the halfway point
+                    cw = c.winfo_width()
+                    rw = int(cw/2)
+                self.canvas_connect[c]["text_id"] = c.create_text(rw,int(h/2),text="Sample Text")
             # Set the color
             c.itemconfig(self.canvas_connect[c]["text_id"], fill=color)
 
