@@ -277,7 +277,8 @@ class PlistWindow(tk.Toplevel):
         # Treeview theming is horribly broken in Windows for whatever reasons...
         self.style_name = "Corp.TLabel" if os.name=="nt" else "Corp.Treeview"
         # Attempt to set the color of the headers
-        self.style.element_create("Corp.Treeheading.border", "from", "default")
+        if not "Corp.Treeheading.border" in self.style.element_names():
+            self.style.element_create("Corp.Treeheading.border", "from", "default")
         self.style.layout(self.style_name+".Heading", [
             ("Corp.Treeheading.cell", {'sticky': 'nswe'}),
             ("Corp.Treeheading.border", {'sticky':'nswe', 'children': [
