@@ -47,6 +47,7 @@ class ProperTree:
         self.settings_window.columnconfigure(3,weight=1)
         self.settings_window.columnconfigure(4,weight=1)
 
+        # Set the default max undo/redo steps to retain
         self.max_undo = 200
         
         # Left side - functional elements:
@@ -396,11 +397,19 @@ class ProperTree:
         # Normalize the pathing for Open Recents
         self.normpath_recents()
         if str(sys.platform) == "darwin": self.update_recents()
-        
-        # Wait before opening a new document to see if we need to.
-        # This was annoying to debug, but seems to work.
-        self.tk.after(250, lambda:self.check_open(plists))
         self.check_dark_mode()
+
+        # Prior implementations tried to wait 250ms to give open_plist_from_app()
+        # enough time to parse anything double-clicked.  The issue was that both
+        # check_open() and open_plist_from_app() would fire at roughly the same
+        # time - resulting in one opening a blank doc, and the other opening the
+        # double-clicked plist(s).  We now use the is_opening lock to determine
+        # if one function is currently working - and the other will check in 5ms
+        # intervals until the lock is lifted before processing.  This allows us
+        # to overtake a blank doc opened by one with the other - hopefully fixing
+        # the issue of multiple documents spawning on double-click in macOS.
+        self.is_opening = False
+        self.check_open(plists)
 
         # Start our run loop
         tk.mainloop()
@@ -745,42 +754,61 @@ class ProperTree:
         return self.pre_open_with_path(path)
 
     def check_open(self, plists = []):
-        plists = [x for x in plists if not self.regexp.search(x)]
-        if isinstance(plists, list) and len(plists):
-            at_least_one = False
-            # Iterate the passed plists and open them
-            for p in set(plists):
-                window = self.pre_open_with_path(p)
-                if not window: continue
-                at_least_one = True
-                if self.start_window == None:
-                    self.start_window = window
-            if not at_least_one: # Check if we have any other windows open - and close as needed
-                windows = self.stackorder(self.tk)
-                if not len(windows): self.quit()
-        elif not len(self.stackorder(self.tk)):
-            # create a fresh plist to start
-            self.start_window = self.new_plist()
+        if self.is_opening: # Already opening - loop until we're not
+            self.tk.after(5, lambda:self.check_open(plists))
+            return
+        self.is_opening = True
+        try:
+            plists = [x for x in plists if not self.regexp.search(x)]
+            if isinstance(plists, list) and len(plists):
+                at_least_one = False
+                # Iterate the passed plists and open them
+                for p in set(plists):
+                    window = self.pre_open_with_path(p)
+                    if not window: continue
+                    at_least_one = True
+                    if self.start_window == None:
+                        self.start_window = window
+                if not at_least_one: # If none of them opened, open a fresh plist
+                    windows = self.stackorder(self.tk)
+                    if not len(windows):
+                        self.start_window = self.new_plist()
+            elif not len(self.stackorder(self.tk)):
+                # create a fresh plist to start
+                self.start_window = self.new_plist()
+        except Exception as e:
+            self.tk.bell()
+            mb.showerror("Error in check_open() function",repr(e))
+        self.is_opening = False
 
     def open_plist_from_app(self, *args):
-        if isinstance(args, str):
-            args = [args]
-        args = [x for x in args if not self.regexp.search(x)]
-        for arg in args:
-            windows = self.stackorder(self.tk)
-            # Verify that no other window has that file selected already
-            existing_window = next((window for window in windows if not window in self.default_windows and window.current_plist==arg),None)
-            if existing_window:
-                self.lift_window(existing_window)
-                continue
-            if len(windows) == 1 and windows[0] == self.start_window and windows[0].edited == False and windows[0].current_plist == None:
-                # Fresh window - replace the contents
-                current_window = windows[0]
-            else:
-                current_window = None
-            # Let's load the plist
-            window = self.pre_open_with_path(arg,current_window)
-            if self.start_window == None: self.start_window = window
+        if self.is_opening: # Already opening - loop until we're not
+            self.tk.after(5, lambda:self.open_plist_from_app(*args))
+            return
+        self.is_opening = True
+        try:
+            if isinstance(args, str):
+                args = [args]
+            args = [x for x in args if not self.regexp.search(x)]
+            for arg in args:
+                windows = self.stackorder(self.tk)
+                # Verify that no other window has that file selected already
+                existing_window = next((window for window in windows if not window in self.default_windows and window.current_plist==arg),None)
+                if existing_window:
+                    self.lift_window(existing_window)
+                    continue
+                if len(windows) == 1 and windows[0] == self.start_window and windows[0].edited == False and windows[0].current_plist == None:
+                    # Fresh window - replace the contents
+                    current_window = windows[0]
+                else:
+                    current_window = None
+                # Let's load the plist
+                window = self.pre_open_with_path(arg,current_window)
+                if self.start_window == None: self.start_window = window
+        except Exception as e:
+            self.tk.bell()
+            mb.showerror("Error in open_plist_from_app() function",repr(e))
+        self.is_opening = False
 
     def change_hd_type(self, value):
         self.hd_type = value
@@ -992,9 +1020,11 @@ class ProperTree:
         if window in self.default_windows:
             return
         plist_data = window.nodes_to_values()
-        new_window = plistwindow.PlistWindow(self, self.tk).open_plist(None,plist_data)
+        new_window = plistwindow.PlistWindow(self, self.tk)
+        new_window.open_plist(None,plist_data)
         # Update the Open Recent menu
         if str(sys.platform) != "darwin": self.update_recents_for_target(new_window)
+        self.lift_window(new_window)
 
     def save_plist(self, event = None):
         windows = self.stackorder(self.tk)
@@ -1007,6 +1037,7 @@ class ProperTree:
         if window.save_plist(event):
             # Saved correctly, let's ensure the path is saved in recents
             self.add_recent(window.current_plist)
+            self.lift_window(window)
     
     def save_plist_as(self, event = None):
         windows = self.stackorder(self.tk)
@@ -1019,6 +1050,7 @@ class ProperTree:
         if window.save_plist_as(event):
             # Saved correctly, let's ensure the path is saved in recents
             self.add_recent(window.current_plist)
+            self.lift_window(window)
 
     def undo(self, event = None):
         windows = self.stackorder(self.tk)
