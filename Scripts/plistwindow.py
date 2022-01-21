@@ -276,6 +276,18 @@ class PlistWindow(tk.Toplevel):
         self.style = ttk.Style()
         # Treeview theming is horribly broken in Windows for whatever reasons...
         self.style_name = "Corp.TLabel" if os.name=="nt" else "Corp.Treeview"
+        # Attempt to set the color of the headers
+        self.style.element_create("Corp.Treeheading.border", "from", "default")
+        self.style.layout(self.style_name+".Heading", [
+            ("Corp.Treeheading.cell", {'sticky': 'nswe'}),
+            ("Corp.Treeheading.border", {'sticky':'nswe', 'children': [
+                ("Corp.Treeheading.padding", {'sticky':'nswe', 'children': [
+                    ("Corp.Treeheading.image", {'side':'right', 'sticky':''}),
+                    ("Corp.Treeheading.text", {'sticky':'we'})
+                ]})
+            ]}),
+        ])
+        self.style.map(self.style_name+".Heading",relief=[('active','groove'),('pressed','sunken')])
 
         # Fix font height for High-DPI displays
         self.font = Font(font='TkTextFont')
@@ -2876,10 +2888,12 @@ class PlistWindow(tk.Toplevel):
         self.r2 = self.controller.r2_canvas["background"]
         self.hl = self.controller.hl_canvas["background"]
         self.bg = self.controller.bg_canvas["background"]
+        self.bgt = self.controller.text_color(self.bg,invert=self.controller.bg_inv_check.get())
         self.r1t = self.controller.text_color(self.r1,invert=self.controller.r1_inv_check.get())
         self.r2t = self.controller.text_color(self.r2,invert=self.controller.r2_inv_check.get())
         self.hlt = self.controller.text_color(self.hl,invert=self.controller.hl_inv_check.get())
         self.style.configure(self.style_name, background=self.bg, fieldbackground=self.bg)
+        self.style.configure(self.style_name+".Heading", background=self.bg, foreground=self.bgt)
         self.style.map(self.style_name, background=[("selected", self.hl)], foreground=[("selected", self.hlt)])
         self._tree.tag_configure('even', foreground=self.r1t, background=self.r1)
         self._tree.tag_configure('odd', foreground=self.r2t, background=self.r2)
