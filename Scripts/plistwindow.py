@@ -287,7 +287,8 @@ class PlistWindow(tk.Toplevel):
                 ]})
             ]}),
         ])
-        self.style.map(self.style_name+".Heading",relief=[('active','groove'),('pressed','sunken')])
+        self.style.configure(self.style_name+".Heading",borderwidth=1,relief="groove")
+        self.style.map(self.style_name+".Heading",relief=[('active','raised'),('pressed','sunken')])
 
         # Fix font height for High-DPI displays
         self.font = Font(font='TkTextFont')
