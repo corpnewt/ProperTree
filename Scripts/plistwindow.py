@@ -230,16 +230,16 @@ class PlistWindow(tk.Toplevel):
 
         # self = tk.Toplevel(self.root)
         try:
-            w = int(self.controller.settings.get("last_window_width",640))
+            w = int(self.controller.settings.get("last_window_width",730))
             h = int(self.controller.settings.get("last_window_height",480))
         except:
             # wut - who be breakin dis?
-            w = 640
+            w = 730
             h = 480
         # Save the previous states for comparison
         self.previous_height = h
         self.previous_width = w
-        self.minsize(width=640,height=480)
+        self.minsize(width=730,height=480)
         self.protocol("WM_DELETE_WINDOW", self.close_window)
         # Let's also center the window
         x = self.winfo_screenwidth() // 2 - w // 2
@@ -362,7 +362,7 @@ class PlistWindow(tk.Toplevel):
             file_menu.add_command(label="Settings",command=lambda:self.controller.show_window(self.controller.settings_window), accelerator="Ctrl+,")
             file_menu.add_separator()
             file_menu.add_command(label="Toggle Find/Replace Pane",command=self.hide_show_find, accelerator="Ctrl+F")
-            file_menu.add_command(label="Toggle Plist/Data/Int Type Pane",command=self.hide_show_type, accelerator="Ctrl+P")
+            file_menu.add_command(label="Toggle Plist/Data/Int/Bool Type Pane",command=self.hide_show_type, accelerator="Ctrl+P")
             file_menu.add_separator()
             file_menu.add_command(label="Quit", command=self.controller.quit, accelerator="Ctrl+Q")
             self.config(menu=main_menu)
@@ -385,8 +385,8 @@ class PlistWindow(tk.Toplevel):
             self.display_frame.columnconfigure(x,weight=1)
         pt_label = tk.Label(self.display_frame,text="Plist Type:")
         dt_label = tk.Label(self.display_frame,text="Display Data as:")
-        in_label = tk.Label(self.display_frame,text="Display Integers as:")
-        bl_label = tk.Label(self.display_frame,text="Display Booleans as:")
+        in_label = tk.Label(self.display_frame,text="Display Ints as:")
+        bl_label = tk.Label(self.display_frame,text="Display Bools as:")
         self.plist_type_string = tk.StringVar(self.display_frame)
         self.plist_type_menu = tk.OptionMenu(self.display_frame, self.plist_type_string, *self.controller.allowed_types, command=self.change_plist_type)
         self.plist_type_string.set(self.controller.allowed_types[0])
@@ -399,14 +399,14 @@ class PlistWindow(tk.Toplevel):
         self.bool_type_string = tk.StringVar(self.display_frame)
         self.bool_type_menu = tk.OptionMenu(self.display_frame, self.bool_type_string, *self.controller.allowed_bool, command=self.change_bool_type)
         self.bool_type_string.set(self.controller.allowed_bool[0])
-        pt_label.grid(row=1,column=1,padx=10,pady=(0,5),sticky="w")
-        dt_label.grid(row=1,column=3,padx=10,pady=(0,5),sticky="w")
-        in_label.grid(row=1,column=5,padx=10,pady=(0,5),sticky="w")
-        bl_label.grid(row=1,column=7,padx=10,pady=(0,5),sticky="w")
-        self.plist_type_menu.grid(row=1,column=2,padx=10,pady=10,sticky="we")
-        self.data_type_menu.grid(row=1,column=4,padx=10,pady=10,sticky="we")
-        self.int_type_menu.grid(row=1,column=6,padx=10,pady=10,sticky="we")
-        self.bool_type_menu.grid(row=1,column=8,padx=10,pady=10,sticky="we")
+        pt_label.grid(row=1,column=1,pady=10,sticky="w")
+        dt_label.grid(row=1,column=3,pady=10,sticky="w")
+        in_label.grid(row=1,column=5,pady=10,sticky="w")
+        bl_label.grid(row=1,column=7,pady=10,sticky="w")
+        self.plist_type_menu.grid(row=1,column=2,pady=10,padx=5,sticky="we")
+        self.data_type_menu.grid(row=1,column=4,pady=10,padx=5,sticky="we")
+        self.int_type_menu.grid(row=1,column=6,pady=10,padx=5,sticky="we")
+        self.bool_type_menu.grid(row=1,column=8,pady=10,padx=5,sticky="we")
         
         # Create our find/replace view
         self.find_frame = tk.Frame(self,height=20)
