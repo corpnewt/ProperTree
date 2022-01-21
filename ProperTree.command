@@ -126,31 +126,34 @@ class ProperTree:
         tfunc_label = tk.Label(self.settings_window,text="Appearance Options:")
         tfunc_label.grid(row=0,column=3,sticky="w",padx=10,pady=10)
 
-        r1_label = tk.Label(self.settings_window,text="Alternating Row Color #1:")
-        r1_label.grid(row=1,column=3,sticky="w",padx=10)
-        self.r1_canvas = tk.Canvas(self.settings_window, height=20, width=30, background="black", relief="groove", bd=2)
-        self.r1_canvas.grid(row=1,column=4,sticky="we",padx=10)
-        r2_label = tk.Label(self.settings_window,text="Alternating Row Color #2:")
-        r2_label.grid(row=2,column=3,sticky="w",padx=10)
-        self.r2_canvas = tk.Canvas(self.settings_window, height=20, width=30, background="black", relief="groove", bd=2)
-        self.r2_canvas.grid(row=2,column=4,sticky="we",padx=10)
-        r3_label = tk.Label(self.settings_window,text="Background Color:")
-        r3_label.grid(row=3,column=3,sticky="w",padx=10)
+        r3_label = tk.Label(self.settings_window,text="Column Header/BG Color:")
+        r3_label.grid(row=1,column=3,sticky="w",padx=10)
         self.bg_canvas = tk.Canvas(self.settings_window, height=20, width=30, background="black", relief="groove", bd=2)
-        self.bg_canvas.grid(row=3,column=4,sticky="we",padx=10)
+        self.bg_canvas.grid(row=1,column=4,sticky="we",padx=10)
+        r1_label = tk.Label(self.settings_window,text="Alternating Row Color #1:")
+        r1_label.grid(row=2,column=3,sticky="w",padx=10)
+        self.r1_canvas = tk.Canvas(self.settings_window, height=20, width=30, background="black", relief="groove", bd=2)
+        self.r1_canvas.grid(row=2,column=4,sticky="we",padx=10)
+        r2_label = tk.Label(self.settings_window,text="Alternating Row Color #2:")
+        r2_label.grid(row=3,column=3,sticky="w",padx=10)
+        self.r2_canvas = tk.Canvas(self.settings_window, height=20, width=30, background="black", relief="groove", bd=2)
+        self.r2_canvas.grid(row=3,column=4,sticky="we",padx=10)
         r4_label = tk.Label(self.settings_window,text="Highlight Color:")
         r4_label.grid(row=4,column=3,sticky="w",padx=10)
         self.hl_canvas = tk.Canvas(self.settings_window, height=20, width=30, background="black", relief="groove", bd=2)
         self.hl_canvas.grid(row=4,column=4,sticky="we",padx=10)
+        self.bg_inv_check = tk.IntVar()
+        self.bg_inv = tk.Checkbutton(self.settings_window,text="Invert Header Text Color",variable=self.bg_inv_check,command=self.check_bg_invert_command)
+        self.bg_inv.grid(row=5,column=4,sticky="w",padx=10)
         self.r1_inv_check = tk.IntVar()
         self.r1_inv = tk.Checkbutton(self.settings_window,text="Invert Row #1 Text Color",variable=self.r1_inv_check,command=self.check_r1_invert_command)
-        self.r1_inv.grid(row=5,column=4,sticky="w",padx=10)
+        self.r1_inv.grid(row=6,column=4,sticky="w",padx=10)
         self.r2_inv_check = tk.IntVar()
         self.r2_inv = tk.Checkbutton(self.settings_window,text="Invert Row #2 Text Color",variable=self.r2_inv_check,command=self.check_r2_invert_command)
-        self.r2_inv.grid(row=6,column=4,sticky="w",padx=10)
+        self.r2_inv.grid(row=7,column=4,sticky="w",padx=10)
         self.hl_inv_check = tk.IntVar()
         self.hl_inv = tk.Checkbutton(self.settings_window,text="Invert Highlight Text Color",variable=self.hl_inv_check,command=self.check_hl_invert_command)
-        self.hl_inv.grid(row=7,column=4,sticky="w",padx=10)
+        self.hl_inv.grid(row=8,column=4,sticky="w",padx=10)
 
         self.default_font = Font(font='TkTextFont')
         self.custom_font = tk.IntVar()
@@ -158,8 +161,8 @@ class ProperTree:
         self.font_string = tk.StringVar()
         self.font_spinbox = tk.Spinbox(self.settings_window,from_=1,to=128,textvariable=self.font_string)
         self.font_string.trace("w",self.update_font)
-        self.font_check.grid(row=8,column=3,sticky="w",padx=10)
-        self.font_spinbox.grid(row=8,column=4,sticky="we",padx=10)
+        self.font_check.grid(row=9,column=3,sticky="w",padx=10)
+        self.font_spinbox.grid(row=9,column=4,sticky="we",padx=10)
 
         # Custom font picker - wacky implementation.
         self.font_var = tk.IntVar()
@@ -168,20 +171,20 @@ class ProperTree:
         self.font_custom = ttk.Combobox(self.settings_window,state="readonly",textvariable=self.font_family,values=sorted(families()))
         self.font_custom.bind('<<ComboboxSelected>>',self.font_pick)
         self.font_family.trace("w",self.update_font_family)
-        self.font_custom_check.grid(row=9,column=3,stick="w",padx=10)
-        self.font_custom.grid(row=9,column=4,sticky="we",padx=10)
+        self.font_custom_check.grid(row=10,column=3,stick="w",padx=10)
+        self.font_custom.grid(row=10,column=4,sticky="we",padx=10)
 
         r5_label = tk.Label(self.settings_window,text="Restore Default Colors:")
-        r5_label.grid(row=10,column=3,sticky="w",padx=10)
+        r5_label.grid(row=11,column=3,sticky="w",padx=10)
         dt_func = ttk.Separator(self.settings_window,orient="horizontal")
-        dt_func.grid(row=10,column=4,columnspan=1,sticky="we",padx=10)
+        dt_func.grid(row=11,column=4,columnspan=1,sticky="we",padx=10)
 
         default_high = tk.Button(self.settings_window,text="Highlight Color",command=lambda:self.swap_colors("highlight"))
-        default_high.grid(row=11,column=4,sticky="we",padx=10)
+        default_high.grid(row=12,column=4,sticky="we",padx=10)
         default_light = tk.Button(self.settings_window,text="Light Mode Colors",command=lambda:self.swap_colors("light"))
-        default_light.grid(row=12,column=4,sticky="we",padx=10)
+        default_light.grid(row=13,column=4,sticky="we",padx=10)
         default_dark = tk.Button(self.settings_window,text="Dark Mode Colors",command=lambda:self.swap_colors("dark"))
-        default_dark.grid(row=13,column=4,sticky="we",padx=10)
+        default_dark.grid(row=14,column=4,sticky="we",padx=10)
 
         sep_theme = ttk.Separator(self.settings_window,orient="horizontal")
         sep_theme.grid(row=15,column=0,columnspan=5,sticky="we",padx=10,pady=(10,0))
@@ -197,6 +200,7 @@ class ProperTree:
 
         # Setup some canvas connections
         self.canvas_connect = {
+            self.bg_canvas: {"invert":self.bg_inv_check},
             self.r1_canvas: {"invert":self.r1_inv_check},
             self.r2_canvas: {"invert":self.r2_inv_check},
             self.hl_canvas: {"invert":self.hl_inv_check}
@@ -207,6 +211,7 @@ class ProperTree:
             "alternating_color_2":"#202020",
             "highlight_color":"#1E90FF",
             "background_color":"#161616",
+            "invert_background_text_color":False,
             "invert_row1_text_color":False,
             "invert_row2_text_color":False
         }
@@ -215,6 +220,7 @@ class ProperTree:
             "alternating_color_2":"#FEFEFE",
             "highlight_color":"#1E90FF",
             "background_color":"#FEFEFE",
+            "invert_background_text_color":False,
             "invert_row1_text_color":False,
             "invert_row2_text_color":False
         }
@@ -341,30 +347,31 @@ class ProperTree:
         #
         # Load the settings - current available settings are:
         # 
-        # last_window_width:          width value (default is 640)
-        # last_window_height:         height value (default is 480)
-        # expand_all_items_on_open:   bool
-        # sort_dict:                  bool, false = OrderedDict
-        # xcode_data:                 bool, true = <data>XXXX</data>, false = different lines
-        # comment_strip_prefix:       string, defaults to #
-        # comment_strip_ignore_case:  bool, true = ignore case when stripping comments
-        # comment_strip_check_string: bool, true = consider string values as well as keys
-        # new_plist_default_type:     string, XML/Binary
-        # display_data_as:            string, Hex/Base64
-        # display_int_as:             string, Decimal/Hex
-        # snapshot_version:           string, X.X.X version number, or Latest
-        # force_snapshot_schema:      bool
-        # alternating_color_1:        string, Dark: #161616 - Light: #F0F1F1
-        # alternating_color_2:        string, Dark: #202020 - Light: #FEFEFE
-        # highlight_color:            string, Dark: #1E90FF - Light: #1E90FF
-        # background_color:           string, Dark: #161616 - Light: #FEFEFE
-        # invert_row1_text_color:     bool
-        # invert_row2_text_color:     bool
-        # invert_hl_text_color:       bool
-        # drag_dead_zone:             pixel distance before drag starts (default is 20)
-        # open_recent:                list, paths recently opened
-        # recent_max:                 int, max number of recent items
-        # max_undo:                   int, max undo history - 0 = unlimited
+        # last_window_width:            width value (default is 640)
+        # last_window_height:           height value (default is 480)
+        # expand_all_items_on_open:     bool
+        # sort_dict:                    bool, false = OrderedDict
+        # xcode_data:                   bool, true = <data>XXXX</data>, false = different lines
+        # comment_strip_prefix:         string, defaults to #
+        # comment_strip_ignore_case:    bool, true = ignore case when stripping comments
+        # comment_strip_check_string:   bool, true = consider string values as well as keys
+        # new_plist_default_type:       string, XML/Binary
+        # display_data_as:              string, Hex/Base64
+        # display_int_as:               string, Decimal/Hex
+        # snapshot_version:             string, X.X.X version number, or Latest
+        # force_snapshot_schema:        bool
+        # alternating_color_1:          string, Dark: #161616 - Light: #F0F1F1
+        # alternating_color_2:          string, Dark: #202020 - Light: #FEFEFE
+        # highlight_color:              string, Dark: #1E90FF - Light: #1E90FF
+        # background_color:             string, Dark: #161616 - Light: #FEFEFE
+        # invert_background_text_color: bool
+        # invert_row1_text_color:       bool
+        # invert_row2_text_color:       bool
+        # invert_hl_text_color:         bool
+        # drag_dead_zone:               pixel distance before drag starts (default is 20)
+        # open_recent:                  list, paths recently opened
+        # recent_max:                   int, max number of recent items
+        # max_undo:                     int, max undo history - 0 = unlimited
         #
 
         self.settings = {}
@@ -481,6 +488,10 @@ class ProperTree:
 
     def check_string_command(self, event = None):
         self.settings["comment_strip_check_string"] = True if self.comment_check_string.get() else False
+
+    def check_bg_invert_command(self, event = None):
+        self.settings["invert_background_text_color"] = True if self.bg_inv_check.get() else False
+        self.update_colors()
 
     def check_r1_invert_command(self, event = None):
         self.settings["invert_row1_text_color"] = True if self.r1_inv_check.get() else False
@@ -628,6 +639,7 @@ class ProperTree:
         self.r2_canvas.configure(background="#"+color_2 if len(color_2) == 6 else default_color["alternating_color_2"])
         self.hl_canvas.configure(background="#"+color_h if len(color_h) == 6 else default_color["highlight_color"])
         self.bg_canvas.configure(background="#"+color_b if len(color_b) == 6 else default_color["background_color"])
+        self.bg_inv_check.set(self.settings.get("invert_background_text_color",False))
         self.r1_inv_check.set(self.settings.get("invert_row1_text_color",False))
         self.r2_inv_check.set(self.settings.get("invert_row2_text_color",False))
         self.hl_inv_check.set(self.settings.get("invert_hl_text_color",False))
@@ -642,7 +654,7 @@ class ProperTree:
 
     def update_canvas_text(self, canvas = None):
         if canvas == None: # Update all
-            canvas = (self.r1_canvas,self.r2_canvas,self.hl_canvas)
+            canvas = (self.bg_canvas,self.r1_canvas,self.r2_canvas,self.hl_canvas)
         if not isinstance(canvas, (tuple,list)): canvas = (canvas,)
         for c in canvas:
             if not c in self.canvas_connect: continue # Not a recognized canvas - skip
