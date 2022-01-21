@@ -27,6 +27,7 @@ class ProperTree:
     def __init__(self, plists = []):
         # Create the new tk object
         self.tk = tk.Tk()
+        self.tk.withdraw() # Try to remove before it's drawn
         self.tk.title("Convert Values")
         self.tk.minsize(width=640,height=130)
         self.tk.resizable(True, False)
@@ -40,6 +41,7 @@ class ProperTree:
 
         # Create the settings window
         self.settings_window = tk.Toplevel(self.tk)
+        self.settings_window.withdraw() # Try to remove before it's drawn
         self.settings_window.title("ProperTree Settings")
         self.settings_window.resizable(False, False)
         self.settings_window.columnconfigure(0,weight=1)
@@ -278,9 +280,6 @@ class ProperTree:
 
         self.tk.protocol("WM_DELETE_WINDOW", self.close_window)
         self.settings_window.protocol("WM_DELETE_WINDOW", self.close_window)
-        # Close initial windows
-        self.tk.withdraw()
-        self.settings_window.withdraw()
 
         self.default_windows = (self.tk,self.settings_window)
 
@@ -872,9 +871,12 @@ class ProperTree:
         if len(windows):
             windows[-1].withdraw()
             windows = windows[:-1]
-        if check_close and not len(windows):
+        if not len(windows):
             # Quit if all windows are closed
-            self.quit()
+            if check_close: self.quit()
+        else:
+            # Bring the last window forward
+            self.lift_window(windows[-1])
 
     def strip_comments(self, event = None):
         windows = self.stackorder(self.tk)
