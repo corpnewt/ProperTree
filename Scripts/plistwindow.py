@@ -1464,7 +1464,17 @@ class PlistWindow(tk.Toplevel):
     def add_undo(self, action):
         if not isinstance(action,list):
             action = [action]
+        try: # Get the max undo items
+            max_undo = int(self.controller.undo_max_text.get())
+            assert max_undo >= 0
+        except:
+            max_undo = self.controller.max_undo
         self.undo_stack.append(action)
+        # See if we need to limit the undo_stack
+        if max_undo > 0:
+            # Pop the first item until we're at/under max
+            while len(self.undo_stack) > max_undo:
+                self.undo_stack.pop(0)
         self.redo_stack = [] # clear the redo stack
 
     def reundo(self, event=None, undo = True, single_undo = None):
