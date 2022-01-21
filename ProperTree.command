@@ -142,6 +142,9 @@ class ProperTree:
         r4_label.grid(row=4,column=3,sticky="w",padx=10)
         self.hl_canvas = tk.Canvas(self.settings_window, height=20, width=30, background="black", relief="groove", bd=2)
         self.hl_canvas.grid(row=4,column=4,sticky="we",padx=10)
+        self.ig_bg_check = tk.IntVar()
+        self.ig_bg = tk.Checkbutton(self.settings_window,text="Header Text Ignores BG Color",variable=self.ig_bg_check,command=self.check_ig_bg_command)
+        self.ig_bg.grid(row=5,column=3,sticky="w",padx=10)
         self.bg_inv_check = tk.IntVar()
         self.bg_inv = tk.Checkbutton(self.settings_window,text="Invert Header Text Color",variable=self.bg_inv_check,command=self.check_bg_invert_command)
         self.bg_inv.grid(row=5,column=4,sticky="w",padx=10)
@@ -364,6 +367,7 @@ class ProperTree:
         # alternating_color_2:          string, Dark: #202020 - Light: #FEFEFE
         # highlight_color:              string, Dark: #1E90FF - Light: #1E90FF
         # background_color:             string, Dark: #161616 - Light: #FEFEFE
+        # header_text_ignore_bg_color:  bool
         # invert_background_text_color: bool
         # invert_row1_text_color:       bool
         # invert_row2_text_color:       bool
@@ -488,6 +492,10 @@ class ProperTree:
 
     def check_string_command(self, event = None):
         self.settings["comment_strip_check_string"] = True if self.comment_check_string.get() else False
+
+    def check_ig_bg_command(self, event = None):
+        self.settings["header_text_ignore_bg_color"] = True if self.ig_bg_check.get() else False
+        self.update_colors()
 
     def check_bg_invert_command(self, event = None):
         self.settings["invert_background_text_color"] = True if self.bg_inv_check.get() else False
@@ -639,6 +647,7 @@ class ProperTree:
         self.r2_canvas.configure(background="#"+color_2 if len(color_2) == 6 else default_color["alternating_color_2"])
         self.hl_canvas.configure(background="#"+color_h if len(color_h) == 6 else default_color["highlight_color"])
         self.bg_canvas.configure(background="#"+color_b if len(color_b) == 6 else default_color["background_color"])
+        self.ig_bg_check.set(self.settings.get("header_text_ignore_bg_color",False))
         self.bg_inv_check.set(self.settings.get("invert_background_text_color",False))
         self.r1_inv_check.set(self.settings.get("invert_row1_text_color",False))
         self.r2_inv_check.set(self.settings.get("invert_row2_text_color",False))
