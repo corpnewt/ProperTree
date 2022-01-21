@@ -46,6 +46,8 @@ class ProperTree:
         self.settings_window.columnconfigure(1,weight=1)
         self.settings_window.columnconfigure(3,weight=1)
         self.settings_window.columnconfigure(4,weight=1)
+
+        self.max_undo = 200
         
         # Left side - functional elements:
         
@@ -106,6 +108,10 @@ class ProperTree:
         self.drag_label.grid(row=13,column=0,sticky="w",padx=10)
         self.drag_scale = tk.Scale(self.settings_window,from_=1,to=100,orient=tk.HORIZONTAL)
         self.drag_scale.grid(row=13,column=1,sticky="we",padx=10)
+        undo_max_label = tk.Label(self.settings_window,text="Max Undo (0=unlim, {}=default):".format(self.max_undo))
+        undo_max_label.grid(row=14,column=0,sticky="w",padx=10)
+        self.undo_max_text = tk.Entry(self.settings_window)
+        self.undo_max_text.grid(row=14,column=1,sticky="we",padx=10)
         
         # Left/right separator:
         sep = ttk.Separator(self.settings_window,orient="vertical")
@@ -175,10 +181,10 @@ class ProperTree:
         default_dark.grid(row=13,column=4,sticky="we",padx=10)
 
         sep_theme = ttk.Separator(self.settings_window,orient="horizontal")
-        sep_theme.grid(row=14,column=0,columnspan=5,sticky="we",padx=10,pady=(10,0))
+        sep_theme.grid(row=15,column=0,columnspan=5,sticky="we",padx=10,pady=(10,0))
         
         reset_settings = tk.Button(self.settings_window,text="Restore All Defaults",command=self.reset_settings)
-        reset_settings.grid(row=15,column=4,sticky="we",padx=10,pady=10)
+        reset_settings.grid(row=16,column=4,sticky="we",padx=10,pady=10)
 
         # Setup the color picker click methods
         self.r1_canvas.bind("<ButtonRelease-1>",lambda x:self.pick_color("alternating_color_1",self.r1_canvas))
@@ -358,6 +364,7 @@ class ProperTree:
         # drag_dead_zone:             pixel distance before drag starts (default is 20)
         # open_recent:                list, paths recently opened
         # recent_max:                 int, max number of recent items
+        # max_undo:                   int, max undo history - 0 = unlimited
         #
 
         self.settings = {}
@@ -600,6 +607,10 @@ class ProperTree:
         prefix = self.settings.get("comment_strip_prefix","#")
         prefix = "#" if not prefix else prefix
         self.comment_prefix_text.insert(0,prefix)
+        self.undo_max_text.delete(0,tk.END)
+        max_undo = self.settings.get("max_undo",self.max_undo)
+        max_undo = self.max_undo if not isinstance(max_undo,int) or max_undo < 0 else max_undo
+        self.undo_max_text.insert(0,str(max_undo))
         default_color = self.default_dark if self.use_dark else self.default_light
         color_1 = "".join([x for x in self.settings.get("alternating_color_1",default_color["alternating_color_1"]) if x.lower() in "0123456789abcdef"])
         color_2 = "".join([x for x in self.settings.get("alternating_color_2",default_color["alternating_color_2"]) if x.lower() in "0123456789abcdef"])
@@ -1132,6 +1143,12 @@ class ProperTree:
         prefix = self.comment_prefix_text.get()
         prefix = "#" if not prefix else prefix
         self.settings["comment_strip_prefix"] = prefix
+        try:
+            max_undo = int(self.undo_max_text.get())
+            assert max_undo >= 0
+        except:
+            max_undo = self.max_undo
+        self.settings["max_undo"] = max_undo
         self.settings["drag_dead_zone"] = self.drag_scale.get()
         # Actually quit the tkinter session
         self.tk.destroy()
