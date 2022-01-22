@@ -126,10 +126,10 @@ class ProperTree:
         tfunc_label = tk.Label(self.settings_window,text="Appearance Options:")
         tfunc_label.grid(row=0,column=3,sticky="w",padx=10,pady=10)
 
-        r3_label = tk.Label(self.settings_window,text="Column Header/BG Color:")
-        r3_label.grid(row=1,column=3,sticky="w",padx=10)
-        self.bg_canvas = tk.Canvas(self.settings_window, height=20, width=30, background="black", relief="groove", bd=2)
-        self.bg_canvas.grid(row=1,column=4,sticky="we",padx=10)
+        r4_label = tk.Label(self.settings_window,text="Highlight Color:")
+        r4_label.grid(row=1,column=3,sticky="w",padx=10)
+        self.hl_canvas = tk.Canvas(self.settings_window, height=20, width=30, background="black", relief="groove", bd=2)
+        self.hl_canvas.grid(row=1,column=4,sticky="we",padx=10)
         r1_label = tk.Label(self.settings_window,text="Alternating Row Color #1:")
         r1_label.grid(row=2,column=3,sticky="w",padx=10)
         self.r1_canvas = tk.Canvas(self.settings_window, height=20, width=30, background="black", relief="groove", bd=2)
@@ -138,10 +138,10 @@ class ProperTree:
         r2_label.grid(row=3,column=3,sticky="w",padx=10)
         self.r2_canvas = tk.Canvas(self.settings_window, height=20, width=30, background="black", relief="groove", bd=2)
         self.r2_canvas.grid(row=3,column=4,sticky="we",padx=10)
-        r4_label = tk.Label(self.settings_window,text="Highlight Color:")
-        r4_label.grid(row=4,column=3,sticky="w",padx=10)
-        self.hl_canvas = tk.Canvas(self.settings_window, height=20, width=30, background="black", relief="groove", bd=2)
-        self.hl_canvas.grid(row=4,column=4,sticky="we",padx=10)
+        r3_label = tk.Label(self.settings_window,text="Column Header/BG Color:")
+        r3_label.grid(row=4,column=3,sticky="w",padx=10)
+        self.bg_canvas = tk.Canvas(self.settings_window, height=20, width=30, background="black", relief="groove", bd=2)
+        self.bg_canvas.grid(row=4,column=4,sticky="we",padx=10)
         self.ig_bg_check = tk.IntVar()
         self.ig_bg = tk.Checkbutton(self.settings_window,text="Header Text Ignores BG Color",variable=self.ig_bg_check,command=self.check_ig_bg_command)
         self.ig_bg.grid(row=5,column=3,sticky="w",padx=10)
@@ -444,6 +444,15 @@ class ProperTree:
             self.update_settings()
         # Continue the loop
         self.tk.after(10000, lambda:self.check_dark_mode())
+
+    def should_set_header_text(self):
+        # In macOS, the header colors are only affected by the background
+        # when in dark mode on specific python build
+        # We'll try to get the system's actual dark mode here
+        if str(sys.platform) != "darwin": return True # Don't make changes on Windows/Linux
+        p = subprocess.Popen(["defaults","read","-g","AppleInterfaceStyle"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        c = p.communicate()
+        return c[0].decode("utf-8", "ignore").strip().lower() == "dark"
 
     def get_dark(self):
         if os.name=="nt":
