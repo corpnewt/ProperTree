@@ -450,9 +450,11 @@ class ProperTree:
         # when in dark mode on specific python build
         # We'll try to get the system's actual dark mode here
         if str(sys.platform) != "darwin": return True # Don't make changes on Windows/Linux
-        p = subprocess.Popen(["defaults","read","-g","AppleInterfaceStyle"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        c = p.communicate()
-        return c[0].decode("utf-8", "ignore").strip().lower() == "dark"
+        try:
+            # Ask the window if it's in dark mode - only works when supported
+            return bool(self.tk.call("tk::unsupported::MacWindowStyle","isdark",self.tk))
+        except Exception as e:
+            return False # If this fails, window doesn't support dark mode
 
     def get_dark(self):
         if os.name=="nt":
