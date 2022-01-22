@@ -2890,7 +2890,8 @@ class PlistWindow(tk.Toplevel):
         self.r2 = self.controller.r2_canvas["background"]
         self.hl = self.controller.hl_canvas["background"]
         self.bg = self.controller.bg_canvas["background"]
-        if self.controller.ig_bg_check.get(): # Ignoring background color when updating header text
+        if self.controller.ig_bg_check.get() or not self.controller.should_set_header_text():
+            # Ignoring background color when updating header text
             self.bgt = "white" if self.controller.bg_inv_check.get() else "black"
         else:
             self.bgt = self.controller.text_color(self.bg,invert=self.controller.bg_inv_check.get())
