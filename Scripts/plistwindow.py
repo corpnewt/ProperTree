@@ -69,8 +69,13 @@ class EntryPopup(tk.Entry):
         self.relocate()
 
     def focus_out(self, event=None):
-        # Pass None as the event to prevent the bell()
-        self.confirm(None, no_prompt=True)
+        if self.master.focus_get():
+            # Pass True as the event to allow the bell() when our window still
+            # has focus (means we're actively editing)
+            self.confirm(True)
+        else:
+            # Pass None as the event to prevent the bell()
+            self.confirm(None, no_prompt=True)
 
     def relocate(self, event=None):
         # Helper called when the window is scrolled to move the popup
@@ -185,8 +190,9 @@ class EntryPopup(tk.Entry):
                     # Have a match, beep and bail
                     if event: self.bell() # Only bell when we have a real event (i.e. return was pressed)
                     if no_prompt or not mb.askyesno("Invalid Key Name","That key name already exists in that dict.\n\nWould you like to keep editing?",parent=self.parent):
-                        self.cancel(event)
-                    return
+                        return self.cancel(event)
+                    # no_prompt is false and we wanted to continue editing - set focus again and return
+                    return self.focus_force()
             # Add to undo stack
             self.master.add_undo({"type":"edit","cell":self.cell,"text":self.parent.item(self.cell,"text"),"values":self.parent.item(self.cell,"values")})
             # No matches, should be safe to set
@@ -212,8 +218,9 @@ class EntryPopup(tk.Entry):
                 # Didn't pass the test - show the error and prompt for edit continuing
                 if event: self.bell() # Only bell when we have a real event (i.e. return was pressed)
                 if no_prompt or not mb.askyesno(output[1],output[2]+"\n\nWould you like to keep editing?",parent=self.parent):
-                    self.cancel(event)
-                return
+                    return self.cancel(event)
+                # no_prompt is false and we wanted to continue editing - set focus again and return
+                return self.focus_force()
             # Set the value to the new output
             value = output[1]
             # Add to undo stack
@@ -222,6 +229,7 @@ class EntryPopup(tk.Entry):
             values[index-1] = value
             # Set the values
             self.parent.item(self.cell, values=values)
+        # Call cancel to close the popup as we're done editing
         self.cancel(event)
 
 class PlistWindow(tk.Toplevel):
