@@ -509,6 +509,7 @@ class PlistWindow(tk.Toplevel):
         self.set_font_size() # Necessary because turning off 'custom font' option seems to fallback to font_size of '9'.
 
     def window_resize(self, event=None, obj=None):
+        if self.entry_popup: self.entry_popup.relocate()
         if not event or not obj: return
         if self.winfo_height() == self.previous_height and self.winfo_width() == self.previous_width: return
         self.previous_height = self.winfo_height()
