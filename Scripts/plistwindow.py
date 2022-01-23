@@ -54,21 +54,42 @@ class EntryPopup(tk.Entry):
             self.bind("<Control-a>", self.select_all)
             self.bind("<Control-c>", self.copy)
             self.bind("<Control-v>", self.paste)
-        self.bind("<Escape>", self.cancel)
-        self.bind("<Return>", self.confirm)
-        self.bind("<KP_Enter>", self.confirm)
-        self.bind("<Up>", self.goto_start)
-        self.bind("<Down>", self.goto_end)
-        self.bind("<Tab>", self.next_field)
+        self.bind("<Key>",self.reveal)
+        self.bind("<Escape>", lambda x:[self.reveal(x),self.cancel(x)])
+        self.bind("<Return>", lambda x:[self.reveal(x),self.confirm(x)])
+        self.bind("<KP_Enter>", lambda x:[self.reveal(x),self.confirm(x)])
+        self.bind("<Up>", lambda x:[self.reveal(x),self.goto_start(x)])
+        self.bind("<Down>", lambda x:[self.reveal(x),self.goto_end(x)])
+        self.bind("<Tab>", lambda x:[self.reveal(x),self.next_field(x)])
         self.bind("<FocusOut>", self.focus_out)
 
-    def focus_out(self, event):
-        self.confirm(event, no_prompt=True)
+    def reveal(self, event=None):
+        # Make sure we're visible if editing
+        self.parent.see(self.cell)
+        self.relocate()
+
+    def focus_out(self, event=None):
+        # Pass None as the event to prevent the bell()
+        self.confirm(None, no_prompt=True)
+
+    def relocate(self, event=None):
+        # Helper called when the window is scrolled to move the popup
+        bbox = self.parent.bbox(self.cell, column=self.column)
+        if bbox:
+            # Move the entry to accommodate the new cell bbox
+            x,y,width,height = bbox
+            pady = height//2
+            self.place(x=x,y=y+pady,anchor="w",width=width)
+        elif self.winfo_viewable():
+            # Entry left the visible area, and our popup is still visible,
+            # hide it
+            self.place_forget()
 
     def cancel(self, event):
-        # Force the parent focus then destroy self
-        self.parent.focus_force()
+        # Destroy ourself, then force the parent to focus
         self.destroy()
+        self.master.entry_popup = None
+        self.parent.focus_force()
 
     def next_field(self, event):
         # We need to determine if our other field can be edited
@@ -94,10 +115,7 @@ class EntryPopup(tk.Entry):
             x,y,width,height = self.master._tree.bbox(self.cell, edit_col)
             # Create an event
             e = tk.Event
-            e.x = x+5
-            e.y = y+5
-            e.x_root = 0
-            e.y_root = 0
+            e.x, e.y, e.x_root, e.y_root = x+5, y+5, 0, 0
             self.master.on_double_click(e)
             return 'break'
 
@@ -149,6 +167,8 @@ class EntryPopup(tk.Entry):
         return 'break'
 
     def confirm(self, event, no_prompt = False):
+        if not self.winfo_exists():
+            return
         if self.column == "#0":
             # First we make sure that no other siblings
             # have the same name - as dict names need to be
@@ -163,10 +183,9 @@ class EntryPopup(tk.Entry):
                 # keys
                 if text == self.parent.item(child, "text"):
                     # Have a match, beep and bail
-                    if not event == None:
-                        self.bell()
-                        if no_prompt or not mb.askyesno("Invalid Key Name","That key name already exists in that dict.\n\nWould you like to keep editing?",parent=self.parent):
-                            self.destroy()
+                    if event: self.bell() # Only bell when we have a real event (i.e. return was pressed)
+                    if no_prompt or not mb.askyesno("Invalid Key Name","That key name already exists in that dict.\n\nWould you like to keep editing?",parent=self.parent):
+                        self.cancel(event)
                     return
             # Add to undo stack
             self.master.add_undo({"type":"edit","cell":self.cell,"text":self.parent.item(self.cell,"text"),"values":self.parent.item(self.cell,"values")})
@@ -191,10 +210,9 @@ class EntryPopup(tk.Entry):
             output = self.master.qualify_value(value,type_value)
             if output[0] == False:
                 # Didn't pass the test - show the error and prompt for edit continuing
-                if not event == None:
-                    self.bell()
-                    if no_prompt or not mb.askyesno(output[1],output[2]+"\n\nWould you like to keep editing?",parent=self.parent):
-                        self.destroy()
+                if event: self.bell() # Only bell when we have a real event (i.e. return was pressed)
+                if no_prompt or not mb.askyesno(output[1],output[2]+"\n\nWould you like to keep editing?",parent=self.parent):
+                    self.cancel(event)
                 return
             # Set the value to the new output
             value = output[1]
@@ -326,8 +344,8 @@ class PlistWindow(tk.Toplevel):
         self._tree.bind("<{}-v>".format(key), self.paste_selection)
 
         # Create the scrollbar
-        vsb = ttk.Scrollbar(self._tree_frame, orient='vertical', command=self._tree.yview)
-        self._tree.configure(yscrollcommand=vsb.set)
+        self.vsb = ttk.Scrollbar(self._tree_frame,orient='vertical',command=self._tree.yview)
+        self._tree.configure(yscrollcommand=self.scrollbar_set)
 
         # Bind right click
         if str(sys.platform) == "darwin":
@@ -465,10 +483,17 @@ class PlistWindow(tk.Toplevel):
         self.f_case.grid(row=0,column=5,sticky="w")
 
         # Add the scroll bars and show the treeview
-        vsb.pack(side="right",fill="y")
+        self.vsb.pack(side="right",fill="y")
         self._tree.pack(side="bottom",fill="both",expand=True)
         self.draw_frames()
         self.entry_popup = None
+
+    def scrollbar_set(self, *args):
+        # Intercepted scrollbar set method to set where our
+        # entry_popup is (if any)
+        self.vsb.set(*args)
+        if not self.entry_popup: return
+        self.entry_popup.relocate()
 
     def set_font_size(self):
         self.font["size"] = self.controller.font_string.get() if self.controller.custom_font.get() else self.controller.default_font["size"]
@@ -2761,12 +2786,8 @@ class PlistWindow(tk.Toplevel):
             return "break"
         # clicked row parent id
         parent = self._tree.parent(rowid)
-        # get column position info
-        x,y,width,height = self._tree.bbox(rowid, column)
         # get the actual item name we're editing
         tv_item = self._tree.identify('item', event.x, event.y)
-        # y-axis offset
-        pady = height // 2
         # Get the actual text
         index = int(column.replace("#",""))
         try:
@@ -2817,7 +2838,7 @@ class PlistWindow(tk.Toplevel):
             text = text.replace("<","").replace(">","")
         # place Entry popup properly
         self.entry_popup = EntryPopup(self._tree, self, text, tv_item, column)
-        self.entry_popup.place( x=x, y=y+pady, anchor="w", width=width)
+        self.entry_popup.relocate()
         if not self.edited:
             self.edited = True
             self.title(self.title()+" - Edited")
