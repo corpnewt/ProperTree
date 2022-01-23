@@ -1849,6 +1849,39 @@ class PlistWindow(tk.Toplevel):
         # Pass the current plist to the save_plist_as function
         return self.save_plist_as(event, self.current_plist)
 
+    def _format_data_string(self,plist_text):
+        # Helper method to format <data> tags inline
+        if not isinstance(plist_text,(list,tuple)):
+            # Split it if it's not already a list
+            plist_text = plist_text.split("\n")
+        new_plist = []
+        data_tag = ""
+        types = ("</array>","</dict>")
+        for i,x in enumerate(plist_text):
+            x_stripped = x.strip()
+            try:
+                type_check = types[types.index(x_stripped)].replace("</","<")
+                if plist_text[i-1].strip() == type_check:
+                    new_plist[-1] = x.replace("</","<").replace(">","/>")
+                    data_tag = ""
+                    continue
+            except (ValueError, IndexError) as e:
+                pass
+            if x_stripped == "<data>":
+                data_tag = x
+                continue
+            if not len(data_tag):
+                # Not primed, and wasn't <data>
+                new_plist.append(x)
+                continue
+            data_tag += x_stripped
+            # Check for the end
+            if x_stripped == "</data>":
+                # Found the end, append it and reset
+                new_plist.append(data_tag)
+                data_tag = ""
+        return "\n".join(new_plist)
+
     def save_plist_as(self, event=None, path=None):
         if path == None:
             # Get the file dialog
@@ -1876,40 +1909,13 @@ class PlistWindow(tk.Toplevel):
                     plist.dump(plist_data,f,sort_keys=self.controller.settings.get("sort_dict",False))
             else:
                 # Dump to a string first
-                plist_text = plist.dumps(plist_data,sort_keys=self.controller.settings.get("sort_dict",False)).split("\n")
-                new_plist = []
-                data_tag = ""
-                types = ("</array>","</dict>")
-                for i,x in enumerate(plist_text):
-                    x_stripped = x.strip()
-                    try:
-                        type_check = types[types.index(x_stripped)].replace("</","<")
-                        if plist_text[i-1].strip() == type_check:
-                            new_plist[-1] = x.replace("</","<").replace(">","/>")
-                            data_tag = ""
-                            continue
-                    except (ValueError, IndexError) as e:
-                        pass
-                    if x_stripped == "<data>":
-                        data_tag = x
-                        continue
-                    if not len(data_tag):
-                        # Not primed, and wasn't <data>
-                        new_plist.append(x)
-                        continue
-                    data_tag += x_stripped
-                    # Check for the end
-                    if x_stripped == "</data>":
-                        # Found the end, append it and reset
-                        new_plist.append(data_tag)
-                        data_tag = ""
+                plist_text = self._format_data_string(plist.dumps(plist_data,sort_keys=self.controller.settings.get("sort_dict",False)))
                 # At this point, we have a list of lines - with all <data> tags on the same line
                 # let's write to file
                 with open(temp_file,"wb") as f:
-                    temp_string = "\n".join(new_plist)
                     if sys.version_info >= (3,0):
-                        temp_string = temp_string.encode("utf-8")
-                    f.write(temp_string)
+                        plist_text = plist_text.encode("utf-8")
+                    f.write(plist_text)
             # Copy the temp over
             shutil.copy(temp_file,path)
         except Exception as e:
@@ -1973,6 +1979,8 @@ class PlistWindow(tk.Toplevel):
             return
         try:
             clipboard_string = plist.dumps(self.nodes_to_values(node,None),sort_keys=self.controller.settings.get("sort_dict",False))
+            if self.controller.settings.get("xcode_data",True):
+                clipboard_string = self._format_data_string(clipboard_string)
             # Get just the values
             self.clipboard_clear()
             self.clipboard_append(clipboard_string)
@@ -2001,6 +2009,8 @@ class PlistWindow(tk.Toplevel):
     def copy_all(self, event = None):
         try:
             clipboard_string = plist.dumps(self.nodes_to_values(self.get_root_node(),None),sort_keys=self.controller.settings.get("sort_dict",False))
+            if self.controller.settings.get("xcode_data",True):
+                clipboard_string = self._format_data_string(clipboard_string)
             # Get just the values
             self.clipboard_clear()
             self.clipboard_append(clipboard_string)
