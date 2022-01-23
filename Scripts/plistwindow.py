@@ -1928,7 +1928,7 @@ class PlistWindow(tk.Toplevel):
             # User cancelled or we failed to save, bail
             return None
         # See if we're the only window left, and close the session after
-        windows = self.stackorder(self.root)
+        windows = self.controller.stackorder(self.root)
         if len(windows) == 1 and windows[0] == self:
             # Last and closing
             self.controller.close_window(event,check_close=check_close)
@@ -2059,13 +2059,6 @@ class PlistWindow(tk.Toplevel):
             self.title(self.title()+" - Edited")
         self.update_all_children()
         self.select(first)
-
-    def stackorder(self, root):
-        """return a list of root and toplevel windows in stacking order (topmost is last)"""
-        c = root.children
-        s = root.tk.eval('wm stackorder {}'.format(root))
-        L = [x.lstrip('.') for x in s.split()]
-        return [(c[x] if x else root) for x in L]
 
     ###                                             ###
     # Converstion to/from Dict and Treeview Functions #
