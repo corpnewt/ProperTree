@@ -1643,6 +1643,8 @@ class PlistWindow(tk.Toplevel):
             self.lift()
 
     def move_selection(self, event):
+        # Check if we have a entry_popup - and relocate it
+        if self.entry_popup: self.entry_popup.relocate()
         # Verify we had clicked in the drag column
         if not self.clicked_drag:
             # Nope, ignore
