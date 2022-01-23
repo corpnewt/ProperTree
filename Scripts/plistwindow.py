@@ -72,10 +72,10 @@ class EntryPopup(tk.Entry):
         if self.master.focus_get():
             # Pass True as the event to allow the bell() when our window still
             # has focus (means we're actively editing)
-            self.confirm(True)
+            self.confirm(event=True)
         else:
             # Pass None as the event to prevent the bell()
-            self.confirm(None, no_prompt=True)
+            self.confirm(no_prompt=True)
 
     def relocate(self, event=None):
         # Helper called when the window is scrolled to move the popup
@@ -90,13 +90,13 @@ class EntryPopup(tk.Entry):
             # hide it
             self.place_forget()
 
-    def cancel(self, event):
+    def cancel(self, event=None):
         # Destroy ourself, then force the parent to focus
         self.destroy()
         self.master.entry_popup = None
         self.parent.focus_force()
 
-    def next_field(self, event):
+    def next_field(self, event=None):
         # We need to determine if our other field can be edited
         # and if so - trigger another double click event there
         edit_col = None
@@ -124,17 +124,17 @@ class EntryPopup(tk.Entry):
             self.master.on_double_click(e)
             return 'break'
 
-    def goto_start(self, event):
+    def goto_start(self, event=None):
         self.selection_range(0, 0)
         self.icursor(0)
         return 'break'
 
-    def goto_end(self, event):
+    def goto_end(self, event=None):
         self.selection_range(0, 0)
         self.icursor(len(self.get()))
         return 'break'
 
-    def copy(self, event):
+    def copy(self, event=None):
         try:
             get = self.selection_get()
         except:
@@ -146,7 +146,7 @@ class EntryPopup(tk.Entry):
         self.update()
         return 'break'
 
-    def paste(self, event):
+    def paste(self, event=None):
         try:
             contents = self.clipboard_get()
         except:
@@ -171,7 +171,7 @@ class EntryPopup(tk.Entry):
         # returns 'break' to interrupt default key-bindings
         return 'break'
 
-    def confirm(self, event, no_prompt = False):
+    def confirm(self, event=None, no_prompt = False):
         if not self.winfo_exists():
             return
         if self.column == "#0":
@@ -1558,6 +1558,9 @@ class PlistWindow(tk.Toplevel):
             self.bell()
             # Nothing to undo/redo
             return
+        # Check if we have any open EntryPopups and cancel them
+        if self.entry_popup:
+            self.entry_popup.cancel()
         # Retain the original selection
         selected,nodes = self.preselect()
         task_list = u.pop(-1)
