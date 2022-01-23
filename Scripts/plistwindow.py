@@ -60,6 +60,10 @@ class EntryPopup(tk.Entry):
         self.bind("<Up>", self.goto_start)
         self.bind("<Down>", self.goto_end)
         self.bind("<Tab>", self.next_field)
+        self.bind("<FocusOut>", self.focus_out)
+
+    def focus_out(self, event):
+        self.confirm(event, no_prompt=True)
 
     def cancel(self, event):
         # Force the parent focus then destroy self
@@ -144,7 +148,7 @@ class EntryPopup(tk.Entry):
         # returns 'break' to interrupt default key-bindings
         return 'break'
 
-    def confirm(self, event):
+    def confirm(self, event, no_prompt = False):
         if self.column == "#0":
             # First we make sure that no other siblings
             # have the same name - as dict names need to be
@@ -161,7 +165,7 @@ class EntryPopup(tk.Entry):
                     # Have a match, beep and bail
                     if not event == None:
                         self.bell()
-                        if not mb.askyesno("Invalid Key Name","That key name already exists in that dict.\n\nWould you like to keep editing?",parent=self.parent):
+                        if no_prompt or not mb.askyesno("Invalid Key Name","That key name already exists in that dict.\n\nWould you like to keep editing?",parent=self.parent):
                             self.destroy()
                     return
             # Add to undo stack
@@ -189,7 +193,7 @@ class EntryPopup(tk.Entry):
                 # Didn't pass the test - show the error and prompt for edit continuing
                 if not event == None:
                     self.bell()
-                    if not mb.askyesno(output[1],output[2]+"\n\nWould you like to keep editing?",parent=self.parent):
+                    if no_prompt or not mb.askyesno(output[1],output[2]+"\n\nWould you like to keep editing?",parent=self.parent):
                         self.destroy()
                 return
             # Set the value to the new output
@@ -200,7 +204,7 @@ class EntryPopup(tk.Entry):
             values[index-1] = value
             # Set the values
             self.parent.item(self.cell, values=values)
-        self.cancel(None)
+        self.cancel(event)
 
 class PlistWindow(tk.Toplevel):
     def __init__(self, controller, root, **kw):
