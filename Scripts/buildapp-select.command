@@ -27,6 +27,15 @@ def get_min_tk_version():
         if os_ver <= curr_os: curr_min = min_tk_version[os_ver]
     return curr_min
 
+def walk_path_for_bin(bin_name="python"):
+    # Helper to walk the os.environ["PATH"] var looking for any paths where that bin exists
+    paths = []
+    for path in os.environ.get("PATH","").split(":"):
+        temp_path = os.path.join(path,bin_name)
+        if os.path.isfile(temp_path):
+            paths.append(temp_path)
+    return paths
+
 def gather_python(show_all=False,path_list=None):
     # Let's find the available python installs, check their tk version
     # and try to pick the latest one supported - or throw an error if
@@ -35,11 +44,9 @@ def gather_python(show_all=False,path_list=None):
     envpaths = []
     if not pypaths:
         for py in ("python","python3"):
-            p = subprocess.Popen(["which",py], shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            c = p.communicate()
             binpath = "/usr/bin/{}".format(py)
             envpath = "/usr/bin/env {}".format(py)
-            avail = [x for x in _decode(c[0]).split("\n") if len(x) and not x in pypaths and not x == binpath]
+            avail = [x for x in walk_path_for_bin(py) if not x in pypaths and not x == binpath]
             if os.path.exists(binpath): avail.insert(0,binpath)
             if len(avail): # Only add paths that we found and verified
                 pypaths.extend(avail)
