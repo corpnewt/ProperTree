@@ -27,15 +27,6 @@ def get_min_tk_version():
         if os_ver <= curr_os: curr_min = min_tk_version[os_ver]
     return curr_min
 
-def walk_path_for_bin(bin_name="python"):
-    # Helper to walk the os.environ["PATH"] var looking for any paths where that bin exists
-    paths = []
-    for path in os.environ.get("PATH","").split(":"):
-        temp_path = os.path.join(path,bin_name)
-        if os.path.isfile(temp_path):
-            paths.append(temp_path)
-    return paths
-
 def gather_python(show_all=False,path_list=None):
     # Let's find the available python installs, check their tk version
     # and try to pick the latest one supported - or throw an error if
@@ -44,9 +35,11 @@ def gather_python(show_all=False,path_list=None):
     envpaths = []
     if not pypaths:
         for py in ("python","python3"):
+            p = subprocess.Popen(["which","-a",py], shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            c = p.communicate()
             binpath = "/usr/bin/{}".format(py)
             envpath = "/usr/bin/env {}".format(py)
-            avail = [x for x in walk_path_for_bin(py) if not x in pypaths and not x == binpath]
+            avail = [x for x in _decode(c[0]).split("\n") if len(x) and not x in pypaths and not x == binpath]
             if os.path.exists(binpath): avail.insert(0,binpath)
             if len(avail): # Only add paths that we found and verified
                 pypaths.extend(avail)
@@ -81,21 +74,24 @@ def gather_python(show_all=False,path_list=None):
 def select_py(py_versions,min_tk,pt_current):
     current = next((x[0] for x in py_versions if x[0] == pt_current),None)
     while True:
-        os.system("clear")
-        print(" - Currently Available Python Versions -")
-        print("")
+        output = " - Currently Available Python Versions -\n\n"
         for i,x in enumerate(py_versions,1):
-            print("{}. {}{}{}{}".format(
+            output += "{}. {}{}{}{}\n".format(
                 i,
                 x[0],
                 " {}".format(x[1]) if x[1] else "",
                 " - tk {}".format(x[2]) if x[2] else "",
                 "" if min_tk==None or x[2]==None or x[2] >= min_tk else " ({}+ recommended)".format(min_tk),
-            ))
-        print("")
-        if current: print("C. Current ({})".format(current))
-        print("Q. Quit")
-        print("")
+            )
+        output += "\n"
+        if current: output += "C. Current ({})\n".format(current)
+        output += "Q. Quit\n"
+        # Gather our width and height and resize the window if needed
+        w = max((len(x) for x in output.split("\n")))
+        h = len(output.split("\n"))+1
+        print('\033[8;{};{}t'.format(h if h > 24 else 24, w if w > 80 else 80))
+        os.system("clear")
+        print(output)
         menu = input("Please select the python version to use{}:  ".format(" (default is C)" if current else "")).lower()
         if not len(menu):
             if current: menu = "c"
