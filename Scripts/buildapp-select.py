@@ -150,8 +150,8 @@ def main(use_current=False,path_list=None):
     os.makedirs("ProperTree.app/Contents/MacOS/Scripts")
     os.makedirs("ProperTree.app/Contents/Resources")
     print("Copying scripts...")
-    print(" - ProperTree.command")
-    with open("ProperTree.command","r") as f:
+    print(" - ProperTree.py -> ProperTree.command")
+    with open("ProperTree.py","r") as f:
         ptcom = f.read().split("\n")
     if ptcom[0].startswith("#!"):
         # Got a shebang - remove it
