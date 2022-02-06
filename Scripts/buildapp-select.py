@@ -39,7 +39,10 @@ def gather_python(show_all=False,path_list=None):
             c = p.communicate()
             binpath = "/usr/bin/{}".format(py)
             envpath = "/usr/bin/env {}".format(py)
-            avail = [x for x in _decode(c[0]).split("\n") if len(x) and not x in pypaths and not x == binpath]
+            avail = []
+            for x in _decode(c[0]).split("\n"):
+                if len(x) and not x in pypaths and not x == binpath and not x in avail:
+                    avail.append(x)
             if os.path.exists(binpath): avail.insert(0,binpath)
             if len(avail): # Only add paths that we found and verified
                 pypaths.extend(avail)
