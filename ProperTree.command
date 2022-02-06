@@ -178,7 +178,7 @@ vercomp () {
             return
         fi
     done
-    return 0
+    echo "0"
 }
 
 get_local_python_version() {
@@ -189,14 +189,6 @@ get_local_python_version() {
         py_name="python3"
     fi
     py_list="$(which -a "$py_name" 2>/dev/null)"
-    # Build a newline separated list from the whereis output too
-    for python in "$(whereis "$py_name" 2>/dev/null)"; do
-        if [ "$py_list" == "" ]; then
-            py_list="$python"
-        else
-            py_list="$py_list${NL}$python"
-        fi
-    done
     # Walk that newline separated list
     while read python; do
         if [ "$python" == "" ]; then
