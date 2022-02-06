@@ -109,6 +109,7 @@ download_py () {
     # Now we check for py again
     echo "Rechecking py..."
     downloaded="TRUE"
+    clear
     main
 }
 
@@ -249,7 +250,6 @@ prompt_and_download() {
 }
 
 main() {
-    clear
     python=
     version=
     # Verify our target exists
