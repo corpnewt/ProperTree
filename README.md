@@ -31,9 +31,9 @@ On any system you can choose the green `Code` button, followed by the `Download 
 
 ```
 git clone https://github.com/corpnewt/ProperTree
-python ./ProperTree/ProperTree.command
+python ./ProperTree/ProperTree.py
 - or -
-python3 ./ProperTree/ProperTree.command
+python3 ./ProperTree/ProperTree.py
 ```
 
 \* On macOS, you can simply double-click the `ProperTree.command` after cloning to launch.
