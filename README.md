@@ -67,7 +67,7 @@ git clone https://github.com/corpnewt/ProperTree
 
   That is because the graphical interface library that ProperTree depends on isn't present or cannot be detected, you need to install `tkinter` from your package manager. 
 
-  To install it on Ubuntu (and Ubuntu-based distros), you can run `sudo apt-get install python3-tk -y`
+  To install it on Debian (and Debian-based distros like Ubuntu), you can run `sudo apt-get install python3-tk -y`
 
 * **ProperTree doesn't run because it doesn't have permissions, what gives?**
 
