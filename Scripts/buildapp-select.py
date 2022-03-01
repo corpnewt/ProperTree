@@ -206,6 +206,11 @@ def main(use_current=False,path_list=None):
         print("Restoring settings.json...")
         shutil.copy(os.path.join(temp, "settings.json"),"ProperTree.app/Contents/MacOS/Scripts/settings.json")
         shutil.rmtree(temp,ignore_errors=True)
+    final_path = os.path.join(os.getcwd(),"ProperTree.app")
+    print("{} to: {}".format(
+        "Saved" if os.path.isdir(final_path) else "Something went wrong saving",
+        final_path
+    ))
 
 if __name__ == '__main__':
     if not str(sys.platform) == "darwin":
