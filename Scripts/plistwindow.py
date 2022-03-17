@@ -257,6 +257,7 @@ class PlistWindow(tk.Toplevel):
         self.menu_code = u"\u21D5"
         #self.drag_code = u"\u2630"
         self.drag_code = u"\u2261"
+        self.safe_path_length = 128 # OC_STORAGE_SAFE_PATH_MAX from Include/Acidanthera/Library/OcStorageLib.h in OpenCorePkg
 
         # self = tk.Toplevel(self.root)
         try:
@@ -968,6 +969,24 @@ class PlistWindow(tk.Toplevel):
     def oc_clean_snapshot(self, event = None):
         self.oc_snapshot(event,True)
 
+    def check_path_length(self, item):
+        paths_too_long = []
+        if isinstance(item,dict):
+            # Get the last path component of the Path or BundlePath values for the name
+            name = os.path.basename(item.get("Path",item.get("BundlePath","Unknown Name")))
+            # Check the keys containing "path"
+            for key in item:
+                if "path" in key.lower() and isinstance(item[key],str) and len(item[key])>self.safe_path_length:
+                    paths_too_long.append(key) # Too long - keep a reference of the key
+        elif isinstance(item,str):
+            name = os.path.basename(item) # Retain the last path component as the name
+            # Checking the item itself
+            if len(item)>self.safe_path_length:
+                paths_too_long.append(item)
+        else: return paths_too_long # Empty list
+        if not paths_too_long: return [] # Return an empty array to allow .extend()
+        return [(item,name,paths_too_long)] # Return a list containing a tuple of the original item, and which paths are too long
+
     def oc_snapshot(self, event = None, clean = False):
         target_dir = os.path.dirname(self.current_plist) if self.current_plist and os.path.exists(os.path.dirname(self.current_plist)) else None
         oc_folder = fd.askdirectory(title="Select OC Folder:",initialdir=target_dir)
@@ -1052,6 +1071,8 @@ class PlistWindow(tk.Toplevel):
         tool_add   = select_snap.get("tool_add",{})
         driver_add = select_snap.get("driver_add",{})
 
+        long_paths = [] # We'll add any paths that exceed the OC_STORAGE_SAFE_PATH_MAX of 128 chars
+
         # ACPI is first, we'll iterate the .aml files we have and add what is missing
         # while also removing what exists in the plist and not in the folder.
         # If something exists in the table already, we won't touch it.  This leaves the
@@ -1094,6 +1115,8 @@ class PlistWindow(tk.Toplevel):
                 # Not there, skip
                 continue
             new_add.append(aml)
+            # Check path length
+            long_paths.extend(self.check_path_length(aml))
         tree_dict["ACPI"]["Add"] = new_add
 
         # Now we need to walk the kexts
@@ -1213,6 +1236,8 @@ class PlistWindow(tk.Toplevel):
         duplicate_bundles = []
         duplicates_disabled = []
         for kext in ordered_kexts:
+            # Check path length
+            long_paths.extend(self.check_path_length(kext))
             temp_kext = {}
             # Shallow copy the kext entry to avoid changing it in ordered_kexts
             for x in kext: temp_kext[x] = kext[x]
@@ -1287,6 +1312,8 @@ class PlistWindow(tk.Toplevel):
                     # Not there, skip it
                     continue
                 new_tools.append(tool)
+                # Check path length
+                long_paths.extend(self.check_path_length(tool))
             tree_dict["Misc"]["Tools"] = new_tools
         else:
             # Make sure our Tools list is empty
@@ -1339,6 +1366,8 @@ class PlistWindow(tk.Toplevel):
                         # Not there, skip it
                         continue
                 new_drivers.append(driver)
+                # Check path length
+                long_paths.extend(self.check_path_length(driver))
             tree_dict["UEFI"]["Drivers"] = new_drivers
         else:
             # Make sure our Drivers list is empty
@@ -1382,6 +1411,24 @@ class PlistWindow(tk.Toplevel):
             self.title(self.title()+" - Edited")
         self.update_all_children()
         self.alternate_colors()
+        # Check if we have any paths that are too long
+        if long_paths:
+            formatted = []
+            for entry in long_paths:
+                item,name,keys = entry
+                if isinstance(item,str): # It's an older string path
+                    formatted.append(name)
+                elif isinstance(item,dict):
+                    formatted.append("{} -> {}".format(name,", ".join(keys)))
+            # Show the dialog warning of lengthy paths
+            mb.showwarning(
+                "Potentially Unsafe Paths".format(self.safe_path_length),
+                "The following exceed the {:,} character safe path max declared by OpenCore and may not work as intended:\n\n{}".format(
+                    self.safe_path_length,
+                    "\n".join(formatted)
+                ),
+                parent=self
+            )
 
     def get_check_type(self, cell=None, string=None):
         if not cell == None:
