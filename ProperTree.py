@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys, os, binascii, base64, json, re, subprocess
+import sys, os, binascii, base64, json, re, subprocess, webbrowser
 from collections import OrderedDict
 try:
     import Tkinter as tk
@@ -21,7 +21,7 @@ except NameError:  # Python 3
     unicode = str
 # Add this script's dir to the local PATH var - may improve import consistency
 sys.path.append(os.path.abspath(os.path.dirname(os.path.realpath(__file__))))
-from Scripts import plist, plistwindow
+from Scripts import plist, plistwindow, downloader
 
 class ProperTree:
     def __init__(self, plists = []):
@@ -191,7 +191,13 @@ class ProperTree:
 
         sep_theme = ttk.Separator(self.settings_window,orient="horizontal")
         sep_theme.grid(row=15,column=0,columnspan=5,sticky="we",padx=10,pady=(10,0))
-        
+
+        # Add the check for updates checkbox and button
+        self.update_int = tk.IntVar()
+        self.update_check = tk.Checkbutton(self.settings_window,text="Check For Updates At Start",variable=self.update_int,command=self.update_command)
+        self.update_check.grid(row=16,column=0,sticky="w",padx=10,pady=10)
+        update_button = tk.Button(self.settings_window,text="Check Now",command=lambda:self.check_for_updates(user_initiated=True))
+        update_button.grid(row=16,column=1,sticky="w",pady=10)
         reset_settings = tk.Button(self.settings_window,text="Restore All Defaults",command=self.reset_settings)
         reset_settings.grid(row=16,column=4,sticky="we",padx=10,pady=10)
 
@@ -376,6 +382,8 @@ class ProperTree:
         # open_recent:                  list, paths recently opened
         # recent_max:                   int, max number of recent items
         # max_undo:                     int, max undo history - 0 = unlimited
+        # check_for_updates_at_startup: bool
+        # ignore_version_check:         string, the version to ignore from auto-update checks
         #
 
         self.settings = {}
@@ -392,6 +400,11 @@ class ProperTree:
                     self.snapshot_data = plist.load(f)
             except:
                 pass
+        # And finally, load the version.json if it exists
+        self.version = {}
+        if os.path.exists("Scripts/version.json"):
+            try: self.version = json.load(open("Scripts/version.json"))
+            except: pass
         os.chdir(cwd)
 
         # Setup the settings page to reflect our settings.json file
@@ -409,6 +422,13 @@ class ProperTree:
         if str(sys.platform) == "darwin": self.update_recents()
         self.check_dark_mode()
 
+        # Attempt to create the downloader class
+        self.dl_error = self.dl = None
+        try: self.dl = downloader.Downloader()
+        except Exception as e: self.dl_error = str(e) # Failed
+        self.version_url = "https://raw.githubusercontent.com/corpnewt/ProperTree/master/Scripts/version.json"
+        self.repo_url = "https://github.com/corpnewt/ProperTree"
+
         # Prior implementations tried to wait 250ms to give open_plist_from_app()
         # enough time to parse anything double-clicked.  The issue was that both
         # check_open() and open_plist_from_app() would fire at roughly the same
@@ -420,6 +440,10 @@ class ProperTree:
         # the issue of multiple documents spawning on double-click in macOS.
         self.is_opening = False
         self.check_open(plists)
+
+        # Check for updates if need be
+        if self.settings.get("check_for_updates_at_startup",True):
+            self.check_for_updates(user_initiated=False)
 
         # Start our run loop
         tk.mainloop()
@@ -474,6 +498,60 @@ class ProperTree:
         c = p.communicate()
         return c[0].decode("utf-8", "ignore").strip().lower() == "dark"
 
+    def check_for_updates(self, user_initiated = False):
+        # Attempts to download the latest version.json and compare to our local copy
+        if self.dl is None:
+            if user_initiated:
+                # We pressed the button - but couldn't initialize the downloader class - whine.
+                self.tk.bell()
+                mb.showerror("An Error Occurred Creating The Downloader",self.dl_error)
+            return
+        # We have the downloader - try to gather the info
+        try:
+            newjson = self.dl.get_string(self.version_url,False)
+        except:
+            if user_initiated:
+                self.tk.bell()
+                mb.showerror("An Error Occurred Checking For Updates","Could not get version data from github.  Potentially a network issue.")
+            return
+        try: version_dict = json.loads(newjson)
+        except: version_dict = {}
+        if not version_dict.get("version"):
+            if user_initiated:
+                self.tk.bell()
+                mb.showerror("An Error Occurred Checking For Updates","Data returned was malformed or nonexistent.")
+            return
+        # At this point - we should have json data containing the version key/value
+        check_version = str(version_dict["version"])
+        our_version   = str(self.version.get("version","0.0.0"))
+        ignore = check_version == self.settings.get("ignore_version_check") and not user_initiated
+        if not ignore and our_version < check_version:
+            # We got an update we're not ignoring - let's prompt
+            self.tk.bell()
+            result = mb.askyesnocancel(
+                title="New ProperTree Version Available",
+                message="Version {} is available (currently on {}).\n\nChanges in {}: {}\n\nYes: Open in browser | No: Ignore {} | Cancel: Dismiss".format(
+                    check_version,
+                    our_version,
+                    check_version,
+                    version_dict.get("changes","No changes listed."),
+                    check_version
+                )
+            )
+            if result: # Open the url in the default browser
+                webbrowser.open(self.repo_url)
+            elif result is False: # Ignore this version during auto-update checks
+                self.settings["ignore_version_check"] = check_version
+            '''else: # Don't ignore this version during auto-update checks
+                self.settings.pop("ignore_version_check",None)'''
+
+        elif user_initiated:
+            # No new updates - but we need to tell the user
+            mb.showinfo(
+                title="No Updates Available",
+                message="You are currently running the latest version of ProperTree ({}).".format(our_version)
+            )
+
     def text_color(self, hex_color, invert = False):
         hex_color = hex_color.lower()
         if hex_color.startswith("0x"): hex_color = hex_color[2:]
@@ -526,6 +604,9 @@ class ProperTree:
 
     def schema_command(self, event = None):
         self.settings["force_snapshot_schema"] = True if self.force_schema.get() else False
+
+    def update_command(self, event = None):
+        self.settings["check_for_updates_at_startup"] = True if self.update_int.get() else False
 
     def change_plist_type(self, event = None):
         self.settings["new_plist_default_type"] = self.plist_type_string.get()
@@ -641,6 +722,7 @@ class ProperTree:
         self.force_schema.set(self.settings.get("force_snapshot_schema",False))
         self.comment_ignore_case.set(self.settings.get("comment_strip_ignore_case",False))
         self.comment_check_string.set(self.settings.get("comment_strip_check_string",True))
+        self.update_int.set(self.settings.get("check_for_updates_at_startup",True))
         self.comment_prefix_text.delete(0,tk.END)
         prefix = self.settings.get("comment_strip_prefix","#")
         prefix = "#" if not prefix else prefix
