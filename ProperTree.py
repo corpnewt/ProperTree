@@ -383,7 +383,6 @@ class ProperTree:
         # recent_max:                   int, max number of recent items
         # max_undo:                     int, max undo history - 0 = unlimited
         # check_for_updates_at_startup: bool
-        # ignore_version_check:         string, the version to ignore from auto-update checks
         #
 
         self.settings = {}
@@ -528,26 +527,20 @@ class ProperTree:
         # At this point - we should have json data containing the version key/value
         check_version = str(version_dict["version"])
         our_version   = str(self.version.get("version","0.0.0"))
-        ignore = check_version == self.settings.get("ignore_version_check") and not user_initiated
-        if not ignore and our_version < check_version:
+        if our_version < check_version:
             # We got an update we're not ignoring - let's prompt
             self.tk.bell()
-            result = mb.askyesnocancel(
+            result = mb.askyesno(
                 title="New ProperTree Version Available",
-                message="Version {} is available (currently on {}).\n\nChanges in {}: {}\n\nYes: Open in browser | No: Ignore {} | Cancel: Dismiss".format(
+                message="Version {} is available (currently on {}).\n\nChanges in {}: {}\n\nVisit ProperTree's github repo now?".format(
                     check_version,
                     our_version,
                     check_version,
-                    version_dict.get("changes","No changes listed."),
-                    check_version
+                    version_dict.get("changes","No changes listed.")
                 )
             )
             if result: # Open the url in the default browser
                 webbrowser.open(self.repo_url)
-            elif result is False: # Ignore this version during auto-update checks
-                self.settings["ignore_version_check"] = check_version
-            '''else: # Don't ignore this version during auto-update checks
-                self.settings.pop("ignore_version_check",None)'''
 
         elif user_initiated:
             # No new updates - but we need to tell the user
