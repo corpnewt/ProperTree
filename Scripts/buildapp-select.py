@@ -168,7 +168,7 @@ def main(use_current=False,path_list=None):
     c = p.communicate()
     # Copy everything else
     for x in os.listdir("Scripts"):
-        if x.startswith(".") or not x.lower().endswith((".py",".plist",".icns")):
+        if x.startswith(".") or not x.lower().endswith((".py",".plist",".icns","version.json")):
             continue
         print(" - "+x)
         target = "ProperTree.app/Contents/Resources" if x.lower().endswith(".icns") else "ProperTree.app/Contents/MacOS/Scripts"
