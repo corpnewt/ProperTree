@@ -407,6 +407,10 @@ class ProperTree:
             except: pass
         os.chdir(cwd)
 
+        # Apply the version to the update button text
+        if self.version.get("version"):
+            update_button.configure(text="Check Now ({})".format(self.version.get("version","?.?.?")))
+
         # Setup the settings page to reflect our settings.json file
 
         self.allowed_types = ("XML","Binary")
