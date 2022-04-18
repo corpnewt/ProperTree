@@ -1,4 +1,4 @@
 {
-    "version": "0.0.1",
-    "changes": "Initial versioning support."
+    "version": "0.0.2",
+    "changes": "Add OpenCore 0.8.0 release and debug hashes."
 }
