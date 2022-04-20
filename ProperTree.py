@@ -195,11 +195,14 @@ class ProperTree:
         # Add the check for updates checkbox and button
         self.update_int = tk.IntVar()
         self.update_check = tk.Checkbutton(self.settings_window,text="Check For Updates At Start",variable=self.update_int,command=self.update_command)
-        self.update_check.grid(row=16,column=0,sticky="w",padx=10,pady=10)
+        self.update_check.grid(row=16,column=0,sticky="w",padx=10,pady=(5,0))
+        self.notify_once_int = tk.IntVar()
+        self.notify_once_check = tk.Checkbutton(self.settings_window,text="Only Notify Once Per Version",variable=self.notify_once_int,command=self.notify_once)
+        self.notify_once_check.grid(row=17,column=0,sticky="w",padx=10,pady=(0,10))
         update_button = tk.Button(self.settings_window,text="Check Now",command=lambda:self.check_for_updates(user_initiated=True))
-        update_button.grid(row=16,column=1,sticky="w",pady=10)
+        update_button.grid(row=17,column=1,sticky="w",padx=10,pady=(0,10))
         reset_settings = tk.Button(self.settings_window,text="Restore All Defaults",command=self.reset_settings)
-        reset_settings.grid(row=16,column=4,sticky="we",padx=10,pady=10)
+        reset_settings.grid(row=17,column=4,sticky="we",padx=10,pady=(0,10))
 
         # Setup the color picker click methods
         self.r1_canvas.bind("<ButtonRelease-1>",lambda x:self.pick_color("alternating_color_1",self.r1_canvas))
@@ -383,6 +386,8 @@ class ProperTree:
         # recent_max:                   int, max number of recent items
         # max_undo:                     int, max undo history - 0 = unlimited
         # check_for_updates_at_startup: bool
+        # notify_once_per_version:      bool
+        # last_version_checked:         str
         #
 
         self.settings = {}
@@ -432,6 +437,10 @@ class ProperTree:
         self.version_url = "https://raw.githubusercontent.com/corpnewt/ProperTree/master/Scripts/version.json"
         self.repo_url = "https://github.com/corpnewt/ProperTree"
 
+        # Check for updates if need be
+        if self.settings.get("check_for_updates_at_startup",True):
+            self.check_for_updates(user_initiated=False)
+
         # Prior implementations tried to wait 250ms to give open_plist_from_app()
         # enough time to parse anything double-clicked.  The issue was that both
         # check_open() and open_plist_from_app() would fire at roughly the same
@@ -443,10 +452,6 @@ class ProperTree:
         # the issue of multiple documents spawning on double-click in macOS.
         self.is_opening = False
         self.check_open(plists)
-
-        # Check for updates if need be
-        if self.settings.get("check_for_updates_at_startup",True):
-            self.check_for_updates(user_initiated=False)
 
         # Start our run loop
         tk.mainloop()
@@ -525,9 +530,16 @@ class ProperTree:
                 mb.showerror("An Error Occurred Checking For Updates","Data returned was malformed or nonexistent.")
             return
         # At this point - we should have json data containing the version key/value
-        check_version = str(version_dict["version"])
-        our_version   = str(self.version.get("version","0.0.0"))
+        check_version = str(version_dict["version"]).lower()
+        our_version   = str(self.version.get("version","0.0.0")).lower()
+        notify_once   = self.settings.get("notify_once_per_version",True)
+        last_version  = str(self.settings.get("last_version_checked","0.0.0")).lower()
         if our_version < check_version:
+            if notify_once and last_version == check_version and not user_initiated:
+                # Already notified about this version - ignore
+                return
+            # Save the last version checked
+            self.settings["last_version_checked"] = check_version
             # We got an update we're not ignoring - let's prompt
             self.tk.bell()
             result = mb.askyesno(
@@ -604,6 +616,13 @@ class ProperTree:
 
     def update_command(self, event = None):
         self.settings["check_for_updates_at_startup"] = True if self.update_int.get() else False
+        self.update_notify()
+
+    def notify_once(self, event = None):
+        self.settings["notify_once_per_version"] = True if self.notify_once_int.get() else False
+
+    def update_notify(self):
+        self.notify_once_check.configure(state="normal" if self.update_int.get() else "disabled")
 
     def change_plist_type(self, event = None):
         self.settings["new_plist_default_type"] = self.plist_type_string.get()
@@ -720,6 +739,8 @@ class ProperTree:
         self.comment_ignore_case.set(self.settings.get("comment_strip_ignore_case",False))
         self.comment_check_string.set(self.settings.get("comment_strip_check_string",True))
         self.update_int.set(self.settings.get("check_for_updates_at_startup",True))
+        self.notify_once_int.set(self.settings.get("notify_once_per_version",True))
+        self.update_notify()
         self.comment_prefix_text.delete(0,tk.END)
         prefix = self.settings.get("comment_strip_prefix","#")
         prefix = "#" if not prefix else prefix
