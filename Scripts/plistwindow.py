@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys, os, plistlib, base64, binascii, datetime, tempfile, shutil, re, itertools, math, hashlib
+import sys, os, plistlib, base64, binascii, datetime, tempfile, shutil, re, subprocess, math, hashlib
 from collections import OrderedDict
 try:
     # Python 2
@@ -141,14 +141,13 @@ class EntryPopup(tk.Entry):
             get = ""
         if not len(get):
             return 'break'
-        self.clipboard_clear()
-        self.clipboard_append(get)
+        self.master._clipboard_append(get)
         self.update()
         return 'break'
 
     def paste(self, event=None):
         try:
-            contents = self.clipboard_get()
+            contents = self.master.clipboard_get()
         except:
             contents = ""
         if len(contents):
@@ -2032,6 +2031,26 @@ class PlistWindow(tk.Toplevel):
             self.destroy()
         return True
 
+    def _clipboard_append(self, clipboard_string = None):
+        # Tkinter has issues copying to the system clipboard as evident in this bug report:
+        # https://bugs.python.org/issue40452
+        #
+        # There are some workarounds that require compiling a new tk binary - but we can
+        # ensure the system clipboard is updated by calling either clip or pbcopy depending
+        # on the current OS.
+        #
+        # First we clear the tkinter clipboard
+        self.clipboard_clear()
+        # Then we leverage either clip or pbcopy
+        clipboard = subprocess.Popen(["clip" if os.name=="nt" else "pbcopy"],stdin=subprocess.PIPE)
+        # Only write to the tkinter clipboard if we have a value
+        if clipboard_string: self.clipboard_append(clipboard_string)
+        else: clipboard_string = "" # Ensure we have at least an empty string
+        # Dirty py2 check to see if we need to encode the data
+        if 2/3!=0: clipboard_string = clipboard_string.encode("utf-8")
+        # Write the value directly to the stdin of our clip/pbcopy command
+        clipboard.stdin.write(clipboard_string)
+
     def copy_selection(self, event = None):
         node = self._tree.focus()
         if node == "":
@@ -2042,8 +2061,7 @@ class PlistWindow(tk.Toplevel):
             if self.controller.settings.get("xcode_data",True):
                 clipboard_string = self._format_data_string(clipboard_string)
             # Get just the values
-            self.clipboard_clear()
-            self.clipboard_append(clipboard_string)
+            self._clipboard_append(clipboard_string)
         except:
             pass
 
@@ -2061,8 +2079,7 @@ class PlistWindow(tk.Toplevel):
                 # Set it to the first item of the array
                 plist_data = plist_data[0]
             clipboard_string = plist.dumps(plist_data,sort_keys=self.controller.settings.get("sort_dict",False))
-            self.clipboard_clear()
-            self.clipboard_append(clipboard_string)
+            self._clipboard_append(clipboard_string)
         except:
             pass
 
@@ -2072,8 +2089,7 @@ class PlistWindow(tk.Toplevel):
             if self.controller.settings.get("xcode_data",True):
                 clipboard_string = self._format_data_string(clipboard_string)
             # Get just the values
-            self.clipboard_clear()
-            self.clipboard_append(clipboard_string)
+            self._clipboard_append(clipboard_string)
         except:
             pass
 
