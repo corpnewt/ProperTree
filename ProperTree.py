@@ -560,6 +560,10 @@ class ProperTree:
                 title="No Updates Available",
                 message="You are currently running the latest version of ProperTree ({}).".format(our_version)
             )
+        # If we got here - we displayed some message, let's lift our window to the top
+        windows = self.stackorder(self.tk)
+        if not len(windows): return
+        self.lift_window(windows[-1])
 
     def text_color(self, hex_color, invert = False):
         hex_color = hex_color.lower()
