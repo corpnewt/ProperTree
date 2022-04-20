@@ -1,4 +1,4 @@
 {
-    "version": "0.0.3",
-    "changes": "Workaround for tkinter not saving clipboard."
+    "version": "0.0.4",
+    "changes": "Add option to only notify once per update version."
 }
