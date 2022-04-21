@@ -2041,17 +2041,17 @@ class PlistWindow(tk.Toplevel):
         #
         # First we clear the tkinter clipboard
         self.clipboard_clear()
-        # Then we leverage either clip or pbcopy
-        try: clipboard = subprocess.Popen(["clip" if os.name=="nt" else "pbcopy"],stdin=subprocess.PIPE)
-        except: clipboard = None
         # Only write to the tkinter clipboard if we have a value
         if clipboard_string: self.clipboard_append(clipboard_string)
         else: clipboard_string = "" # Ensure we have at least an empty string
-        if not clipboard: return # Bail if the subprocess failed
-        # Dirty py2 check to see if we need to encode the data
-        if 2/3!=0: clipboard_string = clipboard_string.encode("utf-8")
-        # Write the value directly to the stdin of our clip/pbcopy command
-        clipboard.stdin.write(clipboard_string)
+        # Gather our args for the potential clipboard commands Windows -> macOS -> Linux
+        for args in (["clip"],) if os.name=="nt" else (["pbcopy"],) if sys.platform=="darwin" else (["xclip","-sel","c"],["xsel","-ib"],):
+            # Try to start a subprocess to mirror the tkinter clipboard contents
+            try: clipboard = subprocess.Popen(args,stdin=subprocess.PIPE)
+            except: continue
+            # Dirty py2 check to see if we need to encode the data or not
+            clipboard.stdin.write(clipboard_string if 2/3==0 else clipboard_string.encode("utf-8"))
+            break # Break out of the loop as needed
 
     def copy_selection(self, event = None):
         node = self._tree.focus()
