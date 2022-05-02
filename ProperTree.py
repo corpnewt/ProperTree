@@ -639,10 +639,18 @@ class ProperTree:
 
     def change_bool_type(self, event = None):
         self.settings["display_bool_as"] = self.bool_type_string.get()
+        self.update_bool_type()
 
     def change_snapshot_version(self, event = None):
         self.settings["snapshot_version"] = self.snapshot_string.get().split(" ")[0]
 
+    def update_bool_type(self, event = None, blank = None, trace_mode = None):
+        windows = self.stackorder(self.tk)
+        if not len(windows): return
+        for window in windows:
+            if window in self.default_windows: continue
+            window.change_bool_type(self.bool_type_string.get())
+        
     def font_command(self, event = None):
         if self.custom_font.get():
             self.settings["use_custom_font_size"] = True
