@@ -30,6 +30,7 @@ On any system you can choose the green `Code` button, followed by the `Download 
 #### On *nix systems:
 
 ```
+# Remember to install python3-tk (or tk)!
 git clone https://github.com/corpnewt/ProperTree
 python ./ProperTree/ProperTree.py
 - or -
