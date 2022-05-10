@@ -56,7 +56,7 @@ def gather_python(show_all=False,path_list=None):
             # Check if we're running 10.15 or newer - and try running "xcode-select -p"
             # If it errors - we need to skip this path - as it's just a stub.
             if get_os_version() >= "10.15": # At least Catalina
-                p = subprocess.Popen(["xcode-select","-p"])
+                p = subprocess.Popen(["xcode-select","-p"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 p.communicate()
                 if p.returncode != 0: continue # Not setup - skip
         p = subprocess.Popen([path,"-V"], shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
