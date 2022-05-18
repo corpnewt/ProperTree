@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys, os, plistlib, base64, binascii, datetime, tempfile, shutil, re, subprocess, math, hashlib
+import sys, os, plistlib, base64, binascii, datetime, tempfile, shutil, re, subprocess, math, hashlib, ctypes
 from collections import OrderedDict
 try:
     # Python 2
@@ -2990,6 +2990,16 @@ class PlistWindow(tk.Toplevel):
             self._tree.item(cell,open=True)
         # Call the actual alternate_colors function
         self.alternate_colors(event)
+    
+    def set_win_titlebar(self):
+        self.update()
+        DWMWA_USE_IMMERSIVE_DARK_MODE = 20
+        set_window_attribute = ctypes.windll.dwmapi.DwmSetWindowAttribute
+        get_parent = ctypes.windll.user32.GetParent
+        hwnd_inst = get_parent(self.winfo_id())
+        value = ctypes.c_int(0 if self.controller.titlebar_style_string.get() == "Light" else 1)
+        set_window_attribute(hwnd_inst, DWMWA_USE_IMMERSIVE_DARK_MODE, ctypes.byref(value),
+                            ctypes.sizeof(value))
 
     def set_colors(self, event = None):
         # Setup the colors and styles

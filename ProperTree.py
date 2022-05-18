@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys, os, binascii, base64, json, re, subprocess, webbrowser
+import sys, os, binascii, base64, json, re, subprocess, webbrowser, ctypes
 from collections import OrderedDict
 try:
     import Tkinter as tk
@@ -145,6 +145,13 @@ class ProperTree:
         self.ig_bg_check = tk.IntVar()
         self.ig_bg = tk.Checkbutton(self.settings_window,text="Header Text Ignores BG Color",variable=self.ig_bg_check,command=self.check_ig_bg_command)
         self.ig_bg.grid(row=5,column=3,sticky="w",padx=10)
+
+        self.titlebar_style_string = tk.StringVar(self.settings_window)
+        self.titlebar_style_menu = tk.OptionMenu(self.settings_window, self.titlebar_style_string, "Light","Dark","System", command=self.change_titlebar_style)
+        titlebar_style_label = tk.Label(self.settings_window,text="Titlebar Style:")
+        titlebar_style_label.grid(row=6,column=3,sticky="w",padx=10)
+        self.titlebar_style_menu.grid(row=7,column=3,sticky="we",padx=10)
+
         self.bg_inv_check = tk.IntVar()
         self.bg_inv = tk.Checkbutton(self.settings_window,text="Invert Header Text Color",variable=self.bg_inv_check,command=self.check_bg_invert_command)
         self.bg_inv.grid(row=5,column=4,sticky="w",padx=10)
@@ -381,6 +388,7 @@ class ProperTree:
         # invert_row1_text_color:       bool
         # invert_row2_text_color:       bool
         # invert_hl_text_color:         bool
+        # titlebar_style:               string, can be "Dark", "Light", or "System"
         # drag_dead_zone:               pixel distance before drag starts (default is 20)
         # open_recent:                  list, paths recently opened
         # recent_max:                   int, max number of recent items
@@ -598,6 +606,10 @@ class ProperTree:
     def check_ig_bg_command(self, event = None):
         self.settings["header_text_ignore_bg_color"] = True if self.ig_bg_check.get() else False
         self.update_colors()
+    
+    def change_titlebar_style(self, event = None):
+        self.settings["titlebar_style"] = self.titlebar_style_string.get()
+        self.update_titlebar_style()
 
     def check_bg_invert_command(self, event = None):
         self.settings["invert_background_text_color"] = True if self.bg_inv_check.get() else False
@@ -801,6 +813,13 @@ class ProperTree:
                 self.canvas_connect[c]["text_id"] = c.create_text(rw,int(h/2),text="Sample Text")
             # Set the color
             c.itemconfig(self.canvas_connect[c]["text_id"], fill=color)
+
+    def update_titlebar_style(self):
+        windows = self.stackorder(self.tk)
+        if not len(windows): return
+        for window in windows:
+            if window in self.default_windows: continue
+            if str(sys.platform) == "win32": window.set_win_titlebar()
 
     def update_fonts(self):
         windows = self.stackorder(self.tk)
