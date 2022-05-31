@@ -377,7 +377,6 @@ class PlistWindow(tk.Toplevel):
         self._tree.bind("<BackSpace>", self.remove_row)
         self._tree.bind("<Return>", self.start_editing)
         self._tree.bind("<KP_Enter>", self.start_editing)
-        self._tree.bind("<Escape>", self.deselect)
         self.bind("<FocusIn>", self.got_focus)
 
         self.recent_menu = None
@@ -872,11 +871,6 @@ class PlistWindow(tk.Toplevel):
         # If we got here - start over
         self.select(matches[0][1])
         return match[0]
-
-    def deselect(self, event=None):
-        # Clear the table selection
-        for x in self._tree.selection():
-            self._tree.selection_remove(x)
 
     def start_editing(self, event = None):
         # Get the currently selected row, if any
