@@ -1,4 +1,4 @@
 {
-    "version": "0.0.5",
-    "changes": "Check for python3 stub on macOS 10.15+."
+    "version": "0.0.6",
+    "changes": "Fix cosmetic issue where pressing escape causes the selected node's text to change to the deselected color."
 }
