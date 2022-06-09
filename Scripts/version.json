@@ -1,4 +1,4 @@
 {
-    "version": "0.0.6",
-    "changes": "Fix cosmetic issue where pressing escape causes the selected node's text to change to the deselected color."
+    "version": "0.0.7",
+    "changes": "Fix issue with confirmation dialog cancelling edits."
 }
