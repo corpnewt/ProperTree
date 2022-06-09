@@ -63,12 +63,16 @@ class EntryPopup(tk.Entry):
         self.bind("<Tab>", lambda x:[self.reveal(x),self.next_field(x)])
         self.bind("<FocusOut>", self.focus_out)
 
+        # Lock to avoid prematurely cancelling on focus_out
+        self.confirmlist = False
+
     def reveal(self, event=None):
         # Make sure we're visible if editing
         self.parent.see(self.cell)
         self.relocate()
 
     def focus_out(self, event=None):
+        if self.confirming: return # Don't do anything if we're still confirming
         if self.master.focus_get():
             # Pass True as the event to allow the bell() when our window still
             # has focus (means we're actively editing)
@@ -170,9 +174,15 @@ class EntryPopup(tk.Entry):
         # returns 'break' to interrupt default key-bindings
         return 'break'
 
+    def confirm_clear_and_focus(self):
+        # Helper to clear confirming, then focus the widget
+        self.confirming = False
+        return self.focus_force()
+
     def confirm(self, event=None, no_prompt = False):
         if not self.winfo_exists():
             return
+        self.confirming = True # Lock confirming
         if self.column == "#0":
             # First we make sure that no other siblings
             # have the same name - as dict names need to be
@@ -191,7 +201,7 @@ class EntryPopup(tk.Entry):
                     if no_prompt or not mb.askyesno("Invalid Key Name","That key name already exists in that dict.\n\nWould you like to keep editing?",parent=self.parent):
                         return self.cancel(event)
                     # no_prompt is false and we wanted to continue editing - set focus again and return
-                    return self.focus_force()
+                    return self.confirm_clear_and_focus()
             # Add to undo stack
             self.master.add_undo({"type":"edit","cell":self.cell,"text":self.parent.item(self.cell,"text"),"values":self.parent.item(self.cell,"values")})
             # No matches, should be safe to set
@@ -219,7 +229,7 @@ class EntryPopup(tk.Entry):
                 if no_prompt or not mb.askyesno(output[1],output[2]+"\n\nWould you like to keep editing?",parent=self.parent):
                     return self.cancel(event)
                 # no_prompt is false and we wanted to continue editing - set focus again and return
-                return self.focus_force()
+                return self.confirm_clear_and_focus()
             # Set the value to the new output
             value = output[1]
             # Add to undo stack
