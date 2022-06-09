@@ -64,7 +64,7 @@ class EntryPopup(tk.Entry):
         self.bind("<FocusOut>", self.focus_out)
 
         # Lock to avoid prematurely cancelling on focus_out
-        self.confirmlist = False
+        self.confirming = False
 
     def reveal(self, event=None):
         # Make sure we're visible if editing
