@@ -1108,7 +1108,7 @@ class PlistWindow(tk.Toplevel):
             }
             # Add our snapshot custom entries, if any
             for x in acpi_add: new_aml_entry[x] = acpi_add[x]
-            add.append(new_aml_entry)
+            add.append(OrderedDict(sorted(new_aml_entry.items(),key=lambda x: str(x[0]).lower())))
         new_add = []
         for aml in add:
             if not isinstance(aml,dict):
@@ -1172,7 +1172,7 @@ class PlistWindow(tk.Toplevel):
                 except Exception as e: 
                     continue # Something else broke here - bail
                 # Should have something valid here
-                kext_list.append((kdict,kinfo))
+                kext_list.append((OrderedDict(sorted(kdict.items(),key=lambda x: str(x[0]).lower())),kinfo))
 
         bundle_list = [x[0].get("BundlePath","") for x in kext_list]
         kexts = [] if clean else tree_dict["Kernel"]["Add"]
@@ -1241,7 +1241,7 @@ class PlistWindow(tk.Toplevel):
         for kext in ordered_kexts:
             # Check path length
             long_paths.extend(self.check_path_length(kext))
-            temp_kext = {}
+            temp_kext = OrderedDict() if isinstance(kext,OrderedDict) else {}
             # Shallow copy the kext entry to avoid changing it in ordered_kexts
             for x in kext: temp_kext[x] = kext[x]
             duplicates_disabled.append(temp_kext)
@@ -1273,7 +1273,6 @@ class PlistWindow(tk.Toplevel):
         if len(duplicate_bundles):
             if mb.askyesno("Duplicate CFBundleIdentifiers","Disable the following kexts with duplicate CFBundleIdentifiers?\n\n{}".format("\n".join(duplicate_bundles)),parent=self):
                 ordered_kexts = duplicates_disabled
-
         tree_dict["Kernel"]["Add"] = ordered_kexts
 
         # Let's walk the Tools folder if it exists
@@ -1298,7 +1297,7 @@ class PlistWindow(tk.Toplevel):
                         }
                         # Add our snapshot custom entries, if any
                         for x in tool_add: new_tool_entry[x] = tool_add[x]
-                        tools_list.append(new_tool_entry)
+                        tools_list.append(OrderedDict(sorted(new_tool_entry.items(),key=lambda x:str(x[0]).lower())))
             tools = [] if clean else tree_dict["Misc"]["Tools"]
             for tool in sorted(tools_list, key=lambda x: x.get("Path","").lower()):
                 if tool["Path"].lower() in [x.get("Path","").lower() for x in tools if isinstance(x,dict)]:
@@ -1344,7 +1343,7 @@ class PlistWindow(tk.Toplevel):
                             }
                             # Add our snapshot custom entries, if any - include the name of the .efi driver if the Comment
                             for x in driver_add: new_driver_entry[x] = name if x.lower() == "comment" else driver_add[x]
-                            drivers_list.append(new_driver_entry)
+                            drivers_list.append(OrderedDict(sorted(new_driver_entry.items(),key=lambda x:str(x[0]).lower())))
             drivers = [] if clean else tree_dict["UEFI"]["Drivers"]
             for driver in sorted(drivers_list, key=lambda x: x.get("Path","").lower() if driver_add else x):
                 if not driver_add: # Old way
