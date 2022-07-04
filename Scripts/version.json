@@ -1,4 +1,4 @@
 {
-    "version": "0.0.7",
-    "changes": "Fix issue with confirmation dialog cancelling edits."
+    "version": "0.0.8",
+    "changes": "Added OC 0.8.2 hashes to snapshot.plist."
 }
