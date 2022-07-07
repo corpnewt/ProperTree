@@ -1,4 +1,4 @@
 {
-    "version": "0.0.8",
-    "changes": "Added OC 0.8.2 hashes to snapshot.plist."
+    "version": "0.0.9",
+    "changes": "Fixed an issue with negative ints when displayed as hex.\nAdjusted the wording/formatting of the update notification."
 }
