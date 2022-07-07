@@ -544,7 +544,7 @@ class ProperTree:
             self.tk.bell()
             result = mb.askyesno(
                 title="New ProperTree Version Available",
-                message="Version {} is available (currently on {}).\n\nChanges in {}: {}\n\nVisit ProperTree's github repo now?".format(
+                message="Version {} is available (currently on {}).\n\nWhat's new in {}:\n{}\n\nVisit ProperTree's github repo now?".format(
                     check_version,
                     our_version,
                     check_version,
