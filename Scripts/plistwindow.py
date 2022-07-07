@@ -1496,8 +1496,7 @@ class PlistWindow(tk.Toplevel):
             if new_display.lower() == "hex":
                 try:
                     value = int(value)
-                    assert value >= 0
-                    value = "0x"+hex(value).upper()[2:].rjust(2,"0")
+                    if value >= 0: value = "0x"+hex(value).upper()[2:].rjust(2,"0")
                 except: pass
             else:
                 if value.lower().startswith("0x"):
@@ -2215,8 +2214,7 @@ class PlistWindow(tk.Toplevel):
             v_type = self.get_type(value)
             try:
                 value = int(value)
-                assert value >= 0
-                value = "0x"+hex(value).upper()[2:].rjust(2,"0")
+                if value >= 0: value = "0x"+hex(value).upper()[2:].rjust(2,"0")
             except: value = "0x00" # Default to 0
             self._tree.item(i, values=(v_type,value,"" if parentNode == "" else self.drag_code,))
         elif isinstance(value, bool):
