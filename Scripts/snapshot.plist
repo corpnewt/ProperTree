@@ -5,15 +5,6 @@
 	<dict>
 		<key>debug_hashes</key>
 		<array>
-			<string>95497990f2dde60661ec66c57f55a28b</string>
-			<string>5be2c6ee90d95f786e8d511ce2124055</string>
-			<string>a0f63021d1605fe580eea882f3760823</string>
-			<string>7c09a5bd5c1554881b0acd1594b971be</string>
-			<string>7de24a3b50a581765a211fa45055214b</string>
-			<string>972daa56413cfe7f5bab31dbb6ccc68c</string>
-			<string>f99d91e4be938766f16768b60773be72</string>
-			<string>31800acd3d80d77539ce21064bea79ef</string>
-			<string>c08d55614715485e2b096e175aae13b3</string>
 			<string>f253ef64ed271d3c95ece553844a34b4</string>
 		</array>
 		<key>kext_add</key>
@@ -26,7 +17,60 @@
 			<string></string>
 		</dict>
 		<key>min_version</key>
+		<string>0.8.3</string>
+		<key>release_hashes</key>
+		<array>
+			<string>9026dd50835d644084d583c340ccdd82</string>
+		</array>
+		<key>tool_add</key>
+		<dict>
+			<key>Arguments</key>
+			<string></string>
+			<key>Auxiliary</key>
+			<true/>
+			<key>Flavour</key>
+			<string>Auto</string>
+			<key>RealPath</key>
+			<false/>
+			<key>TextMode</key>
+			<false/>
+		</dict>
+		<key>driver_add</key>
+		<dict>
+			<key>Arguments</key>
+			<string></string>
+			<key>Comment</key>
+			<string></string>
+			<key>LoadEarly</key>
+			<false/>
+		</dict>
+	</dict>
+	<dict>
+		<key>debug_hashes</key>
+		<array>
+			<string>95497990f2dde60661ec66c57f55a28b</string>
+			<string>5be2c6ee90d95f786e8d511ce2124055</string>
+			<string>a0f63021d1605fe580eea882f3760823</string>
+			<string>7c09a5bd5c1554881b0acd1594b971be</string>
+			<string>7de24a3b50a581765a211fa45055214b</string>
+			<string>972daa56413cfe7f5bab31dbb6ccc68c</string>
+			<string>f99d91e4be938766f16768b60773be72</string>
+			<string>31800acd3d80d77539ce21064bea79ef</string>
+			<string>c08d55614715485e2b096e175aae13b3</string>
+		</array>
+		<key>kext_add</key>
+		<dict>
+			<key>Arch</key>
+			<string>Any</string>
+			<key>MaxKernel</key>
+			<string></string>
+			<key>MinKernel</key>
+			<string></string>
+		</dict>
+		<key>min_version</key>
 		<string>0.7.4</string>
+		<key>max_version</key>
+		<string>0.8.2</string>
 		<key>release_hashes</key>
 		<array>
 			<string>81a2ac329da9548da0ab0cb140eb9661</string>
@@ -38,7 +82,6 @@
 			<string>d032ab8e6ca3fcbd1614208423428a38</string>
 			<string>6792be19b704d7346e68587dc1b01209</string>
 			<string>f0b718f48792286204e95cf2189a6273</string>
-			<string>9026dd50835d644084d583c340ccdd82</string>
 		</array>
 		<key>tool_add</key>
 		<dict>
