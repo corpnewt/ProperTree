@@ -1,4 +1,4 @@
 {
-    "version": "0.0.9",
-    "changes": "Fixed an issue with negative ints when displayed as hex.\nAdjusted the wording/formatting of the update notification."
+    "version": "0.1.0",
+    "changes": "- Updated hashes for OC 0.8.3.\n- Account for UEFI -> Drivers -> LoadEarly schema change.\n- Update version check/compare code."
 }
