@@ -506,6 +506,32 @@ class ProperTree:
         c = p.communicate()
         return c[0].decode("utf-8", "ignore").strip().lower() == "dark"
 
+    def compare_version(self, v1, v2):
+        # Splits the version numbers by periods and compare each value
+        # Allows 0.0.10 > 0.0.9 where normal string comparison would return false
+        # Also strips out any non-numeric values from each segment to avoid conflicts
+        #
+        # Returns True if v1 > v2, None if v1 == v2, and False if v1 < v2
+        if not all((isinstance(x,str) for x in (v1,v2))):
+            # Wrong types
+            return False
+        v1_seg = v1.split(".")
+        v2_seg = v2.split(".")
+        # Pad with 0s to ensure common length
+        v1_seg += ["0"]*(len(v2_seg)-len(v1_seg))
+        v2_seg += ["0"]*(len(v1_seg)-len(v2_seg))
+        # Compare each segment - stripping non-numbers as needed
+        for i in range(len(v1_seg)):
+            a,b = v1_seg[i],v2_seg[i]
+            try: a = int("".join([x for x in a if x.isdigit()]))
+            except: a = 0
+            try: b = int("".join([x for x in b if x.isdigit()]))
+            except: b = 0
+            if a > b: return True
+            if a < b: return False
+        # If we're here, both versions are the same
+        return None
+
     def check_for_updates(self, user_initiated = False):
         # Attempts to download the latest version.json and compare to our local copy
         if self.dl is None:
@@ -534,7 +560,7 @@ class ProperTree:
         our_version   = str(self.version.get("version","0.0.0")).lower()
         notify_once   = self.settings.get("notify_once_per_version",True)
         last_version  = str(self.settings.get("last_version_checked","0.0.0")).lower()
-        if our_version < check_version:
+        if self.compare_version(check_version,our_version) is True:
             if notify_once and last_version == check_version and not user_initiated:
                 # Already notified about this version - ignore
                 return
