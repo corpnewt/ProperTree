@@ -990,6 +990,21 @@ class PlistWindow(tk.Toplevel):
         if not paths_too_long: return [] # Return an empty array to allow .extend()
         return [(item,name,paths_too_long)] # Return a list containing a tuple of the original item, and which paths are too long
 
+    def get_hash(self,path,block_size=65536):
+        if not os.path.exists(path):
+            return ""
+        hasher = hashlib.md5()
+        try:
+            with open(path,"rb") as f:
+                while True:
+                    buffer = f.read(block_size)
+                    if not buffer: break
+                    hasher.update(buffer)
+            return hasher.hexdigest()
+        except:
+            pass
+        return "" # Couldn't determine hash :(
+
     def oc_snapshot(self, event = None, clean = False):
         target_dir = os.path.dirname(self.current_plist) if self.current_plist and os.path.exists(os.path.dirname(self.current_plist)) else None
         oc_folder = fd.askdirectory(title="Select OC Folder:",initialdir=target_dir)
@@ -1030,13 +1045,7 @@ class PlistWindow(tk.Toplevel):
         # Folders are valid - lets work through each section
 
         # Let's get the hash of OpenCore.efi, compare to a known list, and then compare that version to our snapshot_version if found
-        hasher = hashlib.md5()
-        try:
-            with open(oc_efi,"rb") as f:
-                hasher.update(f.read())
-            oc_hash = hasher.hexdigest()
-        except:
-            oc_hash = "" # Couldn't determine hash :(
+        oc_hash = self.get_hash(oc_efi)
         # Let's get the version of the snapshot that matches our target, and that matches our hash if any
         latest_snap = {} # Highest min_version
         target_snap = {} # Matches our hash
@@ -1979,6 +1988,13 @@ class PlistWindow(tk.Toplevel):
                     f.write(plist_text)
             # Copy the temp over
             shutil.copy(temp_file,path)
+            # Let's ensure the md5 of the temp file and saved file are the same
+            # There have been some reports of file issues when saving directly to an ESP
+            temp_hash = self.get_hash(temp_file)
+            save_hash = self.get_hash(path)
+            if not temp_hash == save_hash: # Some issue occurred - let's throw an exception
+                self.bell()
+                mb.showerror("Saved MD5 Hash Mismatch","The saved and temp file hashes do not match - which suggests that copying from the temp directory to the destination was unsuccessful.\n\nIf the destination volume is an ESP, try first saving to your Desktop, then copying the file over manually.",parent=self)
         except Exception as e:
             # Had an issue, throw up a display box
             self.bell()
