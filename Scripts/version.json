@@ -1,4 +1,4 @@
 {
-    "version": "0.1.0",
-    "changes": "- Updated hashes for OC 0.8.3.\n- Account for UEFI -> Drivers -> LoadEarly schema change.\n- Update version check/compare code."
+    "version": "0.1.1",
+    "changes": "- Compare temp and saved file hashes.\n- Account for Misc -> Tools -> FullNvramAccess schema in OC 0.8.4 prerelease."
 }
