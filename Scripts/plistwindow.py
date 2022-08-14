@@ -1035,11 +1035,11 @@ class PlistWindow(tk.Toplevel):
         for x in (oc_acpi,oc_drivers,oc_kexts):
             if not os.path.exists(x):
                 self.bell()
-                mb.showerror("Incorrect OC Folder Struction", "{} does not exist.".format(x), parent=self)
+                mb.showerror("Incorrect OC Folder Structure", "{} does not exist.".format(x), parent=self)
                 return
             if x != oc_efi and not os.path.isdir(x):
                 self.bell()
-                mb.showerror("Incorrect OC Folder Struction", "{} exists, but is not a directory.".format(x), parent=self)
+                mb.showerror("Incorrect OC Folder Structure", "{} exists, but is not a directory.".format(x), parent=self)
                 return
 
         # Folders are valid - lets work through each section
