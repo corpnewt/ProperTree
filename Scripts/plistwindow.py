@@ -1207,9 +1207,9 @@ class PlistWindow(tk.Toplevel):
         for x in new_kexts:
             x = next((y for y in kext_list if y[0].get("BundlePath","") == x.get("BundlePath","")),None)
             if not x: continue
-            parents = [next((z for z in new_kexts if z.get("BundlePath","") == y[0].get("BundlePath","")),[]) for y in kext_list if y[1].get("CFBundleIdentifier",None) in x[1].get("OSBundleLibraries",[])]
+            parents = [next(((z,y[1]) for z in new_kexts if z.get("BundlePath","") == y[0].get("BundlePath","")),[]) for y in kext_list if y[1].get("CFBundleIdentifier",None) in x[1].get("OSBundleLibraries",[])]
             children = [next((z for z in new_kexts if z.get("BundlePath","") == y[0].get("BundlePath","")),[]) for y in kext_list if x[1].get("CFBundleIdentifier",None) in y[1].get("OSBundleLibraries",[])]
-            parents = [y for y in parents if not y in children and not y.get("BundlePath","") == x[0].get("BundlePath","")]
+            parents = [y for y in parents if not y[0] in children and not y[0].get("BundlePath","") == x[0].get("BundlePath","")]
             unordered_kexts.append({
                 "kext":x[0],
                 "parents":parents
@@ -1219,8 +1219,18 @@ class PlistWindow(tk.Toplevel):
         while len(unordered_kexts): # This could be dangerous if things aren't properly prepared above
             kext = unordered_kexts.pop(0)
             if len(kext["parents"]):
-                disabled_parents.extend([x.get("BundlePath","") for x in kext["parents"] if x.get("Enabled",True) == False and not x.get("BundlePath","") in disabled_parents])
-                if not all(x in ordered_kexts for x in kext["parents"]):
+                # Gather a list of enabled/disabled parents - and ensure we properly populate
+                # our disabled_parents list
+                enabled_parents = [x[1].get("CFBundleIdentifier") for x in kext["parents"] if x[0].get("Enabled")]
+                disabled_add = [x for x in kext["parents"] if x[0].get("Enabled") == False and not x[1].get("CFBundleIdentifier") in enabled_parents and not any((x[1].get("CFBundleIdentifier")==y[1].get("CFBundleIdentifier") for y in disabled_parents))]
+                for p in kext["parents"]:
+                    p_cf = p[1].get("CFBundleIdentifier")
+                    if not p_cf: continue # Broken - can't check
+                    if p_cf in enabled_parents: continue # Already have an enabled copy
+                    if any((p_cf == x[1].get("CFBundleIdentifier") for x in disabled_parents)):
+                        continue # Already have a warning copy
+                    disabled_parents.append(p)
+                if not all(x[0] in ordered_kexts for x in kext["parents"]):
                     unordered_kexts.append(kext)
                     continue
             ordered_kexts.append(next(x for x in new_kexts if x.get("BundlePath","") == kext["kext"].get("BundlePath","")))
@@ -1240,9 +1250,9 @@ class PlistWindow(tk.Toplevel):
             if not mb.askyesno("Incorrect Kext Load Order","Correct the following kext load inheritance issues?\n\n{}".format("\n".join(rearranged)),parent=self):
                 ordered_kexts = original_kexts # We didn't want to update it
         if len(disabled_parents):
-            if mb.askyesno("Disabled Parent Kexts","Enable the following disabled parent kexts?\n\n{}".format("\n".join(disabled_parents)),parent=self):
+            if mb.askyesno("Disabled Parent Kexts","Enable the following disabled parent kexts?\n\n{}".format("\n".join([x[0].get("BundlePath","") for x in disabled_parents])),parent=self):
                 for x in ordered_kexts: # Walk our kexts and enable the parents
-                    if x.get("BundlePath","") in disabled_parents: x["Enabled"] = True
+                    if any((x.get("BundlePath","") == y[0].get("BundlePath","") for y in disabled_parents)): x["Enabled"] = True
         # Finally - we walk the kexts and ensure that we're not loading the same CFBundleIdentifier more than once
         enabled_kexts = []
         duplicate_bundles = []
