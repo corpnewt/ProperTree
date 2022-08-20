@@ -1223,13 +1223,16 @@ class PlistWindow(tk.Toplevel):
                 # our disabled_parents list
                 enabled_parents = [x[1].get("CFBundleIdentifier") for x in kext["parents"] if x[0].get("Enabled")]
                 disabled_add = [x for x in kext["parents"] if x[0].get("Enabled") == False and not x[1].get("CFBundleIdentifier") in enabled_parents and not any((x[1].get("CFBundleIdentifier")==y[1].get("CFBundleIdentifier") for y in disabled_parents))]
-                for p in kext["parents"]:
-                    p_cf = p[1].get("CFBundleIdentifier")
-                    if not p_cf: continue # Broken - can't check
-                    if p_cf in enabled_parents: continue # Already have an enabled copy
-                    if any((p_cf == x[1].get("CFBundleIdentifier") for x in disabled_parents)):
-                        continue # Already have a warning copy
-                    disabled_parents.append(p)
+                # Get any existing kext we're referencing
+                k = next((x for x in original_kexts if x.get("BundlePath")==kext["kext"].get("BundlePath")),None)
+                if not k or k.get("Enabled"):
+                    for p in kext["parents"]:
+                        p_cf = p[1].get("CFBundleIdentifier")
+                        if not p_cf: continue # Broken - can't check
+                        if p_cf in enabled_parents: continue # Already have an enabled copy
+                        if any((p_cf == x[1].get("CFBundleIdentifier") for x in disabled_parents)):
+                            continue # Already have a warning copy
+                        disabled_parents.append(p)
                 if not all(x[0] in ordered_kexts for x in kext["parents"]):
                     unordered_kexts.append(kext)
                     continue
