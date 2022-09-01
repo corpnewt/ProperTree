@@ -1,4 +1,4 @@
 {
-    "version": "0.1.1",
-    "changes": "- Compare temp and saved file hashes.\n- Account for Misc -> Tools -> FullNvramAccess schema in OC 0.8.4 prerelease."
+    "version": "0.1.2",
+    "changes": "- Improve wording on some error output.\n- Refine OC Snapshot parent kext routines."
 }
