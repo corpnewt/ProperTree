@@ -620,6 +620,10 @@ class PlistWindow(tk.Toplevel):
                         value = float(value)
                     except:
                         return (False,"Invalid Number Data","Couldn't convert to an integer or float.")
+            # Check if we're saving an integer that's out of range
+            if isinstance(value,int) and not (-1 << 63 <= value < 1 << 63):
+                # Convert it to a float which will force it into scientific notation
+                value = float(value)
             if self.int_type_string.get().lower() == "hex" and not isinstance(value,float) and value >= 0:
                 value = hex(value).upper()[2:]
                 if len(value) % 2: value = "0"+value # Pad to an even number of chars
