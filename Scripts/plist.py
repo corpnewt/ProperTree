@@ -93,7 +93,7 @@ def load(fp, fmt=None, use_builtin_types=None, dict_type=dict):
                 d = p.get_data()
                 value = int(d,16) if d.lower().startswith("0x") else int(d)
                 if -1 << 63 <= value < 1 << 63:
-                    p.add_object(int(d,16) if d.lower().startswith("0x") else int(d))
+                    p.add_object(value)
                 else:
                     raise OverflowError("Integer overflow at line {}".format(p.parser.CurrentLineNumber))
             def end_data():
@@ -126,7 +126,7 @@ def load(fp, fmt=None, use_builtin_types=None, dict_type=dict):
             d = p.getData()
             value = int(d,16) if d.lower().startswith("0x") else int(d)
             if -1 << 63 <= value < 1 << 63:
-                p.addObject(int(d,16) if d.lower().startswith("0x") else int(d))
+                p.addObject(value)
             else:
                 raise OverflowError("Integer overflow at line {}".format(parser.CurrentLineNumber))
         def end_data():
