@@ -1054,30 +1054,34 @@ class PlistWindow(tk.Toplevel):
         latest_snap = {} # Highest min_version
         target_snap = {} # Matches our hash
         select_snap = {} # Whatever the user selected
-        user_snap   = self.controller.settings.get("snapshot_version","Latest")
+        user_snap   = self.controller.settings.get("snapshot_version","Auto-detect")
         for snap in self.controller.snapshot_data:
             hashes = snap.get("release_hashes",[])
             hashes.extend(snap.get("debug_hashes",[]))
             # Retain the highest version we see
             if snap.get("min_version","0.0.0") > latest_snap.get("min_version","0.0.0"):
                 latest_snap = snap
+                # If we want the latest, retain the select_snap as well
+                if user_snap.lower() == "latest": select_snap = snap
             # Also retain the last snap that matches our hash
             if len(oc_hash) and (oc_hash in snap.get("release_hashes",[]) or oc_hash in snap.get("debug_hashes",[])):
                 target_snap = snap
-            # Save the snap that matches the user's choice too if not Latest
-            if user_snap.lower() != "latest" and user_snap >= snap.get("min_version","0.0.0") and snap.get("min_version","0.0.0") > select_snap.get("min_version","0.0.0"):
+                # If we're auto-detecting, retain the select_snap as well
+                if user_snap.lower() == "auto-detect": select_snap = snap
+            # Save the snap that matches the user's choice too if not Latest or Auto-detect
+            if user_snap.lower() not in ("auto-detect","latest") and user_snap >= snap.get("min_version","0.0.0") and snap.get("min_version","0.0.0") > select_snap.get("min_version","0.0.0"):
                 select_snap = snap
-        if user_snap.lower() == "latest" or not select_snap:
-            select_snap = latest_snap
+        # Make sure we have a value for select_snap - either its own, or the latest
+        select_snap = select_snap or latest_snap
         if target_snap and target_snap != select_snap: # Version mismatch - warn
             tar_min,tar_max = target_snap.get("min_version","0.0.0"),target_snap.get("max_version","Current")
             sel_min,sel_max = select_snap.get("min_version","0.0.0"),select_snap.get("max_version","Current")
             found_ver  = tar_min if tar_min==tar_max else "{} -> {}".format(tar_min,tar_max)
             select_ver = sel_min if sel_min==sel_max else "{} -> {}".format(sel_min,sel_max)
-            if mb.askyesno("Snapshot Version Mismatch","Found OC version: {}\nTarget snapshot version: {}\n\nWould you like to snapshot for {} instead?".format(
+            if mb.askyesno("Snapshot Version Mismatch","Detected OpenCore.efi version: {}\n\nOC Snapshot target version: {}{}\n\nWould you like to snapshot for the detected OpenCore.efi version instead?".format(
                 found_ver,
                 select_ver,
-                found_ver
+                " (Latest)" if user_snap.lower() == "latest" else ""
             ),parent=self):
                 # We want to change for this snapshot
                 select_snap = target_snap
