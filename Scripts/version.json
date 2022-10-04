@@ -1,4 +1,4 @@
 {
-    "version": "0.1.3",
-    "changes": "- Add OC 0.8.4 hashes.\n- Improve int/data checks and error output."
+    "version": "0.1.4",
+    "changes": "- Add OC 0.8.5 hashes.\n- Auto-detect OC version by default when snapshotting."
 }
