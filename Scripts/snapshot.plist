@@ -6,6 +6,7 @@
 		<key>debug_hashes</key>
 		<array>
 			<string>ab665d6747347e7d84111bc4eed9aa0a</string>
+			<string>90522df5361813bf25bf57882693059c</string>
 		</array>
 		<key>kext_add</key>
 		<dict>
@@ -21,6 +22,7 @@
 		<key>release_hashes</key>
 		<array>
 			<string>0cbf167281f9fcf64316c55fcfa8dbd4</string>
+			<string>bd68d62b4a39168746b4cfc9197fd452</string>
 		</array>
 		<key>tool_add</key>
 		<dict>
