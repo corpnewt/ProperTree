@@ -296,8 +296,8 @@ class ProperTree:
             key="Command"
             sign=key+"+"
 
-        self.tk.protocol("WM_DELETE_WINDOW", self.close_window)
-        self.settings_window.protocol("WM_DELETE_WINDOW", self.close_window)
+        self.tk.protocol("WM_DELETE_WINDOW", self.close_convert)
+        self.settings_window.protocol("WM_DELETE_WINDOW", self.close_settings)
 
         self.default_windows = (self.tk,self.settings_window)
 
@@ -1027,17 +1027,31 @@ class ProperTree:
             return
         window.hide_show_type(event)
 
+    def close_settings(self, event = None, check_close = True):
+        # We're getting a settings window close event - regardless
+        # of stack order
+        self.settings_window.withdraw()
+        if check_close: self.check_close()
+
+    def close_convert(self, event = None, check_close = True):
+        # We're getting a convert window close event - regardless
+        # of stack order
+        self.tk.withdraw()
+        if check_close: self.check_close()
+
     def close_window(self, event = None, check_close = True):
         # Remove the default window that comes from it
-        windows = self.stackorder(self.tk)
-        if len(windows):
+        windows = self.stackorder(self.tk,include_defaults=True)
+        if windows:
             windows[-1].withdraw()
             windows = windows[:-1]
-        if not len(windows):
-            # Quit if all windows are closed
-            if check_close: self.quit()
-        else:
-            # Bring the last window forward
+        if check_close: self.check_close()
+    
+    def check_close(self, lift_last = False):
+        windows = self.stackorder(self.tk,include_defaults=True)
+        if not windows:
+            self.quit()
+        elif lift_last:
             self.lift_window(windows[-1])
 
     def strip_comments(self, event = None):
@@ -1083,7 +1097,9 @@ class ProperTree:
             window.geometry("+{}+{}".format(x, y))
             window.deiconify()
         window.lift()
-        self.f_text.focus_set()
+        if window == self.tk:
+            # Only set the focus if we're showing the convert window
+            self.f_text.focus_set()
 
     def get_bytes(self, value):
         if sys.version_info >= (3,0) and not isinstance(value,bytes):
@@ -1278,13 +1294,11 @@ class ProperTree:
             # Fresh window - replace the contents
             current_window = windows[0]
         # Verify that no other window has that file selected already
-        for window in windows:
+        for window in windows[::-1]:
             if window in self.default_windows: continue
             if window.current_plist == path:
                 # found one - just make this focus instead
                 self.lift_window(window)
-                window.bell()
-                mb.showerror("File Already Open", "{} is already open here.".format(path)) # , parent=window)
                 return
         return self.open_plist_with_path(None,path,current_window)
 
@@ -1315,14 +1329,30 @@ class ProperTree:
         self.add_recent(path)
         return current_window
 
-    def stackorder(self, root):
+    def stackorder(self, root = None, include_defaults = False):
         """return a list of root and toplevel windows in stacking order (topmost is last)"""
+        root = root or self.tk
+        check_types = (tk.Toplevel,tk.Tk) if include_defaults else plistwindow.PlistWindow
         c = root.children
         s = root.tk.eval('wm stackorder {}'.format(root))
         L = [x.lstrip('.') for x in s.split()]
-        return [(c[x] if x else root) for x in L if x in c or not x]
+        # Remove any non-needed widgets
+        w = {}
+        for x in list(c):
+            if isinstance(c.get(x),check_types):
+                w[x] = c[x] # Retain the valid types
+        if "" in L and isinstance(root,check_types):
+            # We also need to append the root
+            w[""] = root
+        # Build a list of just the tkinter classes that follow the stack order
+        stack_order = [w[x] for x in L if x in w]
+        # Add any missing windows (might be minimized)
+        stack_order = [x for x in w.values()] + stack_order
+        # Return the list, omitting any windows that are withdrawn
+        return [x for x in stack_order if x.wm_state() != "withdrawn"]
 
     def lift_window(self, window):
+        window.deiconify() # Lift minimized windows as well
         window.lift()
         window.focus_force()
         try: window._tree.focus_force()
