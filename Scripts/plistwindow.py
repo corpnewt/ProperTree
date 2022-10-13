@@ -2026,6 +2026,8 @@ class PlistWindow(tk.Toplevel):
                 shutil.rmtree(temp,ignore_errors=True)
             except:
                 pass
+        # Normalize the path as needed
+        path = os.path.normpath(path) if path else path
         # Retain the new path if the save worked correctly
         self.current_plist = path
         # Set the window title to the path
@@ -2039,7 +2041,7 @@ class PlistWindow(tk.Toplevel):
         self.plist_type_string.set(plist_type)
         self._tree.delete(*self._tree.get_children())
         self.add_node(plist_data)
-        self.current_plist = path
+        self.current_plist = os.path.normpath(path) if path else path
         if path == None:
             self.title("Untitled.plist - Edited")
             self.edited = True
@@ -2061,13 +2063,9 @@ class PlistWindow(tk.Toplevel):
         if self.saving or self.check_save() == None:
             # User cancelled or we failed to save, bail
             return None
-        # See if we're the only window left, and close the session after
-        windows = self.controller.stackorder(self.root)
-        if len(windows) == 1 and windows[0] == self:
-            # Last and closing
-            self.controller.close_window(event,check_close=check_close)
-        else:
-            self.destroy()
+        # Destroy our current window - and initiate a check in the controller
+        self.destroy()
+        if check_close: self.controller.check_close()
         return True
 
     def _clipboard_append(self, clipboard_string = None):
