@@ -1347,7 +1347,7 @@ class ProperTree:
         # Build a list of just the tkinter classes that follow the stack order
         stack_order = [w[x] for x in L if x in w]
         # Add any missing windows (might be minimized)
-        stack_order = [x for x in w.values()] + stack_order
+        stack_order = [x for x in w.values() if not x in stack_order] + stack_order
         # Return the list, omitting any windows that are withdrawn
         return [x for x in stack_order if x.wm_state() != "withdrawn"]
 
