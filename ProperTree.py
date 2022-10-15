@@ -1096,7 +1096,7 @@ class ProperTree:
             y = window.winfo_screenheight() // 2 - h // 2
             window.geometry("+{}+{}".format(x, y))
             window.deiconify()
-        window.lift()
+        self.lift_window(window)
         if window == self.tk:
             # Only set the focus if we're showing the convert window
             self.f_text.focus_set()
