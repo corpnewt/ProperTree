@@ -389,6 +389,12 @@ class PlistWindow(tk.Toplevel):
         self._tree.bind("<KP_Enter>", self.start_editing)
         self.bind("<FocusIn>", self.got_focus)
 
+        # Set type and bool bindings
+        self._tree.bind("<{}-Up>".format(key), lambda x:self.cycle_type(increment=False))
+        self._tree.bind("<{}-Down>".format(key), lambda x:self.cycle_type(increment=True))
+        self._tree.bind("<{}-Left>".format(key), self.cycle_bool)
+        self._tree.bind("<{}-Right>".format(key), self.cycle_bool)
+
         self.recent_menu = None
         # Setup menu bar (hopefully per-window) - only happens on non-mac systems
         if not str(sys.platform) == "darwin":
@@ -2490,6 +2496,34 @@ class PlistWindow(tk.Toplevel):
         for x,child in enumerate(self._tree.get_children(target)):
             # Only updating the "text" field
             self._tree.item(child,text=x)
+
+    def cycle_bool(self, event=None):
+        cell = "" if not len(self._tree.selection()) else self._tree.selection()[0]
+        value = self.get_check_type(cell)
+        if not value.lower() == "boolean":
+            return "break"
+        bool_val = self.get_value_from_node(cell)
+        self.set_bool(self.b_false() if bool_val else self.b_true())
+        return "break"
+
+    def cycle_type(self, increment = True):
+        # Set our type to the next in the list
+        cell = "" if not len(self._tree.selection()) else self._tree.selection()[0]
+        value = self.get_check_type(cell)
+        menu = self.root_type_menu if cell in ("",self.get_root_node()) else self.type_menu
+        curr,end = menu.index(value),menu.index(tk.END)
+        if end is None or curr is None: return "break" # Menu is janked?
+        mod = 1 if increment else -1
+        next_index = curr # default to our current index
+        for x in range(2):
+            # Apply the modifier and check type
+            next_index = (next_index+mod) % (end+1)
+            if menu.type(next_index) == "command": break
+        if menu.type(next_index) != "command":
+            return "break" # Never found one, bail.
+        # Invoke the original command
+        menu.invoke(next_index)
+        return "break" # Prevent the keypress from cascading
 
     def change_type(self, value, cell = None):
         # Need to walk the values and pad
