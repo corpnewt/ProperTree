@@ -395,6 +395,10 @@ class PlistWindow(tk.Toplevel):
         self._tree.bind("<{}-Left>".format(key), self.cycle_bool)
         self._tree.bind("<{}-Right>".format(key), self.cycle_bool)
 
+        # Set expansion bindings
+        self._tree.bind("<Shift-Right>", lambda x:self.expand_children())
+        self._tree.bind("<Shift-Left>", lambda x:self.collapse_children())
+
         self.recent_menu = None
         # Setup menu bar (hopefully per-window) - only happens on non-mac systems
         if not str(sys.platform) == "darwin":
@@ -2919,6 +2923,7 @@ class PlistWindow(tk.Toplevel):
         for node in nodes:
             self._tree.item(node,open=True)
         self.alternate_colors()
+        return "break" # Prevent keybinds from propagating further
 
     def collapse_children(self):
         # Get all children of the selected node
@@ -2928,6 +2933,7 @@ class PlistWindow(tk.Toplevel):
         for node in nodes:
             self._tree.item(node,open=False)
         self.alternate_colors()
+        return "break" # Prevent keybinds from propagating further
 
     def tree_click_event(self, event):
         # close previous popups
