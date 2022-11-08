@@ -1,4 +1,4 @@
 {
-    "version": "0.1.4",
-    "changes": "- Add OC 0.8.5 hashes.\n- Auto-detect OC version by default when snapshotting."
+    "version": "0.1.5",
+    "changes": "- Add OC 0.8.6 hashes.\n- Implement keybinds to change node type and bool value.\n- Fix minimized window issues."
 }
