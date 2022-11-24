@@ -636,7 +636,6 @@ class PlistWindow(tk.Toplevel):
                 value = float(value)
             if self.int_type_string.get().lower() == "hex" and not isinstance(value,float) and value >= 0:
                 value = hex(value).upper()[2:]
-                if len(value) % 2: value = "0"+value # Pad to an even number of chars
                 value = "0x"+value
             value = str(value)
         elif value_type == "boolean":
@@ -1536,7 +1535,7 @@ class PlistWindow(tk.Toplevel):
             if new_display.lower() == "hex":
                 try:
                     value = int(value)
-                    if value >= 0: value = "0x"+hex(value).upper()[2:].rjust(2,"0")
+                    if value >= 0: value = "0x"+hex(value).upper()[2:]
                 except: pass
             else:
                 if value.lower().startswith("0x"):
@@ -2256,12 +2255,9 @@ class PlistWindow(tk.Toplevel):
         elif isinstance(value, datetime.datetime):
             self._tree.item(i, values=(self.get_type(value),value.strftime("%b %d, %Y %I:%M:%S %p"),"" if parentNode == "" else self.drag_code,))
         elif isinstance(value, (int,long)) and not isinstance(value, bool) and self.int_type_string.get().lower() == "hex":
-            v_type = self.get_type(value)
-            try:
-                value = int(value)
-                if value >= 0: value = "0x"+hex(value).upper()[2:].rjust(2,"0")
-            except: value = "0x00" # Default to 0
-            self._tree.item(i, values=(v_type,value,"" if parentNode == "" else self.drag_code,))
+            value = int(value)
+            if value >= 0: value = "0x"+hex(value).upper()[2:]
+            self._tree.item(i, values=(self.get_type(value),value,"" if parentNode == "" else self.drag_code,))
         elif isinstance(value, bool):
             self._tree.item(i, values=(self.get_type(value),self.b_true() if value else self.b_false(),"" if parentNode == "" else self.drag_code,))
         else:
@@ -2562,7 +2558,7 @@ class PlistWindow(tk.Toplevel):
         # Set the value if need be
         value = self.get_check_type(None,value).lower()
         if value.lower() == "number":
-            values[1] = "0" if self.int_type_string.get().lower() == "decimal" else "0x00"
+            values[1] = "0" if self.int_type_string.get().lower() == "decimal" else "0x0"
         elif value.lower() == "boolean":
             values[1] = self.b_true()
         elif value.lower() == "array":
