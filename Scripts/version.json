@@ -1,4 +1,4 @@
 {
-    "version": "0.1.5",
-    "changes": "- Add OC 0.8.6 hashes.\n- Implement keybinds to change node type and bool value.\n- Fix minimized window issues."
+    "version": "0.1.6",
+    "changes": "- Add OC 0.8.7 hashes.\n- Minor window stack order fix.\n- Don't needlessly pad hex ints."
 }
