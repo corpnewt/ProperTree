@@ -31,6 +31,7 @@ class EntryPopup(tk.Entry):
     def __init__(self, parent, master, text, cell, column, **kw):
         tk.Entry.__init__(self, parent, **kw)
 
+        self.original_text = text
         self.insert(0, text)
         self.select_all() 
         self['state'] = 'normal'
@@ -179,6 +180,12 @@ class EntryPopup(tk.Entry):
         self.confirming = False
         return self.focus_force()
 
+    def check_edited(self, value):
+        # Make sure we're Edited if the value is different
+        if value != self.original_text and not self.master.edited:
+            self.master.edited = True
+            self.master.title(self.master.title()+" - Edited")
+
     def confirm(self, event=None, no_prompt = False):
         if not self.winfo_exists():
             return
@@ -206,6 +213,8 @@ class EntryPopup(tk.Entry):
             self.master.add_undo({"type":"edit","cell":self.cell,"text":self.parent.item(self.cell,"text"),"values":self.parent.item(self.cell,"values")})
             # No matches, should be safe to set
             self.parent.item(self.cell, text=self.get())
+            # Make sure we check if we're edited
+            self.check_edited(text)
         else:
             # Need to walk the values and pad
             values = self.parent.item(self.cell)["values"] or []
@@ -238,6 +247,8 @@ class EntryPopup(tk.Entry):
             values[index-1] = value
             # Set the values
             self.parent.item(self.cell, values=values)
+            # Make sure we check if we're edited
+            self.check_edited(value)
         # Call cancel to close the popup as we're done editing
         self.cancel(event)
 
@@ -2586,6 +2597,7 @@ class PlistWindow(tk.Toplevel):
     def set_bool(self, value):
         # Need to walk the values and pad
         values = self.get_padded_values("" if not len(self._tree.selection()) else self._tree.selection()[0], 3)
+        if values[1] == value: return # Nothing to do, setting it to itself.
         cell = "" if not len(self._tree.selection()) else self._tree.selection()[0]
         self.add_undo({
             "type":"edit",
@@ -3000,9 +3012,6 @@ class PlistWindow(tk.Toplevel):
         # place Entry popup properly
         self.entry_popup = EntryPopup(self._tree, self, text, tv_item, column)
         self.entry_popup.relocate()
-        if not self.edited:
-            self.edited = True
-            self.title(self.title()+" - Edited")
         return 'break'
 
     ###                   ###
