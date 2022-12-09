@@ -248,7 +248,7 @@ class EntryPopup(tk.Entry):
             # Set the values
             self.parent.item(self.cell, values=values)
             # Make sure we check if we're edited
-            self.check_edited(value)
+            self.check_edited(value.replace("<","").replace(">","") if type_value.lower() == "data" else value)
         # Call cancel to close the popup as we're done editing
         self.cancel(event)
 
@@ -3006,7 +3006,7 @@ class PlistWindow(tk.Toplevel):
                 text = self._tree.item(rowid, 'values')[index-1]
             except:
                 text = ""
-        if index ==2 and t.lower() == "data":
+        if index == 2 and t.lower() == "data":
             # Special formatting of hex values
             text = text.replace("<","").replace(">","")
         # place Entry popup properly
