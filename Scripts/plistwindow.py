@@ -1800,9 +1800,6 @@ class PlistWindow(tk.Toplevel):
         except:
             pass
         else:
-            if not self.edited:
-                self.edited = True
-                self.title(self.title()+" - Edited")
             self.dragging = True
             self.alternate_colors()
 
@@ -1815,6 +1812,13 @@ class PlistWindow(tk.Toplevel):
         self._tree.item(target,open=self.drag_open)
         self.drag_open = None
         node = self._tree.parent(target)
+        # Make sure we actually moved it somewhere
+        if self.drag_undo["from"] == node and self.drag_undo["index"] == self._tree.index(target):
+            return # Didn't actually move it - bail
+        # We moved it - make sure it shows as edited
+        if not self.edited:
+            self.edited = True
+            self.title(self.title()+" - Edited")
         # Finalize the drag undo
         undo_tasks = []
         # Add the move command
