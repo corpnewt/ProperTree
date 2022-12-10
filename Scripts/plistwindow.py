@@ -1747,9 +1747,13 @@ class PlistWindow(tk.Toplevel):
         if not self.clicked_drag:
             # Nope, ignore
             return
+        target = self.get_root_node() if not len(self._tree.selection()) else self._tree.selection()[0]
+        if target == self.get_root_node(): return # Nothing to do here as we can't drag it
         if self.drag_start == None:
-            # Let's set the drag start
+            # Let's set the drag start globals
             self.drag_start = (event.x, event.y)
+            self.drag_undo = None
+            self.dragging = True
             return
         # Find how far we've drug so far
         if not self.dragging:
@@ -1758,7 +1762,14 @@ class PlistWindow(tk.Toplevel):
             if drag_distance < self.controller.drag_scale.get():
                 # Not drug enough
                 return
-        move_to = self._tree.index(self._tree.identify_row(event.y))
+        # Save a reference to the item
+        if not self.drag_undo:
+            self.drag_undo = {"from":self._tree.parent(target),"index":self._tree.index(target),"name":self._tree.item(target,"text")}
+        # Make sure if we drag to the bottom, it stays at the bottom
+        if self._tree.identify_region(event.x, event.y) == "nothing" and not event.y < 5:
+            move_to = len(self.iter_nodes())
+        else:
+            move_to = self._tree.index(self._tree.identify_row(event.y))
         tv_item = self._tree.identify('item', event.x, event.y)
         tv_item = self.get_root_node() if tv_item == "" else tv_item # Force Root node as needed
         if not self.get_check_type(tv_item).lower() in ("dictionary","array") or not self._tree.item(tv_item,"open"):
@@ -1781,30 +1792,21 @@ class PlistWindow(tk.Toplevel):
             else:
                 # Just below should add it at item 0
                 move_to = 0
-        target = self.get_root_node() if not len(self._tree.selection()) else self._tree.selection()[0]
-        if target == self.get_root_node(): return # Nothing to do here as we can't drag it
         # Retain the open state, and make sure the selected node is closed
         if self.drag_open == None: self.drag_open = self._tree.item(target,"open")
         if self._tree.item(target,"open"): self._tree.item(target,open=False)
         if self._tree.index(target) == move_to and tv_item == target:
             # Already the same
             return
-        # Make sure if we drag to the bottom, it stays at the bottom
-        if self._tree.identify_region(event.x, event.y) == "nothing" and not event.y < 5:
-            move_to = len(self.iter_nodes())
-        # Save a reference to the item
-        if not self.drag_undo:
-            self.drag_undo = {"from":self._tree.parent(target),"index":self._tree.index(target),"name":self._tree.item(target,"text")}
         try:
             self._tree.move(target, tv_item, move_to)
         except:
             pass
         else:
-            self.dragging = True
             self.alternate_colors()
 
     def confirm_drag(self, event):
-        if not self.dragging:
+        if not self.dragging or not self.drag_undo:
             return
         self.dragging = False
         self.drag_start = None
