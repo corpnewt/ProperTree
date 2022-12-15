@@ -26,10 +26,80 @@ except NameError:  # Python 3
     long = int
     unicode = str
 
-
-class EntryPopup(tk.Entry):
-    def __init__(self, parent, master, text, cell, column, **kw):
+class EntryPlus(tk.Entry):
+    def __init__(self,parent,master,**kw):
         tk.Entry.__init__(self, parent, **kw)
+
+        self.parent = parent
+        self.master = master
+
+        if str(sys.platform) == "darwin":
+            self.bind("<Command-a>", self.select_all)
+            self.bind("<Command-c>", self.copy)
+            self.bind("<Command-v>", self.paste)
+        else:
+            self.bind("<Control-a>", self.select_all)
+            self.bind("<Control-c>", self.copy)
+            self.bind("<Control-v>", self.paste)
+        self.bind("<Up>", self.goto_start)
+        self.bind("<Down>", self.goto_end)
+        self.bind("<Escape>", self.clear_selection)
+
+    def clear_selection(self, event=None):
+        self.selection_range(0, 0)
+        return 'break'
+
+    def select_all(self, *ignore):
+        self.selection_range(0,"end")
+        self.icursor("end")
+        # returns 'break' to interrupt default key-bindings
+        return 'break'
+
+    def goto_start(self, event=None):
+        self.selection_range(0, 0)
+        self.icursor(0)
+        return 'break'
+
+    def goto_end(self, event=None):
+        self.selection_range(0, 0)
+        self.icursor(len(self.get()))
+        return 'break'
+    
+    def copy(self, event=None):
+        try:
+            get = self.selection_get()
+        except:
+            get = ""
+        if not len(get):
+            return 'break'
+        self.master._clipboard_append(get)
+        self.update()
+        return 'break'
+
+    def paste(self, event=None):
+        try:
+            contents = self.master.clipboard_get()
+        except:
+            contents = ""
+        if len(contents):
+            try:
+                get = self.selection_get()
+            except:
+                get = ""
+            if len(get):
+                # Have a selection - let's get the first and last
+                start = self.index(tk.SEL_FIRST)
+                end   = self.index(tk.SEL_LAST)
+                self.delete(start,end)
+            else:
+                start = self.index(tk.INSERT)
+            self.insert(start,contents)
+        return 'break'
+
+class EntryPopup(EntryPlus):
+    def __init__(self, parent, master, text, cell, column, **kw):
+        # tk.Entry.__init__(self, parent, **kw)
+        EntryPlus.__init__(self, parent, master, **kw)
 
         self.original_text = text
         self.insert(0, text)
@@ -41,20 +111,10 @@ class EntryPopup(tk.Entry):
 
         self.cell = cell
         self.column = column
-        self.parent = parent
-        self.master = master
         self['font'] = Font(font=self.master.font)
 
         self.focus_force()
         
-        if str(sys.platform) == "darwin":
-            self.bind("<Command-a>", self.select_all)
-            self.bind("<Command-c>", self.copy)
-            self.bind("<Command-v>", self.paste)
-        else:
-            self.bind("<Control-a>", self.select_all)
-            self.bind("<Control-c>", self.copy)
-            self.bind("<Control-v>", self.paste)
         self.bind("<Key>",self.reveal)
         self.bind("<Escape>", lambda x:[self.reveal(x),self.cancel(x)])
         self.bind("<Return>", lambda x:[self.reveal(x),self.confirm(x)])
@@ -128,52 +188,6 @@ class EntryPopup(tk.Entry):
             e.x, e.y, e.x_root, e.y_root = x+5, y+5, 0, 0
             self.master.on_double_click(e)
             return 'break'
-
-    def goto_start(self, event=None):
-        self.selection_range(0, 0)
-        self.icursor(0)
-        return 'break'
-
-    def goto_end(self, event=None):
-        self.selection_range(0, 0)
-        self.icursor(len(self.get()))
-        return 'break'
-
-    def copy(self, event=None):
-        try:
-            get = self.selection_get()
-        except:
-            get = ""
-        if not len(get):
-            return 'break'
-        self.master._clipboard_append(get)
-        self.update()
-        return 'break'
-
-    def paste(self, event=None):
-        try:
-            contents = self.master.clipboard_get()
-        except:
-            contents = ""
-        if len(contents):
-            try:
-                get = self.selection_get()
-            except:
-                get = ""
-            if len(get):
-                # Have a selection - let's get the first and last
-                start = self.index(tk.SEL_FIRST)
-                end   = self.index(tk.SEL_LAST)
-                self.delete(start,end)
-            else:
-                start = self.index(tk.INSERT)
-            self.insert(start,contents)
-        return 'break'
-
-    def select_all(self, *ignore):
-        self.selection_range(0, 'end')
-        # returns 'break' to interrupt default key-bindings
-        return 'break'
 
     def confirm_clear_and_focus(self):
         # Helper to clear confirming, then focus the widget
@@ -490,13 +504,13 @@ class PlistWindow(tk.Toplevel):
         r_label = tk.Label(self.find_frame, text="Replace:")
         r_label.grid(row=1,column=0,sticky="e")
         self.find_type = "Key"
-        self.f_text = tk.Entry(self.find_frame)
+        self.f_text = EntryPlus(self.find_frame,self)
         self.f_text.bind("<Return>", self.find_next)
         self.f_text.bind("<KP_Enter>", self.find_next)
         self.f_text.delete(0,tk.END)
         self.f_text.insert(0,"")
         self.f_text.grid(row=0,column=2,sticky="we",padx=10,pady=10)
-        self.r_text = tk.Entry(self.find_frame)
+        self.r_text = EntryPlus(self.find_frame,self)
         self.r_text.bind("<Return>", self.replace)
         self.r_text.bind("<KP_Enter>", self.replace)
         self.r_text.delete(0,tk.END)
@@ -660,14 +674,17 @@ class PlistWindow(tk.Toplevel):
         self.display_frame.pack_forget()
         self._tree_frame.pack_forget()
         if self.show_find_replace:
-            # Add the show_find pane, make the find pane active, and highlight any text
             self.find_frame.pack(side="top",fill="x",padx=10)
-            if changed == "hideshow":
-                self.f_text.focus()
-                self.f_text.selection_range(0, 'end')
-        self._tree_frame.pack(fill="both",expand=True)
         if self.show_type:
             self.display_frame.pack(side="bottom",fill="x",padx=10)
+        self._tree_frame.pack(fill="both",expand=True)
+        # Check if we've toggled our find/replace pane and set focus
+        if changed == "hideshow":
+            if self.show_find_replace:
+                self.f_text.focus()
+                self.f_text.select_all()
+            else:
+                self._tree.focus_force()
 
     def hide_show_find(self, event=None):
         # Let's find out if we're set to show
