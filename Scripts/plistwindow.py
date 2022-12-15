@@ -37,12 +37,24 @@ class EntryPlus(tk.Entry):
         self.bind("<{}-a>".format(key), self.select_all)
         self.bind("<{}-c>".format(key), self.copy)
         self.bind("<{}-v>".format(key), self.paste)
+        self.bind("<Shift-Up>", self.select_prior)
+        self.bind("<Shift-Down>", self.select_after)
         self.bind("<Up>", self.goto_start)
         self.bind("<Down>", self.goto_end)
         self.bind("<Escape>", self.clear_selection)
 
     def clear_selection(self, event=None):
         self.selection_range(0, 0)
+        return 'break'
+
+    def select_prior(self, *ignore):
+        self.selection_range(0,self.index(tk.INSERT))
+        self.icursor(0)
+        return 'break'
+
+    def select_after(self, *ignore):
+        self.selection_range(self.index(tk.INSERT),"end")
+        self.icursor("end")
         return 'break'
 
     def select_all(self, *ignore):
@@ -58,7 +70,7 @@ class EntryPlus(tk.Entry):
 
     def goto_end(self, event=None):
         self.selection_range(0, 0)
-        self.icursor(len(self.get()))
+        self.icursor("end")
         return 'break'
     
     def copy(self, event=None):
