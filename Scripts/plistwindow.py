@@ -33,14 +33,10 @@ class EntryPlus(tk.Entry):
         self.parent = parent
         self.master = master
 
-        if str(sys.platform) == "darwin":
-            self.bind("<Command-a>", self.select_all)
-            self.bind("<Command-c>", self.copy)
-            self.bind("<Command-v>", self.paste)
-        else:
-            self.bind("<Control-a>", self.select_all)
-            self.bind("<Control-c>", self.copy)
-            self.bind("<Control-v>", self.paste)
+        key = "Command" if str(sys.platform) == "darwin" else "Control"
+        self.bind("<{}-a>".format(key), self.select_all)
+        self.bind("<{}-c>".format(key), self.copy)
+        self.bind("<{}-v>".format(key), self.paste)
         self.bind("<Up>", self.goto_start)
         self.bind("<Down>", self.goto_end)
         self.bind("<Escape>", self.clear_selection)
@@ -427,7 +423,6 @@ class PlistWindow(tk.Toplevel):
         self.recent_menu = None
         # Setup menu bar (hopefully per-window) - only happens on non-mac systems
         if not str(sys.platform) == "darwin":
-            key="Control"
             main_menu = tk.Menu(self)
             file_menu = tk.Menu(self, tearoff=0)
             self.recent_menu = tk.Menu(self, tearoff=0)
@@ -516,9 +511,9 @@ class PlistWindow(tk.Toplevel):
         self.r_text.delete(0,tk.END)
         self.r_text.insert(0,"")
         self.r_text.grid(row=1,column=2,columnspan=1,sticky="we",padx=10,pady=10)
-        f_title = tk.StringVar(self.find_frame)
-        f_title.set("Key")
-        f_option = tk.OptionMenu(self.find_frame, f_title, "Key", "Boolean", "Data", "Date", "Number", "String", command=self.change_find_type)
+        self.f_title = tk.StringVar(self.find_frame)
+        self.f_title.set("Key")
+        f_option = tk.OptionMenu(self.find_frame, self.f_title, "Key", "Boolean", "Data", "Date", "Number", "String", command=self.change_find_type)
         f_option['menu'].insert_separator(1)
         f_option.grid(row=0,column=1)
         self.fp_button = tk.Button(self.find_frame,text="< Prev",width=8,command=self.find_prev)
@@ -533,6 +528,15 @@ class PlistWindow(tk.Toplevel):
         self.f_case_var = tk.IntVar()
         self.f_case = tk.Checkbutton(self.find_frame,text="Case-Sensitive",variable=self.f_case_var)
         self.f_case.grid(row=0,column=5,sticky="w")
+
+        # Set find_frame bindings - also bind to child widgets to ensure keybinds are captured
+        self.f_options = ["Key", "Boolean", "Data", "Date", "Number", "String"]
+        def set_frame_binds(widget):
+            for k,i in (("Up",False),("Down",True)):
+                widget.bind("<{}-{}>".format(key,k), lambda x:self.cycle_find_type(increment=i))
+            for child in widget.children.values():
+                set_frame_binds(child)
+        set_frame_binds(self.find_frame)
 
         # Add the scroll bars and show the treeview
         self.vsb.pack(side="right",fill="y")
@@ -606,6 +610,18 @@ class PlistWindow(tk.Toplevel):
 
     def change_find_type(self, value):
         self.find_type = value
+
+    def cycle_find_type(self, increment = True):
+        # Set our type to the next in the list
+        value = self.f_title.get()
+        try: curr,end = self.f_options.index(value),len(self.f_options)
+        except: return "break" # Menu is janked?
+        mod = 1 if increment else -1
+        # Apply the modifier and check type
+        next_value = self.f_options[(curr+mod) % end]
+        self.f_title.set(next_value)
+        self.change_find_type(next_value)
+        return "break" # Prevent the keypress from cascading
 
     def qualify_value(self, value, value_type):
         value_type = value_type.lower()
