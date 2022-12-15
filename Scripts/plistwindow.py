@@ -498,7 +498,8 @@ class PlistWindow(tk.Toplevel):
         f_label.grid(row=0,column=0,sticky="e")
         r_label = tk.Label(self.find_frame, text="Replace:")
         r_label.grid(row=1,column=0,sticky="e")
-        self.find_type = "Key"
+        self.f_options = ["Key", "Boolean", "Data", "Date", "Number", "String"]
+        self.find_type = self.f_options[0]
         self.f_text = EntryPlus(self.find_frame,self)
         self.f_text.bind("<Return>", self.find_next)
         self.f_text.bind("<KP_Enter>", self.find_next)
@@ -512,8 +513,8 @@ class PlistWindow(tk.Toplevel):
         self.r_text.insert(0,"")
         self.r_text.grid(row=1,column=2,columnspan=1,sticky="we",padx=10,pady=10)
         self.f_title = tk.StringVar(self.find_frame)
-        self.f_title.set("Key")
-        f_option = tk.OptionMenu(self.find_frame, self.f_title, "Key", "Boolean", "Data", "Date", "Number", "String", command=self.change_find_type)
+        self.f_title.set(self.find_type)
+        f_option = tk.OptionMenu(self.find_frame, self.f_title, *self.f_options, command=self.change_find_type)
         f_option['menu'].insert_separator(1)
         f_option.grid(row=0,column=1)
         self.fp_button = tk.Button(self.find_frame,text="< Prev",width=8,command=self.find_prev)
@@ -530,7 +531,6 @@ class PlistWindow(tk.Toplevel):
         self.f_case.grid(row=0,column=5,sticky="w")
 
         # Set find_frame bindings - also bind to child widgets to ensure keybinds are captured
-        self.f_options = ["Key", "Boolean", "Data", "Date", "Number", "String"]
         def set_frame_binds(widget):
             for k,i in (("Up",False),("Down",True)):
                 widget.bind("<{}-{}>".format(key,k), lambda x:self.cycle_find_type(increment=i))
