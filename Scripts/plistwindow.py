@@ -1048,9 +1048,9 @@ class PlistWindow(tk.Toplevel):
             name = os.path.basename(item.get("Path",item.get("BundlePath","Unknown Name")))
             # Check the keys containing "path"
             for key in item:
-                if "path" in key.lower() and isinstance(item[key],str) and len(item[key])>self.safe_path_length:
+                if "path" in key.lower() and isinstance(item[key],(str,unicode)) and len(item[key])>self.safe_path_length:
                     paths_too_long.append(key) # Too long - keep a reference of the key
-        elif isinstance(item,str):
+        elif isinstance(item,(str,unicode)):
             name = os.path.basename(item) # Retain the last path component as the name
             # Checking the item itself
             if len(item)>self.safe_path_length:
@@ -1243,9 +1243,13 @@ class PlistWindow(tk.Toplevel):
                 try:
                     with open(plist_full_path,"rb") as f:
                         info_plist = plist.load(f)
+                    if not "CFBundleIdentifier" in info_plist or not isinstance(info_plist["CFBundleIdentifier"],(str,unicode)):
+                        continue # Requires a valid CFBundleIdentifier string
                     kinfo = {
-                        "CFBundleIdentifier": info_plist.get("CFBundleIdentifier",None),
-                        "OSBundleLibraries": info_plist.get("OSBundleLibraries",[])
+                        "CFBundleIdentifier": info_plist["CFBundleIdentifier"],
+                        "OSBundleLibraries": info_plist.get("OSBundleLibraries",[]),
+                        "cfbi": info_plist["CFBundleIdentifier"].lower(), # Case insensitive
+                        "osbl": [x.lower() for x in info_plist.get("OSBundleLibraries",[]) if isinstance(x,(str,unicode))] # Case insensitive
                     }
                     if info_plist.get("CFBundleExecutable",None):
                         if not os.path.exists(os.path.join(path,name,"Contents","MacOS",info_plist["CFBundleExecutable"])):
@@ -1280,8 +1284,8 @@ class PlistWindow(tk.Toplevel):
         for x in new_kexts:
             x = next((y for y in kext_list if y[0].get("BundlePath","") == x.get("BundlePath","")),None)
             if not x: continue
-            parents = [next(((z,y[1]) for z in new_kexts if z.get("BundlePath","") == y[0].get("BundlePath","")),[]) for y in kext_list if y[1].get("CFBundleIdentifier",None) in x[1].get("OSBundleLibraries",[])]
-            children = [next((z for z in new_kexts if z.get("BundlePath","") == y[0].get("BundlePath","")),[]) for y in kext_list if x[1].get("CFBundleIdentifier",None) in y[1].get("OSBundleLibraries",[])]
+            parents = [next(((z,y[1]) for z in new_kexts if z.get("BundlePath","") == y[0].get("BundlePath","")),[]) for y in kext_list if y[1].get("cfbi",None) in x[1].get("osbl",[])]
+            children = [next((z for z in new_kexts if z.get("BundlePath","") == y[0].get("BundlePath","")),[]) for y in kext_list if x[1].get("cfbi",None) in y[1].get("osbl",[])]
             parents = [y for y in parents if not y[0] in children and not y[0].get("BundlePath","") == x[0].get("BundlePath","")]
             unordered_kexts.append({
                 "kext":x[0],
@@ -1294,16 +1298,16 @@ class PlistWindow(tk.Toplevel):
             if len(kext["parents"]):
                 # Gather a list of enabled/disabled parents - and ensure we properly populate
                 # our disabled_parents list
-                enabled_parents = [x[1].get("CFBundleIdentifier") for x in kext["parents"] if x[0].get("Enabled")]
-                disabled_add = [x for x in kext["parents"] if x[0].get("Enabled") == False and not x[1].get("CFBundleIdentifier") in enabled_parents and not any((x[1].get("CFBundleIdentifier")==y[1].get("CFBundleIdentifier") for y in disabled_parents))]
+                enabled_parents = [x[1].get("cfbi") for x in kext["parents"] if x[0].get("Enabled")]
+                disabled_add = [x for x in kext["parents"] if x[0].get("Enabled") == False and not x[1].get("cfbi") in enabled_parents and not any((x[1].get("cfbi")==y[1].get("cfbi") for y in disabled_parents))]
                 # Get any existing kext we're referencing
                 k = next((x for x in original_kexts if x.get("BundlePath")==kext["kext"].get("BundlePath")),None)
                 if not k or k.get("Enabled"):
                     for p in kext["parents"]:
-                        p_cf = p[1].get("CFBundleIdentifier")
+                        p_cf = p[1].get("cfbi")
                         if not p_cf: continue # Broken - can't check
                         if p_cf in enabled_parents: continue # Already have an enabled copy
-                        if any((p_cf == x[1].get("CFBundleIdentifier") for x in disabled_parents)):
+                        if any((p_cf == x[1].get("cfbi") for x in disabled_parents)):
                             continue # Already have a warning copy
                         disabled_parents.append(p)
                 if not all(x[0] in ordered_kexts for x in kext["parents"]):
@@ -1513,7 +1517,7 @@ class PlistWindow(tk.Toplevel):
             formatted = []
             for entry in long_paths:
                 item,name,keys = entry
-                if isinstance(item,str): # It's an older string path
+                if isinstance(item,(str,unicode)): # It's an older string path
                     formatted.append(name)
                 elif isinstance(item,dict):
                     formatted.append("{} -> {}".format(name,", ".join(keys)))
