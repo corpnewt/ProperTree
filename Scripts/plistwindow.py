@@ -1348,11 +1348,11 @@ class PlistWindow(tk.Toplevel):
             if not temp_kext.get("Enabled",False): continue
             # Get the original info
             info = next((x for x in kext_list if x[0].get("BundlePath","") == temp_kext.get("BundlePath","")),None)
-            if not info or not info[1].get("CFBundleIdentifier",None): continue # Broken info
+            if not info or not info[1].get("cfbi",None): continue # Broken info
             # Let's see if it's already in enabled_kexts - and compare the Min/Max/Match Kernel options
             temp_min,temp_max = self.get_min_max_from_kext(temp_kext,"MatchKernel" in kext_add)
             # Gather a list of like IDs
-            comp_kexts = [x for x in enabled_kexts if x[1]["CFBundleIdentifier"] == info[1]["CFBundleIdentifier"]]
+            comp_kexts = [x for x in enabled_kexts if x[1]["cfbi"] == info[1]["cfbi"]]
             # Walk the comp_kexts, and disable if we find an overlap
             for comp_info in comp_kexts:
                 comp_kext = comp_info[0]
