@@ -1,4 +1,4 @@
 {
-    "version": "0.1.6",
-    "changes": "- Add OC 0.8.7 hashes.\n- Minor window stack order fix.\n- Don't needlessly pad hex ints."
+    "version": "0.1.7",
+    "changes": "- Add OC 0.8.8 hashes.\n- Compare CFBundleIdentifiers case-insensitively.\n- Only mark document as edited if changes were made.\n- Add more control key bindings."
 }
