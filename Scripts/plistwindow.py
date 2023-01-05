@@ -544,8 +544,8 @@ class PlistWindow(tk.Toplevel):
 
         # Set find_frame bindings - also bind to child widgets to ensure keybinds are captured
         def set_frame_binds(widget):
-            for k,i in (("Up",False),("Down",True)):
-                widget.bind("<{}-{}>".format(key,k), lambda x:self.cycle_find_type(increment=i))
+            for k in ("Up","Down"):
+                widget.bind("<{}-{}>".format(key,k), lambda x:self.cycle_find_type(x))
             for child in widget.children.values():
                 set_frame_binds(child)
         set_frame_binds(self.find_frame)
@@ -623,7 +623,10 @@ class PlistWindow(tk.Toplevel):
     def change_find_type(self, value):
         self.find_type = value
 
-    def cycle_find_type(self, increment = True):
+    def cycle_find_type(self, event = None):
+        # Use the value if bool, or try to extract the keysym property
+        increment = event if isinstance(event,bool) else {"Up":False,"Down":True}.get(getattr(event,"keysym",None))
+        if increment is None: return # Not sure why this was fired?
         # Set our type to the next in the list
         value = self.f_title.get()
         try: curr,end = self.f_options.index(value),len(self.f_options)
