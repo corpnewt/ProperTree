@@ -96,7 +96,7 @@ class ProperTree:
         int_label.grid(row=9,column=0,sticky="w",padx=10)
         self.int_type_menu.grid(row=9,column=1,sticky="we",padx=10)
         self.bool_type_string = tk.StringVar(self.settings_window)
-        self.bool_type_menu = tk.OptionMenu(self.settings_window, self.bool_type_string, "True/False", "YES/NO", "On/Off", "1/0", command=self.change_bool_type)
+        self.bool_type_menu = tk.OptionMenu(self.settings_window, self.bool_type_string, "True/False", "YES/NO", "On/Off", "1/0", "✔/❌", command=self.change_bool_type)
         bool_label = tk.Label(self.settings_window,text="Boolean Display Default:")
         bool_label.grid(row=10,column=0,sticky="w",padx=10)
         self.bool_type_menu.grid(row=10,column=1,sticky="we",padx=10)
@@ -420,7 +420,7 @@ class ProperTree:
         self.allowed_types = ("XML","Binary")
         self.allowed_data  = ("Hex","Base64")
         self.allowed_int   = ("Decimal","Hex")
-        self.allowed_bool  = ("True/False","YES/NO","On/Off","1/0")
+        self.allowed_bool  = ("True/False","YES/NO","On/Off","1/0","✔/❌")
         self.allowed_conv  = ("Ascii","Base64","Decimal","Hex")
         self.update_settings()
 
