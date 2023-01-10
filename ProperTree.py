@@ -437,9 +437,10 @@ class ProperTree:
         self.version_url = "https://raw.githubusercontent.com/corpnewt/ProperTree/master/Scripts/version.json"
         self.repo_url = "https://github.com/corpnewt/ProperTree"
 
-        # Check for updates if need be
+        # Implement a simple boolean lock, and check for updates if needed
+        self.is_checking_for_updates = False
         if self.settings.get("check_for_updates_at_startup",True):
-            self.check_for_updates(user_initiated=False)
+            self.tk.after(0, lambda:self.check_for_updates(user_initiated=False))
 
         # Prior implementations tried to wait 250ms to give open_plist_from_app()
         # enough time to parse anything double-clicked.  The issue was that both
@@ -533,12 +534,20 @@ class ProperTree:
         return None
 
     def check_for_updates(self, user_initiated = False):
+        if self.is_checking_for_updates: # Already checking
+            if user_initiated:
+                # We pressed the button - but another check is in progress
+                self.tk.bell()
+                mb.showerror("Already Checking For Updates","An update check is already in progress.  If you consistently get this error when manually checking for updates - it may indicate a netowrk issue.")
+            return
+        self.is_checking_for_updates = True # Lock out other update checks
         # Attempts to download the latest version.json and compare to our local copy
         if self.dl is None:
             if user_initiated:
                 # We pressed the button - but couldn't initialize the downloader class - whine.
                 self.tk.bell()
                 mb.showerror("An Error Occurred Creating The Downloader",self.dl_error)
+            self.is_checking_for_updates = False
             return
         # We have the downloader - try to gather the info
         try:
@@ -548,6 +557,8 @@ class ProperTree:
                 self.tk.bell()
                 mb.showerror("An Error Occurred Checking For Updates","Could not get version data from github.  Potentially a network issue.")
             return
+        finally:
+            self.is_checking_for_updates = False # Unlock before showing results
         try: version_dict = json.loads(newjson)
         except: version_dict = {}
         if not version_dict.get("version"):
