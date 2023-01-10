@@ -1,4 +1,4 @@
 {
-    "version": "0.1.7",
-    "changes": "- Add OC 0.8.8 hashes.\n- Compare CFBundleIdentifiers case-insensitively.\n- Only mark document as edited if changes were made.\n- Add more control key bindings."
+    "version": "0.1.8",
+    "changes": "- Leverage multiprocessing for update checks to prevent UI blocking.\n- Correct some keybind issues."
 }
