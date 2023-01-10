@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys, os, binascii, base64, json, re, subprocess, webbrowser
+import sys, os, binascii, base64, json, re, subprocess, webbrowser, multiprocessing
 from collections import OrderedDict
 try:
     import Tkinter as tk
@@ -23,8 +23,40 @@ except NameError:  # Python 3
 sys.path.append(os.path.abspath(os.path.dirname(os.path.realpath(__file__))))
 from Scripts import plist, plistwindow, downloader
 
+def _check_for_update(queue, version_url, user_initiated = False):
+    try:
+        dl = downloader.Downloader()
+    except:
+        return queue.put({
+            "exception":"Could not initialize the downloader.",
+            "error":"An Error Occurred Initializing The Downloader",
+            "user_initiated":user_initiated
+        })
+    try:
+        json_string = dl.get_string(version_url,False)
+    except:
+        return queue.put({
+            "exception":"Could not get version data from github.  Potentially a network issue.",
+            "error":"An Error Occurred Checking For Updates",
+            "user_initiated":user_initiated
+        })
+    try:
+        json_data = json.loads(json_string)
+    except:
+        return queue.put({
+            "exception":"Could not serialize returned JSON data.",
+            "error":"An Error Occurred Checking For Updates",
+            "user_initiated":user_initiated
+        })
+    queue.put({
+        "json":json_data,
+        "user_initiated":user_initiated
+    })
+
 class ProperTree:
     def __init__(self, plists = []):
+        # Create a new queue for multiprocessing
+        self.queue = multiprocessing.Queue()
         # Create the new tk object
         self.tk = tk.Tk()
         self.tk.withdraw() # Try to remove before it's drawn
@@ -430,10 +462,6 @@ class ProperTree:
         if str(sys.platform) == "darwin": self.update_recents()
         self.check_dark_mode()
 
-        # Attempt to create the downloader class
-        self.dl_error = self.dl = None
-        try: self.dl = downloader.Downloader()
-        except Exception as e: self.dl_error = str(e) # Failed
         self.version_url = "https://raw.githubusercontent.com/corpnewt/ProperTree/master/Scripts/version.json"
         self.repo_url = "https://github.com/corpnewt/ProperTree"
 
@@ -541,26 +569,34 @@ class ProperTree:
                 mb.showerror("Already Checking For Updates","An update check is already in progress.  If you consistently get this error when manually checking for updates - it may indicate a netowrk issue.")
             return
         self.is_checking_for_updates = True # Lock out other update checks
-        # Attempts to download the latest version.json and compare to our local copy
-        if self.dl is None:
-            if user_initiated:
-                # We pressed the button - but couldn't initialize the downloader class - whine.
-                self.tk.bell()
-                mb.showerror("An Error Occurred Creating The Downloader",self.dl_error)
-            self.is_checking_for_updates = False
+        # We'll leverage multiprocessing to avoid UI locks if the update checks take too long
+        p = multiprocessing.Process(target=_check_for_update,args=(self.queue,self.version_url,user_initiated),daemon=True)
+        p.start()
+        self.check_update_process(p)
+
+    def check_update_process(self, p):
+        # Helper to watch until an update is done
+        if p.is_alive():
+            self.tk.after(100,self.check_update_process,p)
             return
-        # We have the downloader - try to gather the info
-        try:
-            newjson = self.dl.get_string(self.version_url,False)
-        except:
+        # We've returned - reset our bool lock
+        self.is_checking_for_updates = False
+        # Check if we got anything from the queue
+        if self.queue.empty(): # Nothing in the queue, bail
+            return
+        # Retrieve any returned value and parse
+        output_dict = self.queue.get()
+        user_initiated = output_dict.get("user_initiated",False)
+        # Check if we got an error or exception
+        if "exception" in output_dict or "error" in output_dict:
+            error = output_dict.get("error","An Error Occurred Checking For Updates")
+            excep = output_dict.get("exception","Something went wrong when checking for updates.")
             if user_initiated:
                 self.tk.bell()
-                mb.showerror("An Error Occurred Checking For Updates","Could not get version data from github.  Potentially a network issue.")
+                mb.showerror(error,excep)
             return
-        finally:
-            self.is_checking_for_updates = False # Unlock before showing results
-        try: version_dict = json.loads(newjson)
-        except: version_dict = {}
+        # Parse the output returned
+        version_dict = output_dict.get("json",{})
         if not version_dict.get("version"):
             if user_initiated:
                 self.tk.bell()
