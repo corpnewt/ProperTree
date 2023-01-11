@@ -578,6 +578,12 @@ class ProperTree:
         p.start()
         self.check_update_process(p)
 
+    def reset_update_button(self):
+        self.update_button.configure(
+            state="normal",
+            text="Check Now ({})".format(self.version.get("version","?.?.?"))
+        )
+
     def check_update_process(self, p):
         # Helper to watch until an update is done
         if p.is_alive():
@@ -585,13 +591,9 @@ class ProperTree:
             return
         # We've returned - reset our bool lock
         self.is_checking_for_updates = False
-        self.update_button.configure(
-            state="normal",
-            text="Check Now ({})".format(self.version.get("version","?.?.?"))
-        )
         # Check if we got anything from the queue
         if self.queue.empty(): # Nothing in the queue, bail
-            return
+            return self.reset_update_button()
         # Retrieve any returned value and parse
         output_dict = self.queue.get()
         user_initiated = output_dict.get("user_initiated",False)
@@ -602,14 +604,14 @@ class ProperTree:
             if user_initiated:
                 self.tk.bell()
                 mb.showerror(error,excep)
-            return
+            return self.reset_update_button()
         # Parse the output returned
         version_dict = output_dict.get("json",{})
         if not version_dict.get("version"):
             if user_initiated:
                 self.tk.bell()
                 mb.showerror("An Error Occurred Checking For Updates","Data returned was malformed or nonexistent.")
-            return
+            return self.reset_update_button()
         # At this point - we should have json data containing the version key/value
         check_version = str(version_dict["version"]).lower()
         our_version   = str(self.version.get("version","0.0.0")).lower()
@@ -618,7 +620,7 @@ class ProperTree:
         if self.compare_version(check_version,our_version) is True:
             if notify_once and last_version == check_version and not user_initiated:
                 # Already notified about this version - ignore
-                return
+                return self.reset_update_button()
             # Save the last version checked
             self.settings["last_version_checked"] = check_version
             # We got an update we're not ignoring - let's prompt
@@ -641,6 +643,7 @@ class ProperTree:
                 title="No Updates Available",
                 message="You are currently running the latest version of ProperTree ({}).".format(our_version)
             )
+        self.reset_update_button()
         # If we got here - we displayed some message, let's lift our window to the top
         windows = self.stackorder(self.tk,include_defaults=True)
         if not len(windows): return
