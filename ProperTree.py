@@ -231,8 +231,8 @@ class ProperTree:
         self.notify_once_int = tk.IntVar()
         self.notify_once_check = tk.Checkbutton(self.settings_window,text="Only Notify Once Per Version",variable=self.notify_once_int,command=self.notify_once)
         self.notify_once_check.grid(row=17,column=0,sticky="w",padx=10,pady=(0,10))
-        update_button = tk.Button(self.settings_window,text="Check Now",command=lambda:self.check_for_updates(user_initiated=True))
-        update_button.grid(row=17,column=1,sticky="w",padx=10,pady=(0,10))
+        self.update_button = tk.Button(self.settings_window,text="Check Now",command=lambda:self.check_for_updates(user_initiated=True))
+        self.update_button.grid(row=17,column=1,sticky="w",padx=10,pady=(0,10))
         reset_settings = tk.Button(self.settings_window,text="Restore All Defaults",command=self.reset_settings)
         reset_settings.grid(row=17,column=4,sticky="we",padx=10,pady=(0,10))
 
@@ -444,8 +444,7 @@ class ProperTree:
         os.chdir(cwd)
 
         # Apply the version to the update button text
-        if self.version.get("version"):
-            update_button.configure(text="Check Now ({})".format(self.version.get("version","?.?.?")))
+        self.update_button.configure(text="Check Now ({})".format(self.version.get("version","?.?.?")))
 
         # Setup the settings page to reflect our settings.json file
 
@@ -569,6 +568,10 @@ class ProperTree:
                 mb.showerror("Already Checking For Updates","An update check is already in progress.  If you consistently get this error when manually checking for updates - it may indicate a netowrk issue.")
             return
         self.is_checking_for_updates = True # Lock out other update checks
+        self.update_button.configure(
+            state="disabled",
+            text="Checking... ({})".format(self.version.get("version","?.?.?"))
+        )
         # We'll leverage multiprocessing to avoid UI locks if the update checks take too long
         p = multiprocessing.Process(target=_check_for_update,args=(self.queue,self.version_url,user_initiated))
         p.daemon = True
@@ -582,6 +585,10 @@ class ProperTree:
             return
         # We've returned - reset our bool lock
         self.is_checking_for_updates = False
+        self.update_button.configure(
+            state="normal",
+            text="Check Now ({})".format(self.version.get("version","?.?.?"))
+        )
         # Check if we got anything from the queue
         if self.queue.empty(): # Nothing in the queue, bail
             return
