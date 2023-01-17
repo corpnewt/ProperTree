@@ -428,6 +428,12 @@ class PlistWindow(tk.Toplevel):
         self._tree.bind("<{}-Left>".format(key), self.cycle_bool)
         self._tree.bind("<{}-Right>".format(key), self.cycle_bool)
 
+        # Set up cmd/ctrl+number key binds to change types as needed
+        menu_max = len(self._get_menu_commands(self.type_menu))
+        for i in range(menu_max):
+            self._tree.bind("<{}-Key-{}>".format(key,i+1), lambda x:self.set_type_by_index(x))
+            self._tree.bind("<{}-KP_{}>".format(key,i+1), lambda x:self.set_type_by_index(x))
+
         # Set expansion bindings
         self._tree.bind("<Shift-Right>", lambda x:self.expand_children())
         self._tree.bind("<Shift-Left>", lambda x:self.collapse_children())
@@ -559,6 +565,10 @@ class PlistWindow(tk.Toplevel):
         self.draw_frames()
         self.entry_popup = None
 
+    def _get_menu_commands(self, menu = None, label = False):
+        if not menu: return []
+        return [menu.entrycget(i,"label") if label else i for i in range(menu.index(tk.END)+1) if menu.type(i) == "command"]
+
     def scrollbar_set(self, *args):
         # Intercepted scrollbar set method to set where our
         # entry_popup is (if any)
@@ -644,11 +654,10 @@ class PlistWindow(tk.Toplevel):
         # Set our type to the next in the list
         value = self.f_title.get()
         try: curr,end = self.f_options.index(value),len(self.f_options)
-        except: return "break" # Menu is janked?
+        except: return # Menu is janked?
         mod = 1 if increment else -1
-        # Apply the modifier and check type
-        self.set_find_type_by_index((curr+mod)%end,zero_based=True)
-        return "break" # Prevent the keypress from cascading
+        # Return set_find_type_by_index's return to prevent keypress cascading as needed
+        return self.set_find_type_by_index((curr+mod)%end,zero_based=True)
 
     def qualify_value(self, value, value_type):
         value_type = value_type.lower()
@@ -2587,24 +2596,36 @@ class PlistWindow(tk.Toplevel):
         self.set_bool(self.b_false() if bool_val else self.b_true())
         return "break"
 
+    def set_type_by_index(self, index = None, menu = None, zero_based = False):
+        # Set our type based on index value
+        if not isinstance(index,int):
+            # Try to get the keysym
+            try: index = int(getattr(index,"keysym",None).replace("KP_",""))
+            except: return # Borked value
+        if not menu: # We need to retrieve the menu manually
+            cell = "" if not len(self._tree.selection()) else self._tree.selection()[0]
+            menu = self.root_type_menu if cell in ("",self.get_root_node()) else self.type_menu
+        valid_vals = self._get_menu_commands(menu,label=True)
+        if not valid_vals: return # Menu has no commands
+        if not zero_based: index -= 1 # original index started at 1, normalize to 0-based
+        if index < 0 or index >= len(valid_vals): return # Out of range
+        target_index = menu.index(valid_vals[index])
+        if target_index is None: return # Nothing found
+        menu.invoke(target_index)
+        return "break" # Prevent the keypress from cascading
+
     def cycle_type(self, increment = True):
         # Set our type to the next in the list
         cell = "" if not len(self._tree.selection()) else self._tree.selection()[0]
         value = self.get_check_type(cell)
         menu = self.root_type_menu if cell in ("",self.get_root_node()) else self.type_menu
-        curr,end = menu.index(value),menu.index(tk.END)
-        if end is None or curr is None: return "break" # Menu is janked?
+        valid_vals = self._get_menu_commands(menu,label=True)
+        if not valid_vals: return # Menu has no commands
+        try: curr = valid_vals.index(value)
+        except: return # Our current value isn't in the menu?
         mod = 1 if increment else -1
-        next_index = curr # default to our current index
-        for x in range(2):
-            # Apply the modifier and check type
-            next_index = (next_index+mod) % (end+1)
-            if menu.type(next_index) == "command": break
-        if menu.type(next_index) != "command":
-            return "break" # Never found one, bail.
-        # Invoke the original command
-        menu.invoke(next_index)
-        return "break" # Prevent the keypress from cascading
+        # Return set_type_by_index's return to prevent keypress cascading as needed
+        return self.set_type_by_index((curr+mod)%len(valid_vals),menu=menu,zero_based=True)
 
     def change_type(self, value, cell = None):
         # Need to walk the values and pad
