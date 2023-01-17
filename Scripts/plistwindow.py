@@ -546,6 +546,9 @@ class PlistWindow(tk.Toplevel):
         def set_frame_binds(widget):
             for k in ("Up","Down"):
                 widget.bind("<{}-{}>".format(key,k), lambda x:self.cycle_find_type(x))
+            for i,opt in enumerate(self.f_options,start=1):
+                widget.bind("<{}-Key-{}>".format(key,i), lambda x:self.set_find_type_by_index(x))
+                widget.bind("<{}-KP_{}>".format(key,i), lambda x:self.set_find_type_by_index(x))
             for child in widget.children.values():
                 set_frame_binds(child)
         set_frame_binds(self.find_frame)
@@ -620,6 +623,17 @@ class PlistWindow(tk.Toplevel):
             b.extend([a.lower() if lower else a for a in x.split("/")])
         return b
 
+    def set_find_type_by_index(self, index = None, zero_based = False):
+        if not isinstance(index,int):
+            # Try to get the keysym
+            try: index = int(getattr(index,"keysym",None).replace("KP_",""))
+            except: return # Borked value
+        if not zero_based: index -= 1 # original index started at 1, normalize to 0-based
+        if index < 0 or index >= len(self.f_options): return # Out of range
+        self.f_title.set(self.f_options[index])
+        self.change_find_type(self.f_options[index])
+        return "break" # Prevent the keypress from cascading
+
     def change_find_type(self, value):
         self.find_type = value
 
@@ -633,9 +647,7 @@ class PlistWindow(tk.Toplevel):
         except: return "break" # Menu is janked?
         mod = 1 if increment else -1
         # Apply the modifier and check type
-        next_value = self.f_options[(curr+mod) % end]
-        self.f_title.set(next_value)
-        self.change_find_type(next_value)
+        self.set_find_type_by_index((curr+mod)%end,zero_based=True)
         return "break" # Prevent the keypress from cascading
 
     def qualify_value(self, value, value_type):
