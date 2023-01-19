@@ -9,12 +9,11 @@ except: pass
 def _print_output(output):
     print(json.dumps(output,indent=2))
 
-def _check_for_update(version_url = None, user_initiated = False):
+def _check_for_update(version_url = None):
     if DL is None:
         return _print_output({
             "exception":"Could not initialize the downloader.",
-            "error":"An Error Occurred Initializing The Downloader",
-            "user_initiated":user_initiated
+            "error":"An Error Occurred Initializing The Downloader"
         })
     version_url = version_url or DEFAULT_URL
     try:
@@ -22,27 +21,23 @@ def _check_for_update(version_url = None, user_initiated = False):
     except:
         return _print_output({
             "exception":"Could not get version data from github.  Potentially a network issue.",
-            "error":"An Error Occurred Checking For Updates",
-            "user_initiated":user_initiated
+            "error":"An Error Occurred Checking For Updates"
         })
     try:
         json_data = json.loads(json_string)
     except:
         return _print_output({
             "exception":"Could not serialize returned JSON data.",
-            "error":"An Error Occurred Checking For Updates",
-            "user_initiated":user_initiated
+            "error":"An Error Occurred Checking For Updates"
         })
     _print_output({
-        "json":json_data,
-        "user_initiated":user_initiated
+        "json":json_data
     })
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog="update_check.py")
     parser.add_argument("-u", "--url", help="the URL to check for updates")
-    parser.add_argument("-i", "--user-initiated", help="sets the user_initiated return value to True", action="store_true")
 
     args = parser.parse_args()
 
-    _check_for_update(version_url=args.url,user_initiated=args.user_initiated)
+    _check_for_update(version_url=args.url)

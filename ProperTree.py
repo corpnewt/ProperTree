@@ -35,12 +35,13 @@ def _check_for_update(queue, version_url = None, user_initiated = False):
             "user_initiated":user_initiated
         })
     if version_url: args.extend(["-u",version_url])
-    if user_initiated: args.append("-i")
     proc = subprocess.Popen(args,stdout=subprocess.PIPE)
     o,e = proc.communicate()
     if sys.version_info >= (3,0): o = o.decode("utf-8")
     try:
         json_data = json.loads(o)
+        # Append/update our user_initiated value
+        json_data["user_initiated"] = user_initiated
     except:
         return queue.put({
             "exception":"Could not serialize returned JSON data.",
