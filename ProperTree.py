@@ -23,35 +23,31 @@ except NameError:  # Python 3
 sys.path.append(os.path.abspath(os.path.dirname(os.path.realpath(__file__))))
 from Scripts import plist, plistwindow, downloader
 
-def _check_for_update(queue, version_url, user_initiated = False):
-    try:
-        dl = downloader.Downloader()
-    except:
+def _check_for_update(queue, version_url = None, user_initiated = False):
+    args = [sys.executable]
+    file_path = os.path.join(os.path.abspath(os.path.dirname(os.path.realpath(__file__))),"Scripts","update_check.py")
+    if os.path.exists(file_path):
+        args.append(file_path)
+    else:
         return queue.put({
-            "exception":"Could not initialize the downloader.",
-            "error":"An Error Occurred Initializing The Downloader",
+            "exception":"Could not locate update_check.py.",
+            "error":"Missing Required Files",
             "user_initiated":user_initiated
         })
+    if version_url: args.extend(["-u",version_url])
+    if user_initiated: args.append("-i")
+    proc = subprocess.Popen(args,stdout=subprocess.PIPE)
+    o,e = proc.communicate()
+    if sys.version_info >= (3,0): o = o.decode("utf-8")
     try:
-        json_string = dl.get_string(version_url,False)
-    except:
-        return queue.put({
-            "exception":"Could not get version data from github.  Potentially a network issue.",
-            "error":"An Error Occurred Checking For Updates",
-            "user_initiated":user_initiated
-        })
-    try:
-        json_data = json.loads(json_string)
+        json_data = json.loads(o)
     except:
         return queue.put({
             "exception":"Could not serialize returned JSON data.",
             "error":"An Error Occurred Checking For Updates",
             "user_initiated":user_initiated
         })
-    queue.put({
-        "json":json_data,
-        "user_initiated":user_initiated
-    })
+    queue.put(json_data)
 
 class ProperTree:
     def __init__(self, plists = []):
