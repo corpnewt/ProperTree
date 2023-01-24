@@ -3233,8 +3233,7 @@ class PlistWindow(tk.Toplevel):
 
         # find the path of selected cell
         cell = "" if not len(self._tree.selection()) else self._tree.selection()[0]
-        cell_p = self.get_cell_path(cell)
-        cell_p = cell_p.split('/')
+        cell_p = self.split(self.get_cell_path(cell))
         cell_p.pop(0) # remove root
         if len(cell_p) == 0 or cell_p[-1] == "*": # nothing to search for
             return
