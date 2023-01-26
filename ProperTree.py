@@ -1214,7 +1214,14 @@ class ProperTree:
                     self.f_text.delete(0,tk.END)
                     self.f_text.insert(0,from_value)
                 from_value = base64.b64decode(self.get_bytes(from_value))
-            elif from_type in ["hex","decimal"]:
+            elif from_type in ("hex","decimal"):
+                if len(from_value) % 2:
+                    # Ensure we pad our hex
+                    from_value = "0"+from_value
+                    # Reflect it visually for all cases that need it
+                    if to_type not in ("hex","decimal"):
+                        self.f_text.delete(0,tk.END)
+                        self.f_text.insert(0,from_value)
                 from_value = binascii.unhexlify(self.get_bytes(from_value))
             # Let's get the data converted
             to_value = self.get_bytes(from_value)
