@@ -5,7 +5,7 @@ setlocal enableDelayedExpansion
 
 :checkPrivileges
 net file 1>nul 2>nul
-if "%errorlevel%" == "0" ( goto gotPrivileges) else ( goto getPrivileges )
+if "%errorlevel%" == "0" ( goto gotPrivileges ) else ( goto getPrivileges )
 
 :getPrivileges
 cscript //nologo "%~f0?.wsf" //job:ADMIN "--self" %*
