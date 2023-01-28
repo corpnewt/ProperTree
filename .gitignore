@@ -103,6 +103,8 @@ venv.bak/
 # mypy
 .mypy_cache/
 
-# rbits
+#rbits ignore these while working on config tex parsing
 Scripts/settings.json
-parse_config_tex
+Configuration.tex
+.DS_Store
+ProperTree.app

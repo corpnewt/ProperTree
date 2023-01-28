@@ -1,5 +1,11 @@
-import os, sys
-import tkinter as tk
+import os
+import sys
+if sys.version_info.major == 3:
+    import tkinter as tk, tkinter.font as tk_font
+else:
+    import Tkinter as tk, tkFont as tk_font
+
+
 
 def display_info_window(config_tex, search_list, width, valid_only, show_urls):
     # probably a simpler way to set up the formatted text
@@ -7,30 +13,32 @@ def display_info_window(config_tex, search_list, width, valid_only, show_urls):
     class FormattedText(tk.Text):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
-            from tkinter import font as tkFont
-            default_font = tkFont.nametofont(self.cget("font"))
+            default_font = tk_font.nametofont(self.cget("font"))
 
-            bold_font = tkFont.Font(**default_font.configure())
-            italic_font = tkFont.Font(**default_font.configure())
-            normal_font = tkFont.Font(**default_font.configure())
-            underline_font = tkFont.Font(**default_font.configure())
+            bold_font = tk_font.Font(**default_font.configure())
+            italic_font = tk_font.Font(**default_font.configure())
+            mono_font = tk_font.Font(**default_font.configure())
+            normal_font = tk_font.Font(**default_font.configure())
+            underline_font = tk_font.Font(**default_font.configure())
 
             bold_font.configure(weight="bold")
             italic_font.configure(slant="italic")
+            mono_font.configure(family="Courier New")
             underline_font.configure(underline=1)
-            normal_font.configure(weight="normal", slant="roman")
 
             self.tag_configure("bold", font=bold_font)
             self.tag_configure("italic", font=italic_font)
             self.tag_configure("underline", font=underline_font)
+            self.tag_configure("mono", font=mono_font)
             self.tag_configure("normal", font=normal_font)
             self.tag_configure(
-                "inverse", background="white", foreground="black")
+                "reverse", font=normal_font, background="white", foreground="black")
 
-    result = parse_configuration_tex(config_tex, search_list, width, valid_only, show_urls)
+    result = parse_configuration_tex(
+        config_tex, search_list, width, valid_only, show_urls)
 
     info_window = tk.Toplevel()
-    info_window.title(" > ".join(search_list)) # set title to search path
+    info_window.title(" > ".join(search_list))  # set title to search path
     info_win_height = len(result) + 1  # size info_window to the search result
     if info_win_height > 40:
         info_win_height = 40
@@ -45,42 +53,43 @@ def display_info_window(config_tex, search_list, width, valid_only, show_urls):
         text.insert("end", search_list, "bold")
         return
     if len(result) == 1:
-        text.insert("end", result[0], "inverse")
+        text.insert("end", result[0], "reverse")
         return
 
     style = "normal"
 
     in_escape = False
     for line in result:
-        out = "" # build output string between esc seq one char at a time
+        out = ""  # build output string between esc seq one char at a time
         for c in line:
             # quick hack to decode the escape seqs ret from the parse
             # can improve this
             if in_escape:
-                if c == '0':
+                if c == 'N':
                     style = "normal"
-                if c == '1':
+                if c == 'B':
                     style = "bold"
-                if c == '3':
+                if c == 'I':
                     style = "italic"
-                if c == '4':
-                    style = "underline"
-                if c == '7':
-                    style = "inverse"
-                if c == 'm':
-                    out = ""
-                    in_escape = False
+                if c == 'U':
+                    style = "mono"
+                if c == 'R':
+                    style = "reverse"
+                out = ""
+                in_escape = False
                 continue
             if c == '\x1b':
                 # found end of one esc and start of another
                 # dump formatted output to window
                 # and start over
-                text.insert("end", out, style) 
+                text.insert("end", out, style)
                 out = ""
                 in_escape = True
                 continue
             out += c
-        text.insert("end", out, style) # reached end of line, dump out to window
+        # reached end of line, dump out to window
+        text.insert("end", out, style)
+
 
 def parse_configuration_tex(config_file, search_list, width, valid_only, show_urls):
     try:
@@ -92,28 +101,26 @@ def parse_configuration_tex(config_file, search_list, width, valid_only, show_ur
     align = False
     sub_search = "\\subsection{"
 
-    match len(search_list) - 1:
-        case 0:
-            pass
-        case 1:
-            sub_search += "Properties"
-        case 2 | 3:
-            match search_list[0]:
-                case "NVRAM":
-                    sub_search += "Introduction"
-                case "DeviceProperties":
-                    sub_search += "Common"
-                case "Misc":
-                    if len(search_list) < 4:
-                        sub_search += search_list[1]
-                        sub_search += " Properties"
-                    else:
-                        sub_search += "Entry Properties"
-                case _:
-                    sub_search += search_list[1]
-                    sub_search += " Properties"
-        case _:
-            return result
+    search_len = len(search_list) - 1
+    if search_len == 1:
+        sub_search += "Properties"
+    elif search_len == 2 or search_len == 3:
+        item_zero = search_list[0]
+        if item_zero == "NVRAM":
+            sub_search += "Introduction"
+        elif item_zero == "DeviceProperties":
+            sub_search += "Common"
+        elif item_zero == "Misc":
+            if len(search_list) < 4:
+                sub_search += search_list[1]
+                sub_search += " Properties"
+            else:
+                sub_search += "Entry Properties"
+        else:
+            sub_search += search_list[1]
+            sub_search += " Properties"
+    elif search_len != 0:
+        return result
 
     sec_search = "\\section{"
     sec_search += search_list[0]
@@ -192,11 +199,12 @@ def parse_configuration_tex(config_file, search_list, width, valid_only, show_ur
             continue
         if "\\end{" in line:
             continue
-        if "\\item" in line and ( itemize == 0 and enum == 0 ):
+        if "\\item" in line and (itemize == 0 and enum == 0):
             break
         if "\\subsection{" in line or "\\section{" in line:
             break
-        parsed_line = parse_line(line, columns, width, align, valid_only, show_urls)
+        parsed_line = parse_line(line, columns, width,
+                                 align, valid_only, show_urls)
         if valid_only:
             if itemize > 0:
                 if "---" in line:
@@ -210,94 +218,92 @@ def parse_configuration_tex(config_file, search_list, width, valid_only, show_ur
                 result.append(parsed_line)
     return result
 
+
 def parse_line(line, columns, width, align, valid_only, show_urls):
     ret = ""
     build_key = False
     key = ""
     col_width = 0
     if columns > 0:
-        col_width = int(width / ( columns + 1 ))
+        col_width = int(width / (columns + 1))
     ignore = False
     col_contents_len = 0
     line = line.rstrip()
     for c in line:
         if build_key:
-            match c:
-                case c if c in "{[":
-                    build_key = False
-                    if not valid_only:
-                        match key:
-                            case "text":
-                                ret += "\x1b[0m"
-                            case "textit":
-                                ret += "\x1b[3m"
-                            case "textbf":
-                                ret += "\x1b[1m"
-                            case "emph":
-                                ret += "\x1b[7m"
-                            case "texttt":
-                                ret += "\x1b[4m"
-                            case "href":
-                                if show_urls:
-                                    ret += "\x1b[34m"
-                                else:
-                                    ignore = True
-                            case _:
-                                ignore = True
-                    if key != "href":
-                        key = ""
-                case c if c in " ,()\\0123456789$&":
-                    build_key = False
-                    if key == "item":
-                        if not valid_only:
-                            ret += "•"
-                    ret += special_char(key)
-                    col_contents_len += 1
-                    if c in ",()0123456789$":
-                        ret += c
-                    if c == "\\":
-                        if len(key) > 0:
-                            build_key = True
+            if c in "{[":
+                build_key = False
+                if not valid_only:
+                    if key == "text":
+                        ret += "\x1bN"
+                    elif key == "textit":
+                        ret += "\x1bI"
+                    elif key == "textbf":
+                        ret += "\x1bB"
+                    elif key == "emph":
+                        ret += "\x1bI"
+                    elif key == "texttt":
+                        ret += "\x1bU"
+                    elif key == "href":
+                        if show_urls:
+                            ret += "\x1bL"
+                        else:
+                            ignore = True
+                    else:
+                        ignore = True
+                if key != "href":
                     key = ""
-                case c if c in "_^#":
-                    build_key = False
+            elif c in " ,()\\0123456789$&":
+                build_key = False
+                if key == "item":
+                    if not valid_only:
+                        ret += "•"
+                ret += special_char(key)
+                col_contents_len += 1
+                if c in ",()0123456789$":
+                    ret += c
+                if c == "\\":
+                    if len(key) > 0:
+                        build_key = True
+                key = ""
+            elif c in "_^#":
+                build_key = False
+                ret += c
+                col_contents_len += 1
+                key = ""
+            else:
+                key += c
+        else:
+            if c == "\\":
+                build_key = True
+            elif c in "}]":
+                if not ignore:
+                    if not valid_only:
+                        ret += "\x1bN"
+                        if key == "href":
+                            ret += " "
+                            key = ""
+                        elif c == "]":
+                            ret += "]"
+                ignore = False
+            elif c == "{":
+                if not valid_only:
+                    ret += "\x1bU"
+            elif c == "&":
+                if columns > 0:
+                    pad = col_width - col_contents_len - 1
+                    if pad > 0:
+                        for _ in range(pad):
+                            ret += " "
+                    col_contents_len = 0
+                    ret += "|"
+                else:
+                    if not align:
+                        ret += "&"
+            else:
+                if not ignore:
                     ret += c
                     col_contents_len += 1
-                    key = ""
-                case _:
-                    key += c
-        else:
-            match c:
-                case "\\":
-                    build_key = True
-                case c if c in "}]":
-                    if not ignore:
-                        if not valid_only:
-                            ret += "\x1b[0m"
-                            if key == "href":
-                                ret += " "
-                                key = ""
-                            elif c == "]":
-                                ret += "]"
-                    ignore = False
-                case "{":
-                    if not valid_only:
-                        ret += "\x1b[4m"
-                case "&":
-                    if columns > 0:
-                        pad = col_width - col_contents_len - 1
-                        if pad > 0:
-                            for _ in range(pad):
-                                ret += " "
-                        col_contents_len = 0
-                        ret += "|"
-                    else:
-                        if not align:
-                            ret += "&"
-                case _:
-                    if not ignore:
-                        ret += c
-                        col_contents_len += 1
 
     if len(key) > 0:
         ret += special_char(key)
@@ -313,31 +319,31 @@ def parse_line(line, columns, width, align, valid_only, show_urls):
             ret += "\n"
     return ret
 
+
 def special_char(key):
-    match key:
-        case "kappa":
-            return "\u03f0"
-        case "lambda":
-            return "\u03bb"
-        case "mu":
-            return "\u03bc"
-        case "alpha":
-            return "\u03b1"
-        case "beta":
-            return "\u03b2"
-        case "gamma":
-            return "\u03b3"
-        case "leq":
-            return "\u2264"
-        case "cdot":
-            return "\u00b7"
-        case "in":
-            return "\u220a"
-        case "infty":
-            return "\u221e"
-        case "textbackslash":
-            return "\\"
-        case "hline":
-            return "\u200b"
-        case _:
-            return " "
+    if key == "kappa":
+        return "\u03f0"
+    elif key == "lambda":
+        return "\u03bb"
+    elif key == "mu":
+        return "\u03bc"
+    elif key == "alpha":
+        return "\u03b1"
+    elif key == "beta":
+        return "\u03b2"
+    elif key == "gamma":
+        return "\u03b3"
+    elif key == "leq":
+        return "\u2264"
+    elif key == "cdot":
+        return "\u00b7"
+    elif key == "in":
+        return "\u220a"
+    elif key == "infty":
+        return "\u221e"
+    elif key == "textbackslash":
+        return "\\"
+    elif key == "hline":
+        return "\u200b"
+    else:
+        return " "
