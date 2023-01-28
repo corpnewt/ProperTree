@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 import sys, os, plistlib, base64, binascii, datetime, tempfile, shutil, re, subprocess, math, hashlib
-import rbits
+
 from collections import OrderedDict
+from Scripts import config_tex_info
+
 try:
     # Python 2
     import Tkinter as tk
@@ -391,7 +393,7 @@ class PlistWindow(tk.Toplevel):
         self.bind("<{}-f>".format(key), self.hide_show_find)
         self.bind("<{}-p>".format(key), self.hide_show_type)
         # Add rbits binding
-        self.bind("<{}-i>".format(key), self.parse_tex)
+        self.bind("<{}-i>".format(key), self.show_config_info)
         # Add the treeview bindings
         self._tree.bind("<{}-c>".format(key), self.copy_selection)
         self._tree.bind("<{}-C>".format(key), self.copy_all)
@@ -2954,7 +2956,7 @@ class PlistWindow(tk.Toplevel):
         popup_menu.add_command(label="Paste{}".format(" (Cmd+V)" if is_mac else ""),command=self.paste_selection,state=p_state,accelerator=None if is_mac else "(Ctrl+V)")
         # Add rbits option
         popup_menu.add_command(label="Show Info{}".format(
-            " (Cmd+I)" if is_mac else ""), command=self.parse_tex if is_mac else "(Ctrl+C)")
+            " (Cmd+I)" if is_mac else ""), command=self.show_config_info if is_mac else "(Ctrl+C)")
         
         # Walk through the menu data if it exists
         cell_path = self.get_cell_path(cell)
@@ -3205,80 +3207,18 @@ class PlistWindow(tk.Toplevel):
                 tags.append("odd" if x % 2 else "even")
             self._tree.item(item, tags=tags)
 
-    def parse_tex(self, event=None):
-        # probably a simpler way to set up the formatted text
-        # but found this format online and it works for now
-        class FormattedText(tk.Text):
-            def __init__(self, *args, **kwargs):
-                super().__init__(*args, **kwargs)
-                from tkinter import font as tkFont
-                default_font = tkFont.nametofont(self.cget("font"))
-
-                bold_font = tkFont.Font(**default_font.configure())
-                italic_font = tkFont.Font(**default_font.configure())
-                normal_font = tkFont.Font(**default_font.configure())
-                underline_font = tkFont.Font(**default_font.configure())
-
-                bold_font.configure(weight="bold")
-                italic_font.configure(slant="italic")
-                underline_font.configure(underline=1)
-                normal_font.configure(weight="normal", slant="roman")
-
-                self.tag_configure("bold", font=bold_font)
-                self.tag_configure("italic", font=italic_font)
-                self.tag_configure("underline", font=underline_font)
-                self.tag_configure("normal", font=normal_font)
-                self.tag_configure(
-                    "inverse", background="white", foreground="black")
-
+    def show_config_info(self, event=None):
         # find the path of selected cell
         cell = "" if not len(self._tree.selection()) else self._tree.selection()[0]
-        cell_p = self.split(self.get_cell_path(cell))
-        cell_p.pop(0) # remove root
-        if len(cell_p) == 0 or cell_p[-1] == "*": # nothing to search for
+        search_list = self.split(self.get_cell_path(cell))
+        search_list.pop(0) # remove root
+        if len(search_list) == 0 or search_list[-1] == "*": # nothing to search for
             return
-        # get path to Configuration.tex in root dir
-        # but will need path to tex based on version of plist to work "properly"
-        conf_path = os.path.abspath(os.getcwd()) + "/Configuration.tex"
-        result = rbits.parse_config_tex(conf_path, cell_p, 120, False, False)
-        info_win_height = len(result)+1  # size info_window to the search result
-        if info_win_height > 40:
-            info_win_height = 40
-        info_window = tk.Toplevel()
-        info_window.title(" > ".join(cell_p)) # set title to search path
-        text = FormattedText(info_window, width=120, height=info_win_height)
-        text.pack(fill="both", expand=True)
-
-        style = "normal"
-
-        in_escape = False
-        for line in result:
-            out = "" # build output string between esc seq one char at a time
-            for c in line:
-                # quick hack to decode the escape seqs ret from the parse
-                # can improve this
-                if in_escape:
-                    if c == '0':
-                        style = "normal"
-                    if c == '1':
-                        style = "bold"
-                    if c == '3':
-                        style = "italic"
-                    if c == '4':
-                        style = "underline"
-                    if c == '7':
-                        style = "inverse"
-                    if c == 'm':
-                        out = ""
-                        in_escape = False
-                    continue
-                if c == '\x1b':
-                    # found end of one esc and start of another
-                    # dump formatted output to window
-                    # and start over
-                    text.insert("end", out, style) 
-                    out = ""
-                    in_escape = True
-                    continue
-                out += c
-            text.insert("end", out, style) # reached end of line, dump out to window
+        # will need path to a Configuration.tex based for the version of OpenCore being used
+        # for this to provide the correct info
+        # for now this is a cheap hack to a Configuration.tex in the same location as ProperTree
+        prop_tree_path = sys.path[0]
+        if ".app" in prop_tree_path:
+            prop_tree_path = prop_tree_path[:-30]
+        config_tex_path = os.path.join(prop_tree_path, "Configuration.tex")
+        config_tex_info.display_info_window(config_tex_path, search_list, 120, False, False)
