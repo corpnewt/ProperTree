@@ -62,30 +62,38 @@ def display_info_window(config_tex, search_list, width, valid_only, show_urls):
     style = "normal"
 
     in_escape = False
+    esc_code = ""
     for line in result:
+        # uncomment print line to get output in console while debugging
+#        print(line.rstrip())
         out = ""  # build output string between esc seq one char at a time
         for c in line:
             # quick hack to decode the escape seqs ret from the parse
-            # using single character for the encoding since there is
-            # no need for the full ANSI esc sequence here
+            # only including encodings needed for Configuration.tex and a
+            # few others for now
             if in_escape:
-                if c == 'N':
-                    style = "normal"
-                if c == 'B':
-                    style = "bold"
-                if c == 'I':
-                    style = "italic"
-                if c == 'M':
-                    style = "mono"
-                if c == 'R':
-                    style = "reverse"
-                if c == 'U':
-                    if show_urls:
-                        style = "url"
-                    else:
+                esc_code += c
+                if c == "m": # end of esc code
+                    if esc_code == '[0m':
+                        style = "normal"
+                    if esc_code == '[1m':
+                        style = "bold"
+                    if esc_code == '[3m':
+                        style = "italic"
+                    if esc_code == "[4m":
+                        style = "underline"
+                    if esc_code == '[11m':
                         style = "mono"
-                out = ""
-                in_escape = False
+                    if esc_code == '[7m':
+                        style = "reverse"
+                    if esc_code == '[34m':
+                        if show_urls:
+                            style = "url"
+                        else:
+                            style = "mono"
+                    out = "" # found valid esc - clear out
+                    esc_code = ""
+                    in_escape = False
                 continue
             if c == '\x1b':
                 # found end of one esc and start of another
@@ -249,18 +257,18 @@ def parse_line(line, columns, width, align, valid_only, show_urls):
                 build_key = False
                 if not valid_only:
                     if key == "text":
-                        ret += "\x1bN"
+                        ret += "\x1b[0m"
                     elif key == "textit":
-                        ret += "\x1bI"
+                        ret += "\x1b[3m"
                     elif key == "textbf":
-                        ret += "\x1bB"
+                        ret += "\x1b[1m"
                     elif key == "emph":
-                        ret += "\x1bI"
+                        ret += "\x1b[3m"
                     elif key == "texttt":
-                        ret += "\x1bM"
+                        ret += "\x1b[11m"
                     elif key == "href":
                         if show_urls:
-                            ret += "\x1bU"
+                            ret += "\x1b[34m"
                         else:
                             ignore = True
                     else:
@@ -293,7 +301,7 @@ def parse_line(line, columns, width, align, valid_only, show_urls):
             elif c in "}]":
                 if not ignore:
                     if not valid_only:
-                        ret += "\x1bN"
+                        ret += "\x1b[0m"
                         if key == "href":
                             ret += " "
                             key = ""
@@ -302,7 +310,7 @@ def parse_line(line, columns, width, align, valid_only, show_urls):
                 ignore = False
             elif c == "{":
                 if not valid_only:
-                    ret += "\x1bU"
+                    ret += "\x1b[11m"
             elif c == "&":
                 if columns > 0:
                     pad = col_width - col_contents_len - 1
