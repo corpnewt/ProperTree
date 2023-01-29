@@ -20,17 +20,20 @@ def display_info_window(config_tex, search_list, width, valid_only, show_urls):
             mono_font = tk_font.Font(**default_font.configure())
             normal_font = tk_font.Font(**default_font.configure())
             underline_font = tk_font.Font(**default_font.configure())
+            url_font = tk_font.Font(**default_font.configure())
 
             bold_font.configure(weight="bold")
             italic_font.configure(slant="italic")
             mono_font.configure(family="Courier New")
             underline_font.configure(underline=1)
+            url_font.configure(family="courier New")
 
             self.tag_configure("bold", font=bold_font)
             self.tag_configure("italic", font=italic_font)
             self.tag_configure("underline", font=underline_font)
             self.tag_configure("mono", font=mono_font)
             self.tag_configure("normal", font=normal_font)
+            self.tag_configure("url", font=url_font, foreground="blue")
             self.tag_configure(
                 "reverse", font=normal_font, background="white", foreground="black")
 
@@ -63,7 +66,8 @@ def display_info_window(config_tex, search_list, width, valid_only, show_urls):
         out = ""  # build output string between esc seq one char at a time
         for c in line:
             # quick hack to decode the escape seqs ret from the parse
-            # can improve this
+            # using single character for the encoding since there is
+            # no need for the full ANSI esc sequence here
             if in_escape:
                 if c == 'N':
                     style = "normal"
@@ -71,10 +75,15 @@ def display_info_window(config_tex, search_list, width, valid_only, show_urls):
                     style = "bold"
                 if c == 'I':
                     style = "italic"
-                if c == 'U':
+                if c == 'M':
                     style = "mono"
                 if c == 'R':
                     style = "reverse"
+                if c == 'U':
+                    if show_urls:
+                        style = "url"
+                    else:
+                        style = "mono"
                 out = ""
                 in_escape = False
                 continue
@@ -122,6 +131,7 @@ def parse_configuration_tex(config_file, search_list, width, valid_only, show_ur
     elif search_len != 0:
         return result
 
+    # move down the Configuration.tex to the section we want
     sec_search = "\\section{"
     sec_search += search_list[0]
 
@@ -133,6 +143,7 @@ def parse_configuration_tex(config_file, search_list, width, valid_only, show_ur
             break
 
     if len(search_list) != 1:
+        # we have sub sections and possibly subsub sections (curse you DhinakG)
         while True:
             line = config.readline()
             if not line:
@@ -142,10 +153,11 @@ def parse_configuration_tex(config_file, search_list, width, valid_only, show_ur
         text_search = "texttt{"
         if search_list[0] == "NVRAM" and len(search_list) > 2:
             text_search += search_list[2]
-            if len(search_list) == 4:
+            if len(search_list) == 4: # add the NVRAM variable to the UUID
                 text_search += ":"
                 text_search += search_list[3]
         elif search_list[0] == "DeviceProperties" and len(search_list) == 4:
+            # ignore the PCI path when searching for fields
             text_search += search_list[3]
         else:
             text_search += search_list[len(search_list) - 1]
@@ -201,7 +213,8 @@ def parse_configuration_tex(config_file, search_list, width, valid_only, show_ur
             continue
         if "\\item" in line and (itemize == 0 and enum == 0):
             break
-        if "\\subsection{" in line or "\\section{" in line:
+        if "\\subsubsection{" in line or "\\subsection{" in line or "\\section{" in line:
+            # reached end of current section
             break
         parsed_line = parse_line(line, columns, width,
                                  align, valid_only, show_urls)
@@ -216,6 +229,7 @@ def parse_configuration_tex(config_file, search_list, width, valid_only, show_ur
         else:
             if len(parsed_line) != 0:
                 result.append(parsed_line)
+
     return result
 
 
@@ -243,10 +257,10 @@ def parse_line(line, columns, width, align, valid_only, show_urls):
                     elif key == "emph":
                         ret += "\x1bI"
                     elif key == "texttt":
-                        ret += "\x1bU"
+                        ret += "\x1bM"
                     elif key == "href":
                         if show_urls:
-                            ret += "\x1bL"
+                            ret += "\x1bU"
                         else:
                             ignore = True
                     else:
