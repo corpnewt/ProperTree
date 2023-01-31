@@ -2956,7 +2956,7 @@ class PlistWindow(tk.Toplevel):
         popup_menu.add_command(label="Paste{}".format(" (Cmd+V)" if is_mac else ""),command=self.paste_selection,state=p_state,accelerator=None if is_mac else "(Ctrl+V)")
         # Add rbits option
         popup_menu.add_command(label="Show Info{}".format(
-            " (Cmd+I)" if is_mac else ""), command=self.show_config_info if is_mac else "(Ctrl+C)")
+            " (Cmd+I)" if is_mac else ""), command=self.show_config_info if is_mac else "(Ctrl+I)")
         
         # Walk through the menu data if it exists
         cell_path = self.get_cell_path(cell)
