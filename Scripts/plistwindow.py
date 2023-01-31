@@ -3207,7 +3207,7 @@ class PlistWindow(tk.Toplevel):
                 tags.append("odd" if x % 2 else "even")
             self._tree.item(item, tags=tags)
 
-    def show_config_info(self, event=None):
+    def show_config_info(self, event = None):
         # find the path of selected cell
         cell = "" if not len(self._tree.selection()) else self._tree.selection()[0]
         search_list = self.split(self.get_cell_path(cell))
@@ -3221,4 +3221,7 @@ class PlistWindow(tk.Toplevel):
         if ".app" in prop_tree_path:
             prop_tree_path = prop_tree_path[:-30]
         config_tex_path = os.path.join(prop_tree_path, "Configuration.tex")
-        config_tex_info.display_info_window(config_tex_path, search_list, 120, False, False)
+        # pass mouse pointer location as location to open info window
+        mx = self.root.winfo_pointerx()
+        my = self.root.winfo_pointery()
+        config_tex_info.display_info_window(config_tex_path, search_list, 120, False, False, mx, my)

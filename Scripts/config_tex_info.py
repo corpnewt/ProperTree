@@ -6,8 +6,7 @@ else:
     import Tkinter as tk, tkFont as tk_font
 
 
-
-def display_info_window(config_tex, search_list, width, valid_only, show_urls):
+def display_info_window(config_tex, search_list, width, valid_only, show_urls, mx, my):
     # probably a simpler way to set up the formatted text
     # but found this format online and it works for now
     class FormattedText(tk.Text):
@@ -43,10 +42,12 @@ def display_info_window(config_tex, search_list, width, valid_only, show_urls):
     info_window = tk.Toplevel()
     info_window.title(" > ".join(search_list))  # set title to search path
     info_win_height = len(result) + 1  # size info_window to the search result
-    if info_win_height > 40:
-        info_win_height = 40
+#    if info_win_height > 40:
+#        info_win_height = 40
     text = FormattedText(info_window, width=width, height=info_win_height)
     text.pack(fill="both", expand=True)
+    #move window to mx, my
+    info_window.geometry("+%d+%d" % (mx, my))
 
     # very basic error checking and display
     # length of zero means no result was found
@@ -55,9 +56,9 @@ def display_info_window(config_tex, search_list, width, valid_only, show_urls):
         text.insert("end", "no info found for: ", "bold")
         text.insert("end", search_list, "bold")
         return
-    if len(result) == 1:
-        text.insert("end", result[0], "reverse")
-        return
+#    if len(result) == 1:
+#        text.insert("end", result[0], "reverse")
+#        return
 
     style = "normal"
 
@@ -65,7 +66,7 @@ def display_info_window(config_tex, search_list, width, valid_only, show_urls):
     esc_code = ""
     for line in result:
         # uncomment print line to get output in console while debugging
-#        print(line.rstrip())
+        #        print(line.rstrip())
         out = ""  # build output string between esc seq one char at a time
         for c in line:
             # quick hack to decode the escape seqs ret from the parse
@@ -73,7 +74,7 @@ def display_info_window(config_tex, search_list, width, valid_only, show_urls):
             # few others for now
             if in_escape:
                 esc_code += c
-                if c == "m": # end of esc code
+                if c == "m":  # end of esc code
                     if esc_code == '[0m':
                         style = "normal"
                     if esc_code == '[1m':
@@ -91,7 +92,7 @@ def display_info_window(config_tex, search_list, width, valid_only, show_urls):
                             style = "url"
                         else:
                             style = "mono"
-                    out = "" # found valid esc - clear out
+                    out = ""  # found valid esc - clear out
                     esc_code = ""
                     in_escape = False
                 continue
@@ -115,69 +116,70 @@ def parse_configuration_tex(config_file, search_list, width, valid_only, show_ur
         return ["Could not find/open Configuration.tex at " + config_file]
 
     result = []
-    align = False
-    sub_search = "\\subsection{"
+    search_len = len(search_list)
+    if search_len == 0:  # we shouldn't get here, but just in case
+        return result
 
-    search_len = len(search_list) - 1
+    search_terms = ["\\section{"]
+    search_terms[0] += search_list[0]
+    text_search = search_list[search_len - 1]
+
+    # set the search terms based on selected position
     if search_len == 1:
-        sub_search += "Properties"
-    elif search_len == 2 or search_len == 3:
+        # we're done
+        pass
+    elif search_len == 2:
+        search_terms.append("\\subsection{Properties")
+        search_terms.append("texttt{" + text_search + "}\\")
+    elif search_len == 3:
+        if search_list[0] == "NVRAM":
+            search_terms.append("\\subsection{Introduction")
+            search_terms.append("texttt{" + text_search + "}")
+        else:
+            search_terms.append(
+                "\\subsection{" + search_list[1] + " Properties")
+            search_terms.append("texttt{" + text_search + "}\\")
+    elif search_len == 4:
         item_zero = search_list[0]
+        sub_search = "\\subsection{"
         if item_zero == "NVRAM":
-            sub_search += "Introduction"
+            sub_search = "\\subsection{Introduction"
+            text_search = search_list[2]
+            text_search += ":"
+            text_search += search_list[3]
+            text_search += "}"
         elif item_zero == "DeviceProperties":
             sub_search += "Common"
+            text_search += "}"
         elif item_zero == "Misc":
-            if len(search_list) < 4:
-                sub_search += search_list[1]
-                sub_search += " Properties"
-            else:
+            if len(search_list[2]) < 3:
                 sub_search += "Entry Properties"
+            else:
+                sub_search = "\\subsubsection{"
+                sub_search += search_list[1]
+            text_search += "}"
         else:
             sub_search += search_list[1]
             sub_search += " Properties"
-    elif search_len != 0:
-        return result
+            text_search += "}\\"
+        search_terms.append(sub_search)
+        search_terms.append("texttt{" + text_search)
+    elif search_len == 5:
+        sub_search = "\\subsubsection{"
+        sub_search += search_list[1]
+        search_terms.append(sub_search)
+        search_terms.append("texttt{" + text_search)
 
     # move down the Configuration.tex to the section we want
-    sec_search = "\\section{"
-    sec_search += search_list[0]
-
-    while True:
-        line = config.readline()
-        if not line:
-            return result
-        if sec_search in line:
-            break
-
-    if len(search_list) != 1:
-        # we have sub sections and possibly subsub sections (curse you DhinakG)
+    for i in range(0, len(search_terms)):
         while True:
             line = config.readline()
             if not line:
                 return result
-            if sub_search in line:
-                break
-        text_search = "texttt{"
-        if search_list[0] == "NVRAM" and len(search_list) > 2:
-            text_search += search_list[2]
-            if len(search_list) == 4: # add the NVRAM variable to the UUID
-                text_search += ":"
-                text_search += search_list[3]
-        elif search_list[0] == "DeviceProperties" and len(search_list) == 4:
-            # ignore the PCI path when searching for fields
-            text_search += search_list[3]
-        else:
-            text_search += search_list[len(search_list) - 1]
-            text_search += "}\\"
-
-        while True:
-            line = config.readline()
-            if not line:
-                return result
-            if text_search in line:
+            if search_terms[i] in line:
                 break
 
+    align = False
     itemize = 0
     enum = 0
     columns = 0
@@ -221,7 +223,7 @@ def parse_configuration_tex(config_file, search_list, width, valid_only, show_ur
             continue
         if "\\item" in line and (itemize == 0 and enum == 0):
             break
-        if "\\subsubsection{" in line or "\\subsection{" in line or "\\section{" in line:
+        if "\\subsection{" in line or "\\section{" in line:
             # reached end of current section
             break
         parsed_line = parse_line(line, columns, width,
