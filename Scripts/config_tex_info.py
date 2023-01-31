@@ -208,6 +208,11 @@ def parse_configuration_tex(config_file, search_list, width, valid_only, show_ur
         if "\\begin{enumerate}" in line:
             enum += 1
             continue
+        if "\\begin{lstlisting}" in line:
+            result.append("\x1b[11m")
+            result.append("-"*width)
+            result.append("\n")
+            continue
         if "\\mbox" in line:
             continue
         if "\\end{tabular}" in line:
@@ -218,6 +223,10 @@ def parse_configuration_tex(config_file, search_list, width, valid_only, show_ur
             continue
         if "\\end{enumerate}" in line:
             enum -= 1
+            continue
+        if "\\end{lstlisting}" in line:
+            result.append("-"*width)
+            result.append("\x1b[0m\n")
             continue
         if "\\end{" in line:
             continue
