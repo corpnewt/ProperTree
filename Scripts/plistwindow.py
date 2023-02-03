@@ -3213,12 +3213,12 @@ class PlistWindow(tk.Toplevel):
             # will need path to a Configuration.tex based for the version of OpenCore being used
             # for this to provide the correct info
             # for now this is a cheap hack to a Configuration.tex in the same location as ProperTree
-            
-            # TODO: Rework this to use path separators instead of assumed length:
-            prop_tree_path = sys.path[0]
-            if ".app" in prop_tree_path:
-                prop_tree_path = prop_tree_path[:-30]
-            config_tex_path = os.path.join(prop_tree_path, "Configuration.tex")
+            pt_path_parts = [x or os.sep for x in os.path.normpath(sys.path[0]).split(os.sep)]
+            if len(pt_path_parts) >= 3 and pt_path_parts[-2:] == ["Contents","MacOS"] \
+             and pt_path_parts[-3].lower().endswith(".app"):
+                pt_path_parts = pt_path_parts[:-3]
+            pt_path_parts+=["Configuration.tex"]
+            config_tex_path = os.path.join(*pt_path_parts)
             # pass mouse pointer location as location to open info window
             mx = self.root.winfo_pointerx()
             my = self.root.winfo_pointery()
