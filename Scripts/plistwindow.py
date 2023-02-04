@@ -3222,7 +3222,9 @@ class PlistWindow(tk.Toplevel):
             # pass mouse pointer location as location to open info window
             mx = self.root.winfo_pointerx()
             my = self.root.winfo_pointery()
-            window = config_tex_info.display_info_window(config_tex_path, search_list, 120, False, False, mx, my, font=self.font, fg=self.r1t, bg=self.r1)
+            # force Times New Roman for now so output is closer to Configuration.pdf
+            # for easier debugging of formatting
+            window = config_tex_info.display_info_window(config_tex_path, search_list, 120, False, False, mx, my, font=Font(family="Times New Roman"), fg=self.r1t, bg=self.r1)
             if window:
                 # Override the window closing protocol to allow stack order checks
                 window.protocol("WM_DELETE_WINDOW", lambda x=window:self.controller.close_window(window=x))

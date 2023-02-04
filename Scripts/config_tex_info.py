@@ -38,7 +38,7 @@ def display_info_window(config_tex, search_list, width, valid_only, show_urls, m
             self.italic_font.configure(slant="italic")
             self.mono_font.configure(family="Courier New")
             self.underline_font.configure(underline=1)
-            self.url_font.configure(family="courier New")
+            self.url_font.configure(family="Courier New")
 
             self.tag_configure("bold", font=self.bold_font)
             self.tag_configure("italic", font=self.italic_font)
@@ -113,7 +113,7 @@ def display_info_window(config_tex, search_list, width, valid_only, show_urls, m
         esc_code = ""
 
         # uncomment print line to get output in console while debugging
-        #        print(line.rstrip())
+        print(result)
         out = ""  # build output string between esc seq one char at a time
         max_w = line_w = 0  # keep track of the longest line we have
         total_h = line_h = 0
@@ -281,17 +281,21 @@ def parse_configuration_tex(config_file, search_list, width, valid_only, show_ur
 
     align = False
     itemize = 0
+    in_item = False
+    in_listing = False
     enum = 0
     columns = 0
     lines_between_valid = 0
 
     while True:
+        # track document state & preprocess line before parsing
         line = config.readline()
         if not line:
             break
         if "\\subsection{Introduction}" in line:
             continue
         if "\\begin{tabular}" in line:
+            result.append("\x1b[11m")
             for c in line:
                 if c == "c":
                     columns += 1
@@ -309,30 +313,56 @@ def parse_configuration_tex(config_file, search_list, width, valid_only, show_ur
             enum += 1
             continue
         if "\\begin{lstlisting}" in line:
-            result.append("\x1b[11m")
+            in_listing = True
+            result.append("\n\x1b[11m")
             result.append("-"*width)
             result.append("\n")
             continue
         if "\\mbox" in line:
             continue
         if "\\end{tabular}" in line:
+            result.append("\x1b[0m")
             columns = 0
             continue
         if "\\end{itemize}" in line:
             itemize -= 1
+#            result.append("\n")
+            if itemize == 0 and enum == 0:
+                in_item = False
             continue
         if "\\end{enumerate}" in line:
-            enum -= 1
+            enum = 0
+            if itemize == 0:
+                in_item = False
             continue
         if "\\end{lstlisting}" in line:
+            in_listing = False
             result.append("-"*width)
             result.append("\x1b[0m\n")
             continue
         if "\\end{" in line:
             continue
-        if "\\item" in line and (itemize == 0 and enum == 0):
-            break
-        if "\\subsection{" in line or "\\section{" in line:
+        if "\\item" in line:
+            if itemize == 0 and enum == 0:
+                break # skip line, not itemizing
+            else:
+                if in_item: # no return before first item
+                    result.append("\n")
+                in_item = True
+                if itemize == 0:
+                    line = line.replace("\\item", ("(" + chr(96 + enum) + ")"))
+                    enum += 1
+                elif itemize == 1:
+                    line = line.replace("\\item", u"\u2022")
+                else:
+                    line = line.replace("\\item", "-")
+        else:
+            if itemize > 0 or enum > 0: # inside multi line item
+                line = line.lstrip() # remove leading spaces
+                line = " " + line # put one back
+        if "section{" in line:
+# let's try only checking for "section{" instead of 3 checks
+#        if "\\section{" in line or "\\subsection{" in line or "\\subsubsection{" in line:
             # reached end of current section
             break
         parsed_line = parse_line(line, columns, width,
@@ -346,16 +376,18 @@ def parse_configuration_tex(config_file, search_list, width, valid_only, show_ur
                 if len(result) > 0:
                     lines_between_valid += 1
         else:
-            if len(parsed_line) != 0:
-                result.append(parsed_line)
+            result.append(parsed_line)
+            if in_listing:
+                result.append("\n")
     # Join the result into a single string and remove
     # leading, trailing, and excessive newlines
     # result = re.sub(r"\n{2,}",r"\n\n","".join(result))
     # return result.strip("\n")
 
-    # return "".join(result)
+    # leave all excess internal newlines for now for easier debugging
+    return "".join(result).strip("\n")
 
-    return re.sub("\n{2,}", "\n\n", "".join(result)).strip("\n")
+    # return re.sub("\n{2,}", "\n\n", "".join(result)).strip("\n")
 
 
 def parse_line(line, columns, width, align, valid_only, show_urls):
@@ -368,6 +400,8 @@ def parse_line(line, columns, width, align, valid_only, show_urls):
     ignore = False
     col_contents_len = 0
     line = line.rstrip()
+    if line == "":
+        return "\n\n"
     for c in line:
         if build_key:
             if c in "{[":
@@ -378,7 +412,10 @@ def parse_line(line, columns, width, align, valid_only, show_urls):
                     elif key == "textit":
                         ret += "\x1b[3m"
                     elif key == "textbf":
-                        ret += "\x1b[1m"
+                        if columns > 0:
+                            pass # ignore bold inside columns until \x1b[2nm codes implemented
+                        else:
+                            ret += "\x1b[1m"
                     elif key == "emph":
                         ret += "\x1b[3m"
                     elif key == "texttt":
@@ -394,9 +431,9 @@ def parse_line(line, columns, width, align, valid_only, show_urls):
                     key = ""
             elif c in " ,()\\0123456789$&":
                 build_key = False
-                if key == "item":
-                    if not valid_only:
-                        ret += u"\u2022"
+#                if key == "item":
+#                    if not valid_only:
+#                        ret += u"\u2022"
                 ret += special_char(key)
                 col_contents_len += 1
                 if c in ",()0123456789$":
@@ -418,7 +455,12 @@ def parse_line(line, columns, width, align, valid_only, show_urls):
             elif c in "}]":
                 if not ignore:
                     if not valid_only:
-                        ret += "\x1b[0m"
+                        # here as well, avoid resetting font attributes inside columns
+                        # until \x1b[2nm codes are implemented
+                        if columns > 0:
+                            ret += "\x1b[11m"
+                        else:
+                            ret += "\x1b[0m"
                         if key == "href":
                             ret += " "
                             key = ""
@@ -452,7 +494,12 @@ def parse_line(line, columns, width, align, valid_only, show_urls):
         else:
             if key == "hline":
                 ret = "-"*(width-4)
+                ret += "\n"
+        if line.endswith("\\\\"):
             ret += "\n"
+# shouldn't need this, but we'll see
+#        if line.endswith(":"):
+#            ret += "\n"
     return ret
 
 
@@ -461,7 +508,7 @@ def special_char(key):
         return u"\u03f0"
     elif key == "lambda":
         return u"\u03bb"
-    elif key == "m":
+    elif key == "mu":
         return u"\u03bc"
     elif key == "alpha":
         return u"\u03b1"
