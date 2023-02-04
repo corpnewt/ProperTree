@@ -28,6 +28,7 @@ def display_info_window(config_tex, search_list, width, valid_only, show_urls, m
                 self.font = tk_font.nametofont(self.cget("font"))
 
             self.bold_font = tk_font.Font(**self.font.configure())
+            self.bold_mono_font = tk_font.Font(**self.font.configure())
             self.italic_font = tk_font.Font(**self.font.configure())
             self.mono_font = tk_font.Font(**self.font.configure())
             self.normal_font = tk_font.Font(**self.font.configure())
@@ -35,12 +36,14 @@ def display_info_window(config_tex, search_list, width, valid_only, show_urls, m
             self.url_font = tk_font.Font(**self.font.configure())
 
             self.bold_font.configure(weight="bold")
+            self.bold_mono_font.configure(family="Courier New", weight="bold")
             self.italic_font.configure(slant="italic")
             self.mono_font.configure(family="Courier New")
             self.underline_font.configure(underline=1)
             self.url_font.configure(family="Courier New")
 
             self.tag_configure("bold", font=self.bold_font)
+            self.tag_configure("bold_mono", font=self.bold_mono_font)
             self.tag_configure("italic", font=self.italic_font)
             self.tag_configure("underline", font=self.underline_font)
             self.tag_configure("mono", font=self.mono_font)
@@ -131,19 +134,34 @@ def display_info_window(config_tex, search_list, width, valid_only, show_urls, m
             if in_escape:
                 esc_code += c
                 if c == "m":  # end of esc code
+                    # should be using these to turn font attributes on and off
+                    # but for now just have a style defined for current needs
                     if esc_code == '[0m':
                         style = "normal"
-                    if esc_code == '[1m':
-                        style = "bold"
-                    if esc_code == '[3m':
+                    if esc_code == "[10m": # switch to default family
+                        style = "normal"
+                    if esc_code == '[1m': # bold on
+                        if style == "mono":
+                            style = "bold_mono" # until a better method is found
+                        else:
+                            style = "bold"
+                    if esc_code == "[22m": # bold off
+                        if style == "bold_mono":
+                            style = "mono"
+                        else:
+                            style = "normal"
+                    if esc_code == '[3m': # italic on
                         style = "italic"
-                    if esc_code == "[4m":
+                    # [23m italic off
+                    if esc_code == "[4m": # underline on
                         style = "underline"
-                    if esc_code == '[11m':
+                    # [24m underline off
+                    if esc_code == '[11m': # switch to mono family
                         style = "mono"
-                    if esc_code == '[7m':
+                    if esc_code == '[7m': # reverse on
                         style = "reverse"
-                    if esc_code == '[34m':
+                    # [27m not reverse
+                    if esc_code == '[34m': # foreground blue
                         if show_urls:
                             style = "url"
                         else:
@@ -318,10 +336,12 @@ def parse_configuration_tex(config_file, search_list, width, valid_only, show_ur
             result.append("-"*width)
             result.append("\n")
             continue
+        if "\\begin{" in line: # ignore other begins
+            continue
         if "\\mbox" in line:
             continue
         if "\\end{tabular}" in line:
-            result.append("\x1b[0m")
+            result.append("\x1b[10m")
             columns = 0
             continue
         if "\\end{itemize}" in line:
@@ -338,9 +358,9 @@ def parse_configuration_tex(config_file, search_list, width, valid_only, show_ur
         if "\\end{lstlisting}" in line:
             in_listing = False
             result.append("-"*width)
-            result.append("\x1b[0m\n")
+            result.append("\x1b[10m\n")
             continue
-        if "\\end{" in line:
+        if "\\end{" in line: # ignore other ends
             continue
         if "\\item" in line:
             if itemize == 0 and enum == 0:
@@ -412,10 +432,10 @@ def parse_line(line, columns, width, align, valid_only, show_urls):
                     elif key == "textit":
                         ret += "\x1b[3m"
                     elif key == "textbf":
-                        if columns > 0:
-                            pass # ignore bold inside columns until \x1b[2nm codes implemented
-                        else:
-                            ret += "\x1b[1m"
+#                        if columns > 0:
+#                            pass # ignore bold inside columns until \x1b[2nm codes implemented
+#                        else:
+                        ret += "\x1b[1m"
                     elif key == "emph":
                         ret += "\x1b[3m"
                     elif key == "texttt":
@@ -458,7 +478,7 @@ def parse_line(line, columns, width, align, valid_only, show_urls):
                         # here as well, avoid resetting font attributes inside columns
                         # until \x1b[2nm codes are implemented
                         if columns > 0:
-                            ret += "\x1b[11m"
+                            ret += "\x1b[22m"
                         else:
                             ret += "\x1b[0m"
                         if key == "href":
@@ -497,7 +517,7 @@ def parse_line(line, columns, width, align, valid_only, show_urls):
                 ret += "\n"
         if line.endswith("\\\\"):
             ret += "\n"
-# shouldn't need this, but we'll see
+# shouldn't need this
 #        if line.endswith(":"):
 #            ret += "\n"
     return ret
