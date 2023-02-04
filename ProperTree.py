@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys, os, binascii, base64, json, re, subprocess, webbrowser, multiprocessing
+import sys, os, binascii, base64, json, re, subprocess, webbrowser, multiprocessing, signal
 from collections import OrderedDict
 try:
     import Tkinter as tk
@@ -481,7 +481,11 @@ class ProperTree:
         # to overtake a blank doc opened by one with the other - hopefully fixing
         # the issue of multiple documents spawning on double-click in macOS.
         self.is_opening = False
+        self.is_quitting = False
         self.check_open(plists)
+        
+        # Set up a signal handler for SIGINT that pipes to our quit() function
+        signal.signal(signal.SIGINT, lambda x,y: print("KeyboardInterrupt caught - cleaning up...") or self.quit())
 
         # Start our run loop
         tk.mainloop()
@@ -1450,11 +1454,15 @@ class ProperTree:
         window.attributes("-topmost",True)
         self.tk.after_idle(window.attributes,"-topmost",False)
 
-    def quit(self, event=None):
+    def quit(self, event_or_signum=None, frame=None):
+        if self.is_quitting: return # Already quitting - don't try to do this twice at once
+        self.is_quitting = True # Lock this to one quit attempt at a time
         # Check if we need to save first, then quit if we didn't cancel
         for window in self.stackorder(self.tk)[::-1]:
             if window in self.default_windows: continue
-            if not window.close_window(check_close=False): return # User cancelled or we failed to save, bail
+            if not window.close_window(check_close=False):
+                self.is_quitting = False # Unlock the quit
+                return # User cancelled or we failed to save, bail
         # Make sure we retain any non-event updated settings
         prefix = self.comment_prefix_text.get()
         prefix = "#" if not prefix else prefix

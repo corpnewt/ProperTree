@@ -58,9 +58,11 @@ def display_info_window(config_tex, search_list, width, valid_only, show_urls, m
     class AutoHideScrollbar(tk.Scrollbar):
         def set(self, low, high):
             if float(low) <= 0 and float(high) >= 1.0:
-                self.tk.call("grid", "remove", self)
+                try: self.tk.call("grid", "remove", self)
+                except: pass
             else:
-                self.grid()
+                try: self.grid()
+                except: pass
             tk.Scrollbar.set(self, low, high)
 
     result = parse_configuration_tex(
@@ -72,17 +74,13 @@ def display_info_window(config_tex, search_list, width, valid_only, show_urls, m
     info_window.update_idletasks()
     title = " -> ".join([x for x in search_list if not x == "*"])
     info_window.title('"{}" Info'.format(title))  # set title to search path
-    # Create and place the scrollbars
+    # Create and place the scrollbar
     vsb = AutoHideScrollbar(info_window)
     vsb.grid(row=0, column=1, sticky="ns")
-    # Create a horizontal scroll bar even though we'll never use it, I guess
-    hsb = AutoHideScrollbar(info_window, orient=tk.HORIZONTAL)
-    hsb.grid(row=1, column=0, sticky="ew")
     # Create, place, and color the text widget
     text = FormattedText(
         info_window,
         yscrollcommand=vsb.set,
-        xscrollcommand=hsb.set,
         highlightthickness=0,
         borderwidth=5,
         wrap=tk.WORD,
@@ -90,9 +88,8 @@ def display_info_window(config_tex, search_list, width, valid_only, show_urls, m
     )
     text.grid(row=0, column=0, sticky="nsew")
     text.configure(bg=bg, fg=fg)
-    # Set up the scroll commands
+    # Set up the scroll command
     vsb.config(command=text.yview)
-    hsb.config(command=text.xview)
     # Allow the text widget to expand
     info_window.rowconfigure(0, weight=1)
     info_window.columnconfigure(0, weight=1)
