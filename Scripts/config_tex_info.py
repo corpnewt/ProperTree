@@ -11,6 +11,10 @@ else:
     import tkFont as tk_font #pylint: disable=E0401
     import tkMessageBox as mb #pylint: disable=E0401
 
+class ConfigurationLoadError(Exception):
+    """Raised when the Configuration.tex could not be found or opened."""
+    pass
+
 
 def display_info_window(config_tex, search_list, width, valid_only, show_urls, mx, my, font=None, fg="white", bg="black"):
     # probably a simpler way to set up the formatted text
@@ -65,8 +69,16 @@ def display_info_window(config_tex, search_list, width, valid_only, show_urls, m
                 except: pass
             tk.Scrollbar.set(self, low, high)
 
-    result = parse_configuration_tex(
-        config_tex, search_list, width, valid_only, show_urls)
+    try:
+        result = parse_configuration_tex(
+            config_tex, search_list, width, valid_only, show_urls)
+    except ConfigurationLoadError:
+        mb.showerror(
+            "Configuration.tex Error",
+            "Could not find/open Configuration.tex at: {}".format(
+                config_tex or "No Path Specified"
+            ))
+        return
 
     pad_pixels = 30
     info_window = tk.Toplevel()
@@ -202,7 +214,7 @@ def display_info_window(config_tex, search_list, width, valid_only, show_urls, m
         mb.showerror(
             "Info Not Found",
             "No info found for: \"{}\"".format(title))
-        return None
+        return
 
     # Fit the line width to our max line length topping out at our width value
     # text.configure(width=min(max([len(x)+1 for x in text.get("1.0","end-1c").split("\n")]),width))
@@ -235,8 +247,8 @@ def parse_configuration_tex(config_file, search_list, width, valid_only, show_ur
     #     False - return only link text with no url
     try:
         config = open(config_file, "r")
-    except OSError:
-        return ["Could not find/open Configuration.tex at " + config_file]
+    except:
+        raise ConfigurationLoadError
 
     result = []
     search_len = len(search_list)
