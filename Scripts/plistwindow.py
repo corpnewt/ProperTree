@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 import sys, os, plistlib, base64, binascii, datetime, tempfile, shutil, re, subprocess, math, hashlib
+
 from collections import OrderedDict
+from Scripts import config_tex_info
+
 try:
     # Python 2
     import Tkinter as tk
@@ -389,6 +392,8 @@ class PlistWindow(tk.Toplevel):
         self.bind("<{}-w>".format(key), self.close_window)
         self.bind("<{}-f>".format(key), self.hide_show_find)
         self.bind("<{}-p>".format(key), self.hide_show_type)
+        # Add rbits binding
+        self.bind("<{}-i>".format(key), self.show_config_info)
         # Add the treeview bindings
         self._tree.bind("<{}-c>".format(key), self.copy_selection)
         self._tree.bind("<{}-C>".format(key), self.copy_all)
@@ -564,10 +569,27 @@ class PlistWindow(tk.Toplevel):
         self._tree.pack(side="bottom",fill="both",expand=True)
         self.draw_frames()
         self.entry_popup = None
+        self.controller.set_window_opacity(window=self)
 
     def _get_menu_commands(self, menu = None, label = False):
         if not menu: return []
         return [menu.entrycget(i,"label") if label else i for i in range(menu.index(tk.END)+1) if menu.type(i) == "command"]
+
+    def _ensure_edited(self,edited=True,title=None):
+        if title: # Set the title if we're given one
+            self.title(title)
+        if edited and not self.edited:
+            # Make sure we show as edited
+            self.edited = True
+            if not self.title().endswith(" - Edited"):
+                self.title(self.title()+" - Edited")
+            if sys.platform == "darwin":
+                self.attributes("-modified",1)
+        elif not edited and self.edited:
+            # Undo our edited status
+            self.edited = False
+            if sys.platform == "darwin":
+                self.attributes("-modified",0)
 
     def scrollbar_set(self, *args):
         # Intercepted scrollbar set method to set where our
@@ -599,9 +621,7 @@ class PlistWindow(tk.Toplevel):
         self.controller.settings["last_window_height"] = self.previous_height
 
     def change_plist_type(self, value):
-        if not self.edited:
-            self.edited = True
-            self.title(self.title()+" - Edited")
+        self._ensure_edited()
 
     def change_data_type(self, value):
         self.change_data_display(value)
@@ -832,7 +852,7 @@ class PlistWindow(tk.Toplevel):
         else:
             # Not matching all, and current cell is not a match, let's get the next
             node = self.find_next(replacing=True)
-            if node == None:
+            if node is None:
                 # Nothing found - let's throw an error
                 self.bell()
                 mb.showerror("No Replaceable Matches Found", '"{}" did not match any {} fields in the current plist.'.format(find,self.find_type.lower()),parent=self)
@@ -854,9 +874,7 @@ class PlistWindow(tk.Toplevel):
         self.select(matches[-1][1])
         self.add_undo(replacements)
         # Ensure we're edited
-        if not self.edited:
-            self.edited = True
-            self.title(self.title()+" - Edited")
+        self._ensure_edited()
         # Let's try to find the next
         if not replace_all: self.find_next(replacing=True)
 
@@ -902,7 +920,7 @@ class PlistWindow(tk.Toplevel):
     def find_all(self, text=""):
         # Builds a list of tuples that list the node, the index of the found entry, and 
         # where it found it name/value (name == 0, value == 1 respectively)
-        if text == None or not len(text):
+        if text is None or not len(text):
             return []
         nodes = self.iter_nodes(False)
         found = []
@@ -1347,7 +1365,7 @@ class PlistWindow(tk.Toplevel):
             check1 = [x.get("BundlePath","") for x in ordered_kexts if not x.get("BundlePath","") in rearranged]
             check2 = [x.get("BundlePath","") for x in original_kexts if not x.get("BundlePath","") in rearranged]
             out_of_place = next((x for x in range(len(check1)) if check1[x] != check2[x]),None)
-            if out_of_place == None: break
+            if out_of_place is None: break
             rearranged.append(check2[out_of_place])
         # Verify if the load order changed - and prompt the user if need be
         if len(rearranged):
@@ -1531,9 +1549,7 @@ class PlistWindow(tk.Toplevel):
         # Select the root element
         self.select(self.get_root_node())
         # Ensure we're edited
-        if not self.edited:
-            self.edited = True
-            self.title(self.title()+" - Edited")
+        self._ensure_edited()
         self.update_all_children()
         self.alternate_colors()
         # Check if we have any paths that are too long
@@ -1556,9 +1572,9 @@ class PlistWindow(tk.Toplevel):
             )
 
     def get_check_type(self, cell=None, string=None):
-        if not cell == None:
+        if not cell is None:
             t = self.get_padded_values(cell,1)[0]
-        elif not string == None:
+        elif not string is None:
             t = string
         else:
             return None
@@ -1781,12 +1797,10 @@ class PlistWindow(tk.Toplevel):
                 # Let's actually move it now
                 self._tree.move(cell,task["from"],task.get("index","end"))
         # Let's check if we have an r_task_list - and add it if it wasn't a one-off
-        if len(r_task_list) and single_undo == None:
+        if len(r_task_list) and single_undo is None:
             r.append(r_task_list)
         # Ensure we're edited
-        if not self.edited:
-            self.edited = True
-            self.title(self.title()+" - Edited")
+        self._ensure_edited()
         # Change selection if needed
         self.update_all_children()
         self.reselect((selected,nodes))
@@ -1822,7 +1836,7 @@ class PlistWindow(tk.Toplevel):
             return
         target = self.get_root_node() if not len(self._tree.selection()) else self._tree.selection()[0]
         if target == self.get_root_node(): return # Nothing to do here as we can't drag it
-        if self.drag_start == None:
+        if self.drag_start is None:
             # Let's set the drag start globals
             self.drag_start = (event.x, event.y)
             self.drag_undo = None
@@ -1866,7 +1880,7 @@ class PlistWindow(tk.Toplevel):
                 # Just below should add it at item 0
                 move_to = 0
         # Retain the open state, and make sure the selected node is closed
-        if self.drag_open == None: self.drag_open = self._tree.item(target,"open")
+        if self.drag_open is None: self.drag_open = self._tree.item(target,"open")
         if self._tree.item(target,"open"): self._tree.item(target,open=False)
         if self._tree.index(target) == move_to and tv_item == target:
             # Already the same
@@ -1891,9 +1905,7 @@ class PlistWindow(tk.Toplevel):
         if self.drag_undo["from"] == node and self.drag_undo["index"] == self._tree.index(target):
             return # Didn't actually move it - bail
         # We moved it - make sure it shows as edited
-        if not self.edited:
-            self.edited = True
-            self.title(self.title()+" - Edited")
+        self._ensure_edited()
         # Finalize the drag undo
         undo_tasks = []
         # Add the move command
@@ -1971,9 +1983,7 @@ class PlistWindow(tk.Toplevel):
         # We removed some, flush the changes, update the view,
         # post the undo, and make sure we're edited
         self.add_undo(removedlist)
-        if not self.edited:
-            self.edited = True
-            self.title(self.title()+" - Edited")
+        self._ensure_edited()
         self.update_all_children()
         self.reselect(selected)
 
@@ -2007,9 +2017,7 @@ class PlistWindow(tk.Toplevel):
         # We removed some, flush the changes, update the view,
         # post the undo, and make sure we're edited
         self.add_undo(removedlist)
-        if not self.edited:
-            self.edited = True
-            self.title(self.title()+" - Edited")
+        self._ensure_edited()
         self.update_all_children()
         self.reselect(selected)
 
@@ -2073,7 +2081,7 @@ class PlistWindow(tk.Toplevel):
         return "\n".join(new_plist)
 
     def save_plist_as(self, event=None, path=None):
-        if path == None:
+        if path is None:
             # Get the file dialog
             path = fd.asksaveasfilename(
                 title="Please select a file name for saving:",
@@ -2132,21 +2140,19 @@ class PlistWindow(tk.Toplevel):
         # Set the window title to the path
         self.title(path)
         # No changes - so we'll reset that
-        self.edited = False
+        self._ensure_edited(edited=False)
         return True
 
-    def open_plist(self, path, plist_data, plist_type = "XML",auto_expand=True):
+    def open_plist(self, path, plist_data, plist_type = "XML", auto_expand = True):
         # Opened it correctly - let's load it, and set our values
         self.plist_type_string.set(plist_type)
         self._tree.delete(*self._tree.get_children())
         self.add_node(plist_data)
         self.current_plist = os.path.normpath(path) if path else path
-        if path == None:
-            self.title("Untitled.plist - Edited")
-            self.edited = True
+        if path is None:
+            self._ensure_edited(title=path or "Untitled.plist")
         else:
-            self.title(path)
-            self.edited = False
+            self._ensure_edited(edited=False,title=path)
         self.undo_stack = []
         self.redo_stack = []
         # Close if need be
@@ -2157,9 +2163,9 @@ class PlistWindow(tk.Toplevel):
         self._tree.item(root,open=True)
         self.select(root)
 
-    def close_window(self, event=None, check_close = True):
+    def close_window(self, event = None, check_close = True):
         # Check if we need to save first, then quit if we didn't cancel
-        if self.saving or self.check_save() == None:
+        if self.saving or self.check_save() is None:
             # User cancelled or we failed to save, bail
             return None
         # Destroy our current window - and initiate a check in the controller
@@ -2259,7 +2265,7 @@ class PlistWindow(tk.Toplevel):
                 self.bell()
                 mb.showerror("An Error Occurred While Pasting", repr(e),parent=self)
                 return 'break'
-        if plist_data == None:
+        if plist_data is None:
             if len(clip):
                 # Check if we actually pasted something
                 self.bell()
@@ -2283,7 +2289,7 @@ class PlistWindow(tk.Toplevel):
         add_list = []
         if not isinstance(plist_data,dict):
             # Check if we're replacing the Root node
-            if node == self.get_root_node() and self.get_root_type() == None:
+            if node == self.get_root_node() and self.get_root_type() is None:
                 # Update the cell to reflect what's going on
                 add_list.append({"type":"edit","cell":node,"text":self._tree.item(node,"text"),"values":self._tree.item(node,"values")})
                 if self.is_data(plist_data):
@@ -2308,9 +2314,7 @@ class PlistWindow(tk.Toplevel):
                 self._tree.item(last,open=to_open)
         first = self.get_root_node() if not len(add_list) else add_list[0].get("cell")
         self.add_undo(add_list)
-        if not self.edited:
-            self.edited = True
-            self.title(self.title()+" - Edited")
+        self._ensure_edited()
         self.update_all_children()
         self.select(first)
 
@@ -2401,12 +2405,12 @@ class PlistWindow(tk.Toplevel):
             # Top level - set the parent to the type of our Root
             node = self.get_root_node()
             parent = self.get_root_type()
-            if parent == None: return self.get_value_from_node(node) # Return the raw value - we don't have a collection
+            if parent is None: return self.get_value_from_node(node) # Return the raw value - we don't have a collection
             for child in self._tree.get_children(node):
                 parent = self.nodes_to_values(child,parent)
             return parent
         # Not top - process
-        if parent == None:
+        if parent is None:
             # We need to setup the parent
             p = self._tree.parent(node)
             if p in ("",self.get_root_node()):
@@ -2482,7 +2486,7 @@ class PlistWindow(tk.Toplevel):
         return temp_name
 
     def new_row(self,target=None,force_sibling=False):
-        if target == None or isinstance(target, tk.Event):
+        if target is None or isinstance(target, tk.Event):
             target = "" if not len(self._tree.selection()) else self._tree.selection()[0]
         if target == self.get_root_node() and not self.get_check_type(self.get_root_node()).lower() in ("array","dictionary"):
             return # Can't add to a non-collection!
@@ -2501,9 +2505,7 @@ class PlistWindow(tk.Toplevel):
             self.update_array_counts(target)
         # Select and scroll to the target
         self.select(new_cell,alternate=False)
-        if not self.edited:
-            self.edited = True
-            self.title(self.title()+" - Edited")
+        self._ensure_edited()
         self.add_undo({"type":"add","cell":new_cell})
         if target == "":
             # Top level, nothing to do here but edit the new row
@@ -2517,7 +2519,7 @@ class PlistWindow(tk.Toplevel):
         self.alternate_colors()
 
     def remove_row(self,target=None):
-        if target == None or isinstance(target, tk.Event):
+        if target is None or isinstance(target, tk.Event):
             target = "" if not len(self._tree.selection()) else self._tree.selection()[0]
         if target in ("",self.get_root_node()):
             # Can't remove top level
@@ -2537,9 +2539,7 @@ class PlistWindow(tk.Toplevel):
         remaining = self._tree.get_children(parent)
         new_target = parent if not len(remaining) else remaining[target_index] if target_index < len(remaining) else remaining[-1]
         self.select(new_target,alternate=False)
-        if not self.edited:
-            self.edited = True
-            self.title(self.title()+" - Edited")
+        self._ensure_edited()
         # Check if the parent was an array/dict, and update counts
         if parent == "":
             return
@@ -2629,7 +2629,7 @@ class PlistWindow(tk.Toplevel):
 
     def change_type(self, value, cell = None):
         # Need to walk the values and pad
-        if cell == None:
+        if cell is None:
             cell = "" if not len(self._tree.selection()) else self._tree.selection()[0]
         values = self.get_padded_values(cell, 3)
         # Verify we actually changed type
@@ -2677,9 +2677,7 @@ class PlistWindow(tk.Toplevel):
             values[1] = ""
         # Set the values
         self._tree.item(cell, values=values)
-        if not self.edited:
-            self.edited = True
-            self.title(self.title()+" - Edited")
+        self._ensure_edited()
 
     ###             ###
     # Click Functions #
@@ -2699,9 +2697,7 @@ class PlistWindow(tk.Toplevel):
         values[1] = value
         # Set the values
         self._tree.item("" if not len(self._tree.selection()) else self._tree.selection()[0], values=values)
-        if not self.edited:
-            self.edited = True
-            self.title(self.title()+" - Edited")
+        self._ensure_edited()
 
     def split(self, a, escape = '\\', separator = '/'):
         result = []
@@ -2725,7 +2721,7 @@ class PlistWindow(tk.Toplevel):
     def get_cell_path(self, cell = None):
         # Returns the path to the given cell
         # Will clear out array indexes - as those should be ignored
-        if cell == None:
+        if cell is None:
             return None
         current_cell = cell
         path = []
@@ -2743,7 +2739,7 @@ class PlistWindow(tk.Toplevel):
         return "/".join(path[::-1])
 
     def merge_menu_preset(self, val = None):
-        if val == None:
+        if val is None:
             return
         # We need to walk the path of the item to ensure all
         # items exist - each should be a dict, unless specified
@@ -2857,9 +2853,7 @@ class PlistWindow(tk.Toplevel):
                 "cell":last_cell
             })
         self.add_undo(undo_list)
-        if not self.edited:
-            self.edited = True
-            self.title(self.title()+" - Edited")
+        self._ensure_edited()
         self.update_all_children()
         self.alternate_colors()
 
@@ -2890,9 +2884,7 @@ class PlistWindow(tk.Toplevel):
         # Let's build a sorted list of keys, then generate move edits for each
         undo_tasks = self.do_sort(cell,recursive=recursive,reverse=reverse)
         if not len(undo_tasks): return # Nothing changed - bail
-        if not self.edited:
-            self.edited = True
-            self.title(self.title()+" - Edited")
+        self._ensure_edited()
         self.add_undo(undo_tasks)
         self.alternate_colors()
 
@@ -2949,9 +2941,16 @@ class PlistWindow(tk.Toplevel):
         if not cell in ("",self.get_root_node()) and self.get_check_type(cell).lower() in ("array","dictionary"):
             popup_menu.add_command(label="Copy Children", command=self.copy_children,state=c_state)
         popup_menu.add_command(label="Paste{}".format(" (Cmd+V)" if is_mac else ""),command=self.paste_selection,state=p_state,accelerator=None if is_mac else "(Ctrl+V)")
+        cell_path = self.get_cell_path(cell)
+        # Add rbits option
+        cell_search = [x for x in self.split(cell_path) if not x=="*"]
+        if cell_search and cell_search[0] == "Root": cell_search = cell_search[1:]
+        if cell_search:
+            popup_menu.add_separator()
+            popup_menu.add_command(label="Show info for \"{}\"{}".format(
+                " -> ".join(cell_search), " (Cmd+I)" if is_mac else ""), command=self.show_config_info, accelerator=None if is_mac else "(Ctrl+I)")
         
         # Walk through the menu data if it exists
-        cell_path = self.get_cell_path(cell)
         first_key = True
         for key in sorted(list(self.menu_data)):
             options = self.menu_data[key]
@@ -3125,7 +3124,7 @@ class PlistWindow(tk.Toplevel):
 
     def iter_nodes(self, visible = True, current_item = None):
         items = []
-        if current_item == None or isinstance(current_item, tk.Event):
+        if current_item is None or isinstance(current_item, tk.Event):
             current_item = ""
         for child in self._tree.get_children(current_item):
             items.append(child)
@@ -3198,3 +3197,40 @@ class PlistWindow(tk.Toplevel):
             else:
                 tags.append("odd" if x % 2 else "even")
             self._tree.item(item, tags=tags)
+
+    def show_config_info(self, event = None):
+        # find the path of selected cell
+        cell = "" if not len(self._tree.selection()) else self._tree.selection()[0]
+        search_list = [x for x in self.split(self.get_cell_path(cell)) if not x=="*"] # Strip *
+        if search_list and search_list[0] == "Root": search_list = search_list[1:] # Remove "Root"
+        if not search_list: # nothing to search for
+            return
+
+        # Check if a window with this entry is already open
+        check_title = '"{}" Info'.format(" -> ".join([x for x in search_list if not x=="*"]))
+        window = next((x for x in self.controller.stackorder(self.controller.tk,include_defaults=True) if x.title() == check_title),None)
+        if not window:
+            # will need path to a Configuration.tex based for the version of OpenCore being used
+            # for this to provide the correct info
+            # for now this is a cheap hack to a Configuration.tex in the same location as ProperTree
+            pt_path_parts = [x or os.sep for x in os.path.normpath(sys.path[0]).split(os.sep)]
+            if len(pt_path_parts) >= 3 and pt_path_parts[-2:] == ["Contents","MacOS"] \
+             and pt_path_parts[-3].lower().endswith(".app"):
+                pt_path_parts = pt_path_parts[:-3]
+            pt_path_parts+=["Configuration.tex"]
+            config_tex_path = os.path.join(*pt_path_parts)
+            # pass mouse pointer location as location to open info window
+            mx = self.root.winfo_pointerx()
+            my = self.root.winfo_pointery()
+            # force Times New Roman for now so output is closer to Configuration.pdf
+            # for easier debugging of formatting
+            window = config_tex_info.display_info_window(config_tex_path, search_list, 120, False, False, mx, my, font=Font(family="Times New Roman"), fg=self.r1t, bg=self.r1)
+            if window:
+                # Override the window closing protocol to allow stack order checks
+                window.protocol("WM_DELETE_WINDOW", lambda x=window:self.controller.close_window(window=x))
+                window.bind("<{}-w>".format("Command" if sys.platform == "darwin" else "Control"), self.controller.close_window)
+                self.controller.set_window_opacity(window=window)
+            else:
+                window = self # Ensure we're lifted again
+        # Ensure window is lifted
+        self.controller.lift_window(window)

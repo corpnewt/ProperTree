@@ -102,3 +102,9 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+#rbits ignore these while working on config tex parsing
+Scripts/settings.json
+Configuration.tex
+.DS_Store
+ProperTree.app

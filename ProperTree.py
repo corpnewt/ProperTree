@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys, os, binascii, base64, json, re, subprocess, webbrowser, multiprocessing
+import sys, os, binascii, base64, json, re, subprocess, webbrowser, multiprocessing, signal
 from collections import OrderedDict
 try:
     import Tkinter as tk
@@ -155,37 +155,41 @@ class ProperTree:
         tfunc_label = tk.Label(self.settings_window,text="Appearance Options:")
         tfunc_label.grid(row=0,column=3,sticky="w",padx=10,pady=10)
 
+        self.op_label = tk.Label(self.settings_window,text="Window Opacity (25-100%):")
+        self.op_label.grid(row=1,column=3,sticky="w",padx=10)
+        self.op_scale = tk.Scale(self.settings_window,from_=25,to=100,orient=tk.HORIZONTAL,command=self.update_opacity)
+        self.op_scale.grid(row=1,column=4,sticky="we",padx=10)
         r4_label = tk.Label(self.settings_window,text="Highlight Color:")
-        r4_label.grid(row=1,column=3,sticky="w",padx=10)
+        r4_label.grid(row=2,column=3,sticky="w",padx=10)
         self.hl_canvas = tk.Canvas(self.settings_window, height=20, width=30, background="black", relief="groove", bd=2)
-        self.hl_canvas.grid(row=1,column=4,sticky="we",padx=10)
+        self.hl_canvas.grid(row=2,column=4,sticky="we",padx=10)
         r1_label = tk.Label(self.settings_window,text="Alternating Row Color #1:")
-        r1_label.grid(row=2,column=3,sticky="w",padx=10)
+        r1_label.grid(row=3,column=3,sticky="w",padx=10)
         self.r1_canvas = tk.Canvas(self.settings_window, height=20, width=30, background="black", relief="groove", bd=2)
-        self.r1_canvas.grid(row=2,column=4,sticky="we",padx=10)
+        self.r1_canvas.grid(row=3,column=4,sticky="we",padx=10)
         r2_label = tk.Label(self.settings_window,text="Alternating Row Color #2:")
-        r2_label.grid(row=3,column=3,sticky="w",padx=10)
+        r2_label.grid(row=4,column=3,sticky="w",padx=10)
         self.r2_canvas = tk.Canvas(self.settings_window, height=20, width=30, background="black", relief="groove", bd=2)
-        self.r2_canvas.grid(row=3,column=4,sticky="we",padx=10)
+        self.r2_canvas.grid(row=4,column=4,sticky="we",padx=10)
         r3_label = tk.Label(self.settings_window,text="Column Header/BG Color:")
-        r3_label.grid(row=4,column=3,sticky="w",padx=10)
+        r3_label.grid(row=5,column=3,sticky="w",padx=10)
         self.bg_canvas = tk.Canvas(self.settings_window, height=20, width=30, background="black", relief="groove", bd=2)
-        self.bg_canvas.grid(row=4,column=4,sticky="we",padx=10)
+        self.bg_canvas.grid(row=5,column=4,sticky="we",padx=10)
         self.ig_bg_check = tk.IntVar()
         self.ig_bg = tk.Checkbutton(self.settings_window,text="Header Text Ignores BG Color",variable=self.ig_bg_check,command=self.check_ig_bg_command)
-        self.ig_bg.grid(row=5,column=3,sticky="w",padx=10)
+        self.ig_bg.grid(row=6,column=3,sticky="w",padx=10)
         self.bg_inv_check = tk.IntVar()
         self.bg_inv = tk.Checkbutton(self.settings_window,text="Invert Header Text Color",variable=self.bg_inv_check,command=self.check_bg_invert_command)
-        self.bg_inv.grid(row=5,column=4,sticky="w",padx=10)
+        self.bg_inv.grid(row=6,column=4,sticky="w",padx=10)
         self.r1_inv_check = tk.IntVar()
         self.r1_inv = tk.Checkbutton(self.settings_window,text="Invert Row #1 Text Color",variable=self.r1_inv_check,command=self.check_r1_invert_command)
-        self.r1_inv.grid(row=6,column=4,sticky="w",padx=10)
+        self.r1_inv.grid(row=7,column=4,sticky="w",padx=10)
         self.r2_inv_check = tk.IntVar()
         self.r2_inv = tk.Checkbutton(self.settings_window,text="Invert Row #2 Text Color",variable=self.r2_inv_check,command=self.check_r2_invert_command)
-        self.r2_inv.grid(row=7,column=4,sticky="w",padx=10)
+        self.r2_inv.grid(row=8,column=4,sticky="w",padx=10)
         self.hl_inv_check = tk.IntVar()
         self.hl_inv = tk.Checkbutton(self.settings_window,text="Invert Highlight Text Color",variable=self.hl_inv_check,command=self.check_hl_invert_command)
-        self.hl_inv.grid(row=8,column=4,sticky="w",padx=10)
+        self.hl_inv.grid(row=9,column=4,sticky="w",padx=10)
 
         self.default_font = Font(font='TkTextFont')
         self.custom_font = tk.IntVar()
@@ -193,8 +197,8 @@ class ProperTree:
         self.font_string = tk.StringVar()
         self.font_spinbox = tk.Spinbox(self.settings_window,from_=1,to=128,textvariable=self.font_string)
         self.font_string.trace("w",self.update_font)
-        self.font_check.grid(row=9,column=3,sticky="w",padx=10)
-        self.font_spinbox.grid(row=9,column=4,sticky="we",padx=10)
+        self.font_check.grid(row=10,column=3,sticky="w",padx=10)
+        self.font_spinbox.grid(row=10,column=4,sticky="we",padx=10)
 
         # Custom font picker - wacky implementation.
         self.font_var = tk.IntVar()
@@ -203,16 +207,16 @@ class ProperTree:
         self.font_custom = ttk.Combobox(self.settings_window,state="readonly",textvariable=self.font_family,values=sorted(families()))
         self.font_custom.bind('<<ComboboxSelected>>',self.font_pick)
         self.font_family.trace("w",self.update_font_family)
-        self.font_custom_check.grid(row=10,column=3,stick="w",padx=10)
-        self.font_custom.grid(row=10,column=4,sticky="we",padx=10)
+        self.font_custom_check.grid(row=11,column=3,stick="w",padx=10)
+        self.font_custom.grid(row=11,column=4,sticky="we",padx=10)
 
         r5_label = tk.Label(self.settings_window,text="Restore Default Colors:")
-        r5_label.grid(row=11,column=3,sticky="w",padx=10)
+        r5_label.grid(row=12,column=3,sticky="w",padx=10)
         dt_func = ttk.Separator(self.settings_window,orient="horizontal")
-        dt_func.grid(row=11,column=4,columnspan=1,sticky="we",padx=10)
+        dt_func.grid(row=12,column=4,columnspan=1,sticky="we",padx=10)
 
         default_high = tk.Button(self.settings_window,text="Highlight Color",command=lambda:self.swap_colors("highlight"))
-        default_high.grid(row=12,column=4,sticky="we",padx=10)
+        default_high.grid(row=13,column=3,sticky="we",padx=10)
         default_light = tk.Button(self.settings_window,text="Light Mode Colors",command=lambda:self.swap_colors("light"))
         default_light.grid(row=13,column=4,sticky="we",padx=10)
         default_dark = tk.Button(self.settings_window,text="Dark Mode Colors",command=lambda:self.swap_colors("dark"))
@@ -325,8 +329,8 @@ class ProperTree:
             key="Command"
             sign=key+"+"
 
-        self.tk.protocol("WM_DELETE_WINDOW", self.close_convert)
-        self.settings_window.protocol("WM_DELETE_WINDOW", self.close_settings)
+        self.tk.protocol("WM_DELETE_WINDOW", lambda x=self.tk: self.close_window(window=x))
+        self.settings_window.protocol("WM_DELETE_WINDOW", lambda x=self.settings_window: self.close_window(window=x))
 
         self.default_windows = (self.tk,self.settings_window)
 
@@ -339,7 +343,7 @@ class ProperTree:
             main_menu.add_cascade(label="File", menu=file_menu)
             file_menu.add_command(label="New (Cmd+N)", command=self.new_plist)
             file_menu.add_command(label="Open (Cmd+O)", command=self.open_plist)
-            file_menu.add_cascade(label="Open Recent", menu=self.recent_menu)
+            file_menu.add_cascade(label="Open Recent", menu=self.recent_menu, command=self.open_recent)
             file_menu.add_command(label="Save (Cmd+S)", command=self.save_plist)
             file_menu.add_command(label="Save As... (Cmd+Shift+S)", command=self.save_plist_as)
             file_menu.add_command(label="Duplicate (Cmd+D)", command=self.duplicate_plist)
@@ -417,6 +421,7 @@ class ProperTree:
         # check_for_updates_at_startup: bool
         # notify_once_per_version:      bool
         # last_version_checked:         str
+        # opacity                       int, 10-100 (default is 100)
         #
 
         self.settings = {}
@@ -476,7 +481,11 @@ class ProperTree:
         # to overtake a blank doc opened by one with the other - hopefully fixing
         # the issue of multiple documents spawning on double-click in macOS.
         self.is_opening = False
+        self.is_quitting = False
         self.check_open(plists)
+        
+        # Set up a signal handler for SIGINT that pipes to our quit() function
+        signal.signal(signal.SIGINT, lambda x,y: print("KeyboardInterrupt caught - cleaning up...") or self.quit())
 
         # Start our run loop
         tk.mainloop()
@@ -661,6 +670,18 @@ class ProperTree:
         if l: return "white" if invert else "black"
         return "black" if invert else "white"
 
+    def set_window_opacity(self, opacity=None, window=None):
+        if opacity is None:
+            try: opacity = min(100,max(int(self.settings.get("opacity",100)),25))
+            except: opacity = 100 # failsafe
+        windows = (window,) if window else self.stackorder(self.tk,include_defaults=True)
+        for window in self.stackorder(self.tk,include_defaults=True):
+            window.attributes("-alpha",float(opacity)/float(100))
+
+    def update_opacity(self, event = None):
+        self.settings["opacity"] = self.op_scale.get()
+        self.set_window_opacity(self.settings["opacity"])
+
     def expand_command(self, event = None):
         self.settings["expand_all_items_on_open"] = True if self.expand_on_open.get() else False
 
@@ -834,6 +855,10 @@ class ProperTree:
         max_undo = self.settings.get("max_undo",self.max_undo)
         max_undo = self.max_undo if not isinstance(max_undo,int) or max_undo < 0 else max_undo
         self.undo_max_text.insert(0,str(max_undo))
+        try: opacity = min(100,max(int(self.settings.get("opacity",100)),25))
+        except: opacity = 100 # failsafe
+        self.op_scale.set(opacity)
+        self.set_window_opacity(opacity)
         default_color = self.default_dark if self.use_dark else self.default_light
         color_1 = "".join([x for x in self.settings.get("alternating_color_1",default_color["alternating_color_1"]) if x.lower() in "0123456789abcdef"])
         color_2 = "".join([x for x in self.settings.get("alternating_color_2",default_color["alternating_color_2"]) if x.lower() in "0123456789abcdef"])
@@ -884,22 +909,35 @@ class ProperTree:
             c.itemconfig(self.canvas_connect[c]["text_id"], fill=color)
 
     def update_fonts(self):
-        windows = self.stackorder(self.tk)
+        windows = self.stackorder(self.tk,include_defaults=True)
         if not len(windows): return
+        font = Font(font="TkTextFont" if self.font_var.get() else self.font_family.get())
+        font["size"] = self.font_string.get() if self.custom_font.get() else self.default_font["size"]
         for window in windows:
             if window in self.default_windows: continue
-            window.set_font_size()
+            form_text = next((x for x in window.winfo_children() if str(x).endswith("!formattedtext")),None)
+            if form_text: # We need to manually set the text colors here
+                form_text.update_font(font)
+            else:
+                window.set_font_size()
 
     def update_colors(self):
         self.update_canvas_text()
         # Update all windows' colors
-        windows = self.stackorder(self.tk)
+        windows = self.stackorder(self.tk,include_defaults=True)
         if not len(windows):
             # Nothing to do
             return
+        # Get the text colors for the FormattedText widgets as needed
+        r1  = self.r1_canvas["background"]
+        r1t = self.text_color(r1,invert=self.r1_inv_check.get())
         for window in windows:
             if window in self.default_windows: continue
-            window.set_colors()
+            form_text = next((x for x in window.winfo_children() if str(x).endswith("!formattedtext")),None)
+            if form_text: # We need to manually set the text colors here
+                form_text.configure(bg=r1,fg=r1t)
+            else: # Just have a standard window - no formatted text to update
+                window.set_colors()
 
     def compare_paths(self,check,path):
         if not isinstance(path,(str,unicode,list)): return False
@@ -958,9 +996,14 @@ class ProperTree:
         self.settings.pop("open_recent",None)
         self.update_recents()
 
-    def open_recent(self, path):
+    def open_recent(self, path=None):
         # First check if the file exists - if not, throw an error, and remove it
         # from the recents menu
+        if path is None: # Try getting the first item from settings
+            paths = self.settings.get("open_recent",[])
+            if paths: path = paths[0]
+        if path is None: # Couldn't get any recents - bail
+            return
         path = os.path.normpath(path)
         if not (os.path.exists(path) and os.path.isfile(path)):
             self.rem_recent(path)
@@ -1082,27 +1125,15 @@ class ProperTree:
             return
         window.hide_show_type(event)
 
-    def close_settings(self, event = None, check_close = True):
-        # We're getting a settings window close event - regardless
-        # of stack order
-        self.settings_window.withdraw()
-        if check_close: self.check_close()
-
-    def close_convert(self, event = None, check_close = True):
-        # We're getting a convert window close event - regardless
-        # of stack order
-        self.tk.withdraw()
-        if check_close: self.check_close()
-
-    def close_window(self, event = None, check_close = True):
-        # Remove the default window that comes from it
-        windows = self.stackorder(self.tk,include_defaults=True)
-        if windows:
-            windows[-1].withdraw()
-            windows = windows[:-1]
+    def close_window(self, event = None, window = None, check_close = True):
+        if window: window.withdraw()
+        else:
+            # Remove the default window that comes from it
+            windows = self.stackorder(self.tk,include_defaults=True)
+            if windows: windows[-1].withdraw()
         if check_close: self.check_close()
     
-    def check_close(self, lift_last = False):
+    def check_close(self, lift_last = True):
         windows = self.stackorder(self.tk,include_defaults=True)
         if not windows:
             self.quit()
@@ -1261,6 +1292,7 @@ class ProperTree:
         window = windows[-1] # Get the last item (most recent)
         if window in self.default_windows:
             return
+        title = window.title()[:-len(" - Edited") if window.edited else None]+" - Copy"
         plist_data = window.nodes_to_values()
         new_window = plistwindow.PlistWindow(self, self.tk)
         new_window.open_plist(None,plist_data)
@@ -1422,11 +1454,15 @@ class ProperTree:
         window.attributes("-topmost",True)
         self.tk.after_idle(window.attributes,"-topmost",False)
 
-    def quit(self, event=None):
+    def quit(self, event_or_signum=None, frame=None):
+        if self.is_quitting: return # Already quitting - don't try to do this twice at once
+        self.is_quitting = True # Lock this to one quit attempt at a time
         # Check if we need to save first, then quit if we didn't cancel
         for window in self.stackorder(self.tk)[::-1]:
             if window in self.default_windows: continue
-            if not window.close_window(check_close=False): return # User cancelled or we failed to save, bail
+            if not window.close_window(check_close=False):
+                self.is_quitting = False # Unlock the quit
+                return # User cancelled or we failed to save, bail
         # Make sure we retain any non-event updated settings
         prefix = self.comment_prefix_text.get()
         prefix = "#" if not prefix else prefix
