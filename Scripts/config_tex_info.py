@@ -8,8 +8,8 @@ if sys.version_info.major >= 3:
     from tkinter import messagebox as mb
 else:
     import Tkinter as tk
-    import tkFont as tk_font
-    import tkMessageBox as mb
+    import tkFont as tk_font #pylint: disable=E0401
+    import tkMessageBox as mb #pylint: disable=E0401
 
 
 def display_info_window(config_tex, search_list, width, valid_only, show_urls, mx, my, font=None, fg="white", bg="black"):
@@ -27,6 +27,8 @@ def display_info_window(config_tex, search_list, width, valid_only, show_urls, m
             if not self.font:  # Fall back to defaults
                 self.font = tk_font.nametofont(self.cget("font"))
 
+            #TODO find a way to turn attributes on and off individually
+            # instead of defining a font for each combination
             self.bold_font = tk_font.Font(**self.font.configure())
             self.bold_mono_font = tk_font.Font(**self.font.configure())
             self.italic_font = tk_font.Font(**self.font.configure())
@@ -228,6 +230,12 @@ def display_info_window(config_tex, search_list, width, valid_only, show_urls, m
 
 
 def parse_configuration_tex(config_file, search_list, width, valid_only, show_urls):
+    # valid_only: True - return only the valid config.plist options for the search term &
+    # return an empty list if no valid options found
+    #     False: return whole text of section
+    #
+    # show_urls: True - return full url of links in the text
+    #     False - return only link text with no url
     try:
         config = open(config_file, "r")
     except OSError:
@@ -240,7 +248,7 @@ def parse_configuration_tex(config_file, search_list, width, valid_only, show_ur
 
     search_terms = ["\\section{"]
     search_terms[0] += search_list[0]
-    text_search = search_list[search_len - 1]
+    text_search = search_list[search_len - 1] # ultimately looking for last item
 
     # set the search terms based on selected position
     if search_len == 1:
@@ -250,7 +258,7 @@ def parse_configuration_tex(config_file, search_list, width, valid_only, show_ur
         search_terms.append("\\subsection{Properties")
         search_terms.append("texttt{" + text_search + "}\\")
     elif search_len == 3:
-        if search_list[0] == "NVRAM":
+        if search_list[0] == "NVRAM": # look for value in Introduction
             search_terms.append("\\subsection{Introduction")
             search_terms.append("texttt{" + text_search + "}")
         else:
@@ -260,19 +268,21 @@ def parse_configuration_tex(config_file, search_list, width, valid_only, show_ur
     elif search_len == 4:
         item_zero = search_list[0]
         sub_search = "\\subsection{"
-        if item_zero == "NVRAM":
+        if item_zero == "NVRAM": # look for UUID:term in Introduction
             sub_search = "\\subsection{Introduction"
             text_search = search_list[2]
             text_search += ":"
             text_search += search_list[3]
             text_search += "}"
-        elif item_zero == "DeviceProperties":
+        elif item_zero == "DeviceProperties": # look in Common
             sub_search += "Common"
             text_search += "}"
-        elif item_zero == "Misc":
+        elif item_zero == "Misc": # Entry Properties or subsub
             if len(search_list[2]) < 3:
                 sub_search += "Entry Properties"
             else:
+                # is there a better way to do this that is more uniform to
+                # the whole plist instead of doing subsub searches twice?
                 sub_search = "\\subsubsection{"
                 sub_search += search_list[1]
             text_search += "}"
@@ -304,12 +314,15 @@ def parse_configuration_tex(config_file, search_list, width, valid_only, show_ur
     enum = 0
     columns = 0
     lines_between_valid = 0
+    last_line_ended_in_colon = False
 
     while True:
         # track document state & preprocess line before parsing
         line = config.readline()
         if not line:
             break
+        if line.lstrip().startswith("%"): # skip comments
+            continue
         if "\\subsection{Introduction}" in line:
             continue
         if "\\begin{tabular}" in line:
@@ -364,30 +377,52 @@ def parse_configuration_tex(config_file, search_list, width, valid_only, show_ur
             continue
         if "\\item" in line:
             if itemize == 0 and enum == 0:
-                break # skip line, not itemizing
+                break # skip line, not itemizing, shouldn't get here
             else:
-                if in_item: # no return before first item
+                if in_item: # newline before this item
                     result.append("\n")
                 in_item = True
-                if itemize == 0:
-                    line = line.replace("\\item", ("(" + chr(96 + enum) + ")"))
+                if itemize == 0: # in enum
+                    if search_len == 1: # first level enumerate, use numeric
+                        replace_str = str(enum) + "."
+                    else: # use alpha
+                        replace_str = "(" + chr(96 + enum) + ")"
+                    line = line.replace("\\item", replace_str)
                     enum += 1
-                elif itemize == 1:
+                elif itemize == 1: # first level item
                     line = line.replace("\\item", u"\u2022")
                 else:
                     line = line.replace("\\item", "-")
+                # fix indenting
+                line = line.lstrip()
+                line = "    "*itemize + line
+                if enum != 0:
+                    line = "    " + line
         else:
             if itemize > 0 or enum > 0: # inside multi line item
                 line = line.lstrip() # remove leading spaces
                 line = " " + line # put one back
-        if "section{" in line:
+        if "section{" in line: # stop when next section is found
 # let's try only checking for "section{" instead of 3 checks
 #        if "\\section{" in line or "\\subsection{" in line or "\\subsubsection{" in line:
             # reached end of current section
             break
-        parsed_line = parse_line(line, columns, width,
+
+        if line.rstrip() == "": # blank line, need linefeed, maybe two
+            if last_line_ended_in_colon:
+                parsed_line = "\n"
+            else:
+                parsed_line = "\n\n"
+        else:
+            parsed_line = parse_line(line, columns, width,
                                  align, valid_only, show_urls)
-        if valid_only:
+            if parsed_line.endswith(":"):
+                last_line_ended_in_colon = True
+                parsed_line += "\n" # add newline but ignore it if next line is blank
+            else:
+                last_line_ended_in_colon = False
+
+        if valid_only: # we only want to return valid plist options for the field
             if itemize > 0:
                 if "---" in line:
                     if lines_between_valid < 10:
@@ -420,8 +455,6 @@ def parse_line(line, columns, width, align, valid_only, show_urls):
     ignore = False
     col_contents_len = 0
     line = line.rstrip()
-    if line == "":
-        return "\n\n"
     for c in line:
         if build_key:
             if c in "{[":
@@ -517,9 +550,6 @@ def parse_line(line, columns, width, align, valid_only, show_urls):
                 ret += "\n"
         if line.endswith("\\\\"):
             ret += "\n"
-# shouldn't need this
-#        if line.endswith(":"):
-#            ret += "\n"
     return ret
 
 
