@@ -312,6 +312,7 @@ def parse_configuration_tex(config_file, search_list, width, valid_only, show_ur
     columns = 0
     lines_between_valid = 0
     last_line_ended_in_colon = False
+    last_line_had_forced_return = False
 
     while True:
         # track document state & preprocess line before parsing
@@ -398,7 +399,10 @@ def parse_configuration_tex(config_file, search_list, width, valid_only, show_ur
         else:
             if itemize > 0 or enum > 0: # inside multi line item
                 line = line.lstrip() # remove leading spaces
-                line = " " + line # put one back
+                line = "   " + line # put one back
+            if itemize > 0 or enum > 0:
+                if last_line_had_forced_return:
+                    line = "    " + line
         if "section{" in line: # stop when next section is found
 # let's try only checking for "section{" instead of 3 checks
 #        if "\\section{" in line or "\\subsection{" in line or "\\subsubsection{" in line:
@@ -413,6 +417,10 @@ def parse_configuration_tex(config_file, search_list, width, valid_only, show_ur
         else:
             parsed_line = parse_line(line, columns, width,
                                  align, valid_only, show_urls)
+            if parsed_line.endswith("\n"):
+                last_line_had_forced_return = True
+            else:
+                last_line_had_forced_return = False
             if parsed_line.endswith(":"):
                 last_line_ended_in_colon = True
                 parsed_line += "\n" # add newline but ignore it if next line is blank
