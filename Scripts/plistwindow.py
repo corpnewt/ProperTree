@@ -2163,9 +2163,9 @@ class PlistWindow(tk.Toplevel):
         self._tree.item(root,open=True)
         self.select(root)
 
-    def close_window(self, event = None, check_close = True):
+    def close_window(self, event = None, check_saving = True, check_close = True):
         # Check if we need to save first, then quit if we didn't cancel
-        if self.saving or self.check_save() is None:
+        if check_saving and (self.saving or self.check_save() is None):
             # User cancelled or we failed to save, bail
             return None
         # Destroy our current window - and initiate a check in the controller
