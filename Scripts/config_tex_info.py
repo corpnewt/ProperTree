@@ -289,8 +289,6 @@ def parse_configuration_tex(config_file, search_list, width, valid_only, show_ur
             if len(search_list[2]) < 3:
                 sub_search += "Entry Properties"
             else:
-                # is there a better way to do this that is more uniform to
-                # the whole plist instead of doing subsub searches twice?
                 sub_search = "\\subsubsection{"
                 sub_search += search_list[1]
             text_search += "}"
@@ -317,20 +315,23 @@ def parse_configuration_tex(config_file, search_list, width, valid_only, show_ur
 
     align = False
     itemize = 0
-    in_item = False
+    not_first_item = False
     in_listing = False
     enum = 0
     columns = 0
     lines_between_valid = 0
     last_line_ended_in_colon = False
     last_line_had_forced_return = False
+    last_line_ended_in_return = False
+    last_line_was_blank = False
 
     while True:
         # track document state & preprocess line before parsing
         line = config.readline()
         if not line:
             break
-        if line.lstrip().startswith("%"): # skip comments
+        line = line.strip()
+        if line.startswith("%"): # skip comments
             continue
         if "\\subsection{Introduction}" in line:
             continue
@@ -368,14 +369,13 @@ def parse_configuration_tex(config_file, search_list, width, valid_only, show_ur
             continue
         if "\\end{itemize}" in line:
             itemize -= 1
-#            result.append("\n")
             if itemize == 0 and enum == 0:
-                in_item = False
+                not_first_item = False
             continue
         if "\\end{enumerate}" in line:
             enum = 0
             if itemize == 0:
-                in_item = False
+                not_first_item = False
             continue
         if "\\end{lstlisting}" in line:
             in_listing = False
@@ -388,9 +388,10 @@ def parse_configuration_tex(config_file, search_list, width, valid_only, show_ur
             if itemize == 0 and enum == 0:
                 break # skip line, not itemizing, shouldn't get here
             else:
-                if in_item: # newline before this item
+                if not_first_item or not last_line_ended_in_return:
+                    # newline before this item
                     result.append("\n")
-                in_item = True
+                not_first_item = True
                 if itemize == 0: # in enum
                     if search_len == 1: # first level enumerate, use numeric
                         replace_str = str(enum) + "."
@@ -403,41 +404,55 @@ def parse_configuration_tex(config_file, search_list, width, valid_only, show_ur
                 else:
                     line = line.replace("\\item", "-")
                 # fix indenting
-                line = line.lstrip()
                 line = "    "*itemize + line
                 if enum != 0:
                     line = "    " + line
         else:
             if itemize > 0 or enum > 0: # inside multi line item
-                line = line.lstrip() # remove leading spaces
-                line = "   " + line # put one back
-            if itemize > 0 or enum > 0:
                 if last_line_had_forced_return:
-                    line = "    " + line
+                    line = "    "*itemize + line
+                    line = "       " + line # indent
         if "section{" in line: # stop when next section is found
 # let's try only checking for "section{" instead of 3 checks
 #        if "\\section{" in line or "\\subsection{" in line or "\\subsubsection{" in line:
             # reached end of current section
             break
 
-        if line.rstrip() == "": # blank line, need linefeed, maybe two
+        if line.strip() == "": # blank line, need linefeed, maybe two, maybe none
             if last_line_ended_in_colon:
                 parsed_line = "\n"
             else:
-                parsed_line = "\n\n"
+                if last_line_was_blank:  # skip this blank line
+                    continue
+                else:
+                    parsed_line = "\n\n"
+            last_line_was_blank = True
         else:
+            last_line_was_blank = False
             parsed_line = parse_line(line, columns, width,
-                                 align, valid_only, show_urls)
+                                     align, valid_only, show_urls)
+            if len(parsed_line) == 0:
+                continue
+            # post process line
+            last_line_had_forced_return = False
+            last_line_ended_in_colon = False
             if parsed_line.endswith("\n"):
                 last_line_had_forced_return = True
+            elif parsed_line.endswith(":"):
+                parsed_line += "\n"
+                if not_first_item:
+                    # treat as forced return instead
+                    last_line_had_forced_return = True
+                else:
+                    last_line_ended_in_colon = True
             else:
-                last_line_had_forced_return = False
-            if parsed_line.endswith(":"):
-                last_line_ended_in_colon = True
-                parsed_line += "\n" # add newline but ignore it if next line is blank
-            else:
-                last_line_ended_in_colon = False
+                parsed_line += " "  # add space for next word
 
+        if parsed_line.endswith("\n"):
+            # slightly different use than last_line_had_forced_return
+            last_line_ended_in_return = True
+        else:
+            last_line_ended_in_return = False
         if valid_only: # we only want to return valid plist options for the field
             if itemize > 0:
                 if "---" in line:
@@ -481,9 +496,6 @@ def parse_line(line, columns, width, align, valid_only, show_urls):
                     elif key == "textit":
                         ret += "\x1b[3m"
                     elif key == "textbf":
-#                        if columns > 0:
-#                            pass # ignore bold inside columns until \x1b[2nm codes implemented
-#                        else:
                         ret += "\x1b[1m"
                     elif key == "emph":
                         ret += "\x1b[3m"
@@ -500,9 +512,6 @@ def parse_line(line, columns, width, align, valid_only, show_urls):
                     key = ""
             elif c in " ,()\\0123456789$&":
                 build_key = False
-#                if key == "item":
-#                    if not valid_only:
-#                        ret += u"\u2022"
                 ret += special_char(key)
                 col_contents_len += 1
                 if c in ",()0123456789$":
@@ -524,14 +533,12 @@ def parse_line(line, columns, width, align, valid_only, show_urls):
             elif c in "}]":
                 if not ignore:
                     if not valid_only:
-                        # here as well, avoid resetting font attributes inside columns
-                        # until \x1b[2nm codes are implemented
                         if columns > 0:
                             ret += "\x1b[22m"
                         else:
                             ret += "\x1b[0m"
                         if key == "href":
-                            ret += " "
+                            # ret += " "
                             key = ""
                         elif c == "]":
                             ret += "]"

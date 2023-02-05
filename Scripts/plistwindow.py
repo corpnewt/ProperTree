@@ -3216,7 +3216,12 @@ class PlistWindow(tk.Toplevel):
     def show_config_info(self, event = None):
         # find the path of selected cell
         cell = "" if not len(self._tree.selection()) else self._tree.selection()[0]
-        search_list = [x for x in self.split(self.get_cell_path(cell)) if not x=="*"] # Strip *
+#        search_list = [x for x in self.split(self.get_cell_path(cell)) if not x=="*"] # Strip *
+        # don't strip * - needed to differentiate sub section from subsub section
+        search_list = [x for x in self.split(self.get_cell_path(cell))]
+        # but remove it if it's the last item
+        if search_list[-1] == "*":
+            search_list.pop()
         if search_list and search_list[0] == "Root": search_list = search_list[1:] # Remove "Root"
         if not search_list: # nothing to search for
             return
