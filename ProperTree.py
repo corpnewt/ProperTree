@@ -485,10 +485,17 @@ class ProperTree:
         self.check_open(plists)
         
         # Set up a signal handler for SIGINT that pipes to our quit() function
-        signal.signal(signal.SIGINT, lambda x,y: print("KeyboardInterrupt caught - cleaning up...") or self.quit())
+        signal.signal(signal.SIGINT,self.quit)
+        # Set up our event loop "poker" to keep the event loop processing
+        self.tk.after(200,self.sigint_check)
 
         # Start our run loop
         tk.mainloop()
+
+    def sigint_check(self):
+        # Helper to keep the event loop moving in order to ensure we can catch
+        # KeyboardInterrupts as needed
+        self.tk.after(200,self.sigint_check)
 
     def get_case_insensitive(self):
         # Helper function to check our file path, change case, and see if os.path.exists() still works
@@ -1461,6 +1468,8 @@ class ProperTree:
 
     def quit(self, event_or_signum=None, frame=None):
         if self.is_quitting: return # Already quitting - don't try to do this twice at once
+        if isinstance(event_or_signum,int) and frame is not None:
+            print("KeyboardInterrupt caught - cleaning up...")
         self.is_quitting = True # Lock this to one quit attempt at a time
         # Get a list of all windows with unsaved changes
         unsaved = [x for x in self.stackorder(self.tk) if x.edited]
