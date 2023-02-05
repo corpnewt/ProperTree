@@ -127,7 +127,7 @@ def display_info_window(config_tex, search_list, width, valid_only, show_urls, m
         esc_code = ""
 
         # uncomment print line to get output in console while debugging
-        print(result)
+        # print(result)
         out = ""  # build output string between esc seq one char at a time
         max_w = line_w = 0  # keep track of the longest line we have
         total_h = line_h = 0
