@@ -1,7 +1,6 @@
 import os
 import sys
 import re
-import json
 if sys.version_info.major >= 3:
     import tkinter as tk
     import tkinter.font as tk_font
