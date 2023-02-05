@@ -7,12 +7,8 @@ if sys.version_info.major >= 3:
     from tkinter import messagebox as mb
 else:
     import Tkinter as tk
-    import tkFont as tk_font #pylint: disable=E0401
-    import tkMessageBox as mb #pylint: disable=E0401
-
-class ConfigurationLoadError(Exception):
-    """Raised when the Configuration.tex could not be found or opened."""
-    pass
+    import tkFont as tk_font  # pylint: disable=E0401
+    import tkMessageBox as mb  # pylint: disable=E0401
 
 
 def display_info_window(config_tex, search_list, width, valid_only, show_urls, mx, my, font=None, fg="white", bg="black"):
@@ -30,7 +26,7 @@ def display_info_window(config_tex, search_list, width, valid_only, show_urls, m
             if not self.font:  # Fall back to defaults
                 self.font = tk_font.nametofont(self.cget("font"))
 
-            #TODO find a way to turn attributes on and off individually
+            # TODO find a way to turn attributes on and off individually
             # instead of defining a font for each combination
             self.bold_font = tk_font.Font(**self.font.configure())
             self.bold_mono_font = tk_font.Font(**self.font.configure())
@@ -61,23 +57,19 @@ def display_info_window(config_tex, search_list, width, valid_only, show_urls, m
     class AutoHideScrollbar(tk.Scrollbar):
         def set(self, low, high):
             if float(low) <= 0 and float(high) >= 1.0:
-                try: self.tk.call("grid", "remove", self)
-                except: pass
+                try:
+                    self.tk.call("grid", "remove", self)
+                except:
+                    pass
             else:
-                try: self.grid()
-                except: pass
+                try:
+                    self.grid()
+                except:
+                    pass
             tk.Scrollbar.set(self, low, high)
 
-    try:
-        result = parse_configuration_tex(
-            config_tex, search_list, width, valid_only, show_urls)
-    except ConfigurationLoadError:
-        mb.showerror(
-            "Configuration.tex Error",
-            "Could not find/open Configuration.tex at: {}".format(
-                config_tex or "No Path Specified"
-            ))
-        return
+    result = parse_configuration_tex(
+        config_tex, search_list, width, valid_only, show_urls)
 
     pad_pixels = 30
     info_window = tk.Toplevel()
@@ -148,30 +140,30 @@ def display_info_window(config_tex, search_list, width, valid_only, show_urls, m
                     # but for now just have a style defined for current needs
                     if esc_code == '[0m':
                         style = "normal"
-                    if esc_code == "[10m": # switch to default family
+                    if esc_code == "[10m":  # switch to default family
                         style = "normal"
-                    if esc_code == '[1m': # bold on
+                    if esc_code == '[1m':  # bold on
                         if style == "mono":
-                            style = "bold_mono" # until a better method is found
+                            style = "bold_mono"  # until a better method is found
                         else:
                             style = "bold"
-                    if esc_code == "[22m": # bold off
+                    if esc_code == "[22m":  # bold off
                         if style == "bold_mono":
                             style = "mono"
                         else:
                             style = "normal"
-                    if esc_code == '[3m': # italic on
+                    if esc_code == '[3m':  # italic on
                         style = "italic"
                     # [23m italic off
-                    if esc_code == "[4m": # underline on
+                    if esc_code == "[4m":  # underline on
                         style = "underline"
                     # [24m underline off
-                    if esc_code == '[11m': # switch to mono family
+                    if esc_code == '[11m':  # switch to mono family
                         style = "mono"
-                    if esc_code == '[7m': # reverse on
+                    if esc_code == '[7m':  # reverse on
                         style = "reverse"
                     # [27m not reverse
-                    if esc_code == '[34m': # foreground blue
+                    if esc_code == '[34m':  # foreground blue
                         if show_urls:
                             style = "url"
                         else:
@@ -213,7 +205,7 @@ def display_info_window(config_tex, search_list, width, valid_only, show_urls, m
         mb.showerror(
             "Info Not Found",
             "No info found for: \"{}\"".format(title))
-        return
+        return None
 
     # Fit the line width to our max line length topping out at our width value
     # text.configure(width=min(max([len(x)+1 for x in text.get("1.0","end-1c").split("\n")]),width))
@@ -246,8 +238,8 @@ def parse_configuration_tex(config_file, search_list, width, valid_only, show_ur
     #     False - return only link text with no url
     try:
         config = open(config_file, "r")
-    except:
-        raise ConfigurationLoadError
+    except OSError:
+        return ["Could not find/open Configuration.tex at " + config_file]
 
     result = []
     search_len = len(search_list)
@@ -256,7 +248,8 @@ def parse_configuration_tex(config_file, search_list, width, valid_only, show_ur
 
     search_terms = ["\\section{"]
     search_terms[0] += search_list[0]
-    text_search = search_list[search_len - 1] # ultimately looking for last item
+    # ultimately looking for last item
+    text_search = search_list[search_len - 1]
 
     # set the search terms based on selected position
     if search_len == 1:
@@ -266,7 +259,7 @@ def parse_configuration_tex(config_file, search_list, width, valid_only, show_ur
         search_terms.append("\\subsection{Properties")
         search_terms.append("texttt{" + text_search + "}\\")
     elif search_len == 3:
-        if search_list[0] == "NVRAM": # look for value in Introduction
+        if search_list[0] == "NVRAM":  # look for value in Introduction
             search_terms.append("\\subsection{Introduction")
             search_terms.append("texttt{" + text_search + "}")
         else:
@@ -276,21 +269,19 @@ def parse_configuration_tex(config_file, search_list, width, valid_only, show_ur
     elif search_len == 4:
         item_zero = search_list[0]
         sub_search = "\\subsection{"
-        if item_zero == "NVRAM": # look for UUID:term in Introduction
+        if item_zero == "NVRAM":  # look for UUID:term in Introduction
             sub_search = "\\subsection{Introduction"
             text_search = search_list[2]
             text_search += ":"
             text_search += search_list[3]
             text_search += "}"
-        elif item_zero == "DeviceProperties": # look in Common
+        elif item_zero == "DeviceProperties":  # look in Common
             sub_search += "Common"
             text_search += "}"
-        elif item_zero == "Misc": # Entry Properties or subsub
+        elif item_zero == "Misc":  # Entry Properties or subsub
             if len(search_list[2]) < 3:
                 sub_search += "Entry Properties"
             else:
-                # is there a better way to do this that is more uniform to
-                # the whole plist instead of doing subsub searches twice?
                 sub_search = "\\subsubsection{"
                 sub_search += search_list[1]
             text_search += "}"
@@ -324,13 +315,15 @@ def parse_configuration_tex(config_file, search_list, width, valid_only, show_ur
     lines_between_valid = 0
     last_line_ended_in_colon = False
     last_line_had_forced_return = False
+    last_line_was_blank = False
 
     while True:
         # track document state & preprocess line before parsing
         line = config.readline()
         if not line:
             break
-        if line.lstrip().startswith("%"): # skip comments
+        line = line.strip()
+        if line.startswith("%"):  # skip comments
             continue
         if "\\subsection{Introduction}" in line:
             continue
@@ -358,7 +351,7 @@ def parse_configuration_tex(config_file, search_list, width, valid_only, show_ur
             result.append("-"*width)
             result.append("\n")
             continue
-        if "\\begin{" in line: # ignore other begins
+        if "\\begin{" in line:  # ignore other begins
             continue
         if "\\mbox" in line:
             continue
@@ -368,7 +361,6 @@ def parse_configuration_tex(config_file, search_list, width, valid_only, show_ur
             continue
         if "\\end{itemize}" in line:
             itemize -= 1
-#            result.append("\n")
             if itemize == 0 and enum == 0:
                 in_item = False
             continue
@@ -382,63 +374,68 @@ def parse_configuration_tex(config_file, search_list, width, valid_only, show_ur
             result.append("-"*width)
             result.append("\x1b[10m\n")
             continue
-        if "\\end{" in line: # ignore other ends
+        if "\\end{" in line:  # ignore other ends
             continue
         if "\\item" in line:
             if itemize == 0 and enum == 0:
-                break # skip line, not itemizing, shouldn't get here
+                break  # skip line, not itemizing, shouldn't get here
             else:
-                if in_item: # newline before this item
+                if in_item:  # newline before this item
                     result.append("\n")
                 in_item = True
-                if itemize == 0: # in enum
-                    if search_len == 1: # first level enumerate, use numeric
+                if itemize == 0:  # in enum
+                    if search_len == 1:  # first level enumerate, use numeric
                         replace_str = str(enum) + "."
-                    else: # use alpha
+                    else:  # use alpha
                         replace_str = "(" + chr(96 + enum) + ")"
                     line = line.replace("\\item", replace_str)
                     enum += 1
-                elif itemize == 1: # first level item
+                elif itemize == 1:  # first level item
                     line = line.replace("\\item", u"\u2022")
                 else:
                     line = line.replace("\\item", "-")
                 # fix indenting
-                line = line.lstrip()
                 line = "    "*itemize + line
                 if enum != 0:
                     line = "    " + line
         else:
-            if itemize > 0 or enum > 0: # inside multi line item
-                line = line.lstrip() # remove leading spaces
-                line = "   " + line # put one back
-            if itemize > 0 or enum > 0:
+            #            line += " " # add space for following words
+            if itemize > 0 or enum > 0:  # inside multi line item
                 if last_line_had_forced_return:
-                    line = "    " + line
-        if "section{" in line: # stop when next section is found
-# let's try only checking for "section{" instead of 3 checks
-#        if "\\section{" in line or "\\subsection{" in line or "\\subsubsection{" in line:
+                    line = "       " + line  # indent
+        if "section{" in line:  # stop when next section is found
+            # let's try only checking for "section{" instead of 3 checks
+            #        if "\\section{" in line or "\\subsection{" in line or "\\subsubsection{" in line:
             # reached end of current section
             break
 
-        if line.rstrip() == "": # blank line, need linefeed, maybe two
+        if line.strip() == "":  # blank line, need linefeed, maybe two, maybe none
             if last_line_ended_in_colon:
                 parsed_line = "\n"
             else:
-                parsed_line = "\n\n"
+                if last_line_was_blank:  # skip this blank line
+                    continue
+                else:
+                    parsed_line = "\n\n"
+            last_line_was_blank = True
         else:
+            last_line_was_blank = False
             parsed_line = parse_line(line, columns, width,
-                                 align, valid_only, show_urls)
+                                     align, valid_only, show_urls)
+            if len(parsed_line) == 0:
+                continue
+            # post process line
+            last_line_had_forced_return = False
+            last_line_ended_in_colon = False
             if parsed_line.endswith("\n"):
                 last_line_had_forced_return = True
-            else:
-                last_line_had_forced_return = False
-            if parsed_line.endswith(":"):
+            elif parsed_line.endswith(":"):
                 last_line_ended_in_colon = True
-                parsed_line += "\n" # add newline but ignore it if next line is blank
+                parsed_line += "\n"  # add newline but ignore it if next line is blank
             else:
-                last_line_ended_in_colon = False
+                parsed_line += " "  # add space for next word
 
-        if valid_only: # we only want to return valid plist options for the field
+        if valid_only:  # we only want to return valid plist options for the field
             if itemize > 0:
                 if "---" in line:
                     if lines_between_valid < 10:
@@ -481,9 +478,6 @@ def parse_line(line, columns, width, align, valid_only, show_urls):
                     elif key == "textit":
                         ret += "\x1b[3m"
                     elif key == "textbf":
-#                        if columns > 0:
-#                            pass # ignore bold inside columns until \x1b[2nm codes implemented
-#                        else:
                         ret += "\x1b[1m"
                     elif key == "emph":
                         ret += "\x1b[3m"
@@ -500,9 +494,6 @@ def parse_line(line, columns, width, align, valid_only, show_urls):
                     key = ""
             elif c in " ,()\\0123456789$&":
                 build_key = False
-#                if key == "item":
-#                    if not valid_only:
-#                        ret += u"\u2022"
                 ret += special_char(key)
                 col_contents_len += 1
                 if c in ",()0123456789$":
@@ -524,14 +515,12 @@ def parse_line(line, columns, width, align, valid_only, show_urls):
             elif c in "}]":
                 if not ignore:
                     if not valid_only:
-                        # here as well, avoid resetting font attributes inside columns
-                        # until \x1b[2nm codes are implemented
                         if columns > 0:
                             ret += "\x1b[22m"
                         else:
                             ret += "\x1b[0m"
                         if key == "href":
-                            ret += " "
+                            # ret += " "
                             key = ""
                         elif c == "]":
                             ret += "]"
