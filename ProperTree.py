@@ -752,7 +752,7 @@ class ProperTree:
         else:
             self.settings["use_custom_font_size"] = False
             self.font_spinbox.configure(state="disabled")
-            self.font_string.set(self.default_font["size"])
+            # self.font_string.set(self.default_font["size"])
             self.settings.pop("font_size",None)
         self.update_font()
 
@@ -911,7 +911,7 @@ class ProperTree:
     def update_fonts(self):
         windows = self.stackorder(self.tk,include_defaults=True)
         if not len(windows): return
-        font = Font(font="TkTextFont" if self.font_var.get() else self.font_family.get())
+        font = Font(family=self.font_family.get()) if self.font_var.get() else Font(font="TkTextFont")
         font["size"] = self.font_string.get() if self.custom_font.get() else self.default_font["size"]
         for window in windows:
             if window in self.default_windows: continue
