@@ -210,13 +210,15 @@ class ProperTree:
         self.font_custom_check.grid(row=11,column=3,stick="w",padx=10)
         self.font_custom.grid(row=11,column=4,sticky="we",padx=10)
 
-        r5_label = tk.Label(self.settings_window,text="Restore Default Colors:")
+        r5_label = tk.Label(self.settings_window,text="Restore Appearance Defaults:")
         r5_label.grid(row=12,column=3,sticky="w",padx=10)
         dt_func = ttk.Separator(self.settings_window,orient="horizontal")
         dt_func.grid(row=12,column=4,columnspan=1,sticky="we",padx=10)
 
+        default_font = tk.Button(self.settings_window,text="Font Defaults",command=self.font_defaults)
+        default_font.grid(row=13,column=3,sticky="we",padx=10)
         default_high = tk.Button(self.settings_window,text="Highlight Color",command=lambda:self.swap_colors("highlight"))
-        default_high.grid(row=13,column=3,sticky="we",padx=10)
+        default_high.grid(row=14,column=3,sticky="we",padx=10)
         default_light = tk.Button(self.settings_window,text="Light Mode Colors",command=lambda:self.swap_colors("light"))
         default_light.grid(row=13,column=4,sticky="we",padx=10)
         default_dark = tk.Button(self.settings_window,text="Dark Mode Colors",command=lambda:self.swap_colors("dark"))
@@ -793,6 +795,13 @@ class ProperTree:
         for window in windows:
             if window in self.default_windows: continue
             window.set_font_family()
+
+    def font_defaults(self, event = None):
+        self.settings["use_custom_font"] = False
+        self.settings.pop("font_family",None)
+        self.settings["use_custom_font_size"] = False
+        self.settings.pop("font_size",None)
+        self.update_settings()
 
     def pick_color(self, color_name = None, canvas = None):
         if not color_name or not canvas: return # uh wut?
