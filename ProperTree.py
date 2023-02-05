@@ -1445,7 +1445,12 @@ class ProperTree:
         # Return the list, omitting any windows that are withdrawn
         return [x for x in stack_order if x.wm_state() != "withdrawn"]
 
-    def lift_window(self, window):
+    def lift_window(self, window=None):
+        if window is None:
+            windows = self.stackorder(self.tk,include_defaults=True)
+            if windows: # Get the last window we saw
+                window = windows[-1]
+        if window is None: return # No windows in the stack order?
         window.deiconify() # Lift minimized windows as well
         window.lift()
         window.focus_force()
@@ -1457,10 +1462,27 @@ class ProperTree:
     def quit(self, event_or_signum=None, frame=None):
         if self.is_quitting: return # Already quitting - don't try to do this twice at once
         self.is_quitting = True # Lock this to one quit attempt at a time
-        # Check if we need to save first, then quit if we didn't cancel
+        # Get a list of all windows with unsaved changes
+        unsaved = [x for x in self.stackorder(self.tk) if x.edited]
+        ask_to_save = True
+        if len(unsaved) > 1: # Ask for review
+            answer = mb.askyesnocancel(
+                "Unsaved Changes",
+                "You have {:,} document{} with unsaved changes.\nWould you like to review?\n(If you don't review, all unsaved changes will be lost)".format(
+                    len(unsaved),
+                    "" if len(unsaved)==1 else "s"
+                ))
+            if answer is None:
+                # Unlock quitting and return - user canceled
+                self.is_quitting = False
+                self.lift_window()
+                return
+            ask_to_save = answer # Iterate the windows and ask to save as needed
+        # Walk through the windows and close them - either reviewing changes or ignoring them.
         for window in self.stackorder(self.tk)[::-1]:
             if window in self.default_windows: continue
-            if not window.close_window(check_close=False):
+            self.lift_window(window)
+            if not window.close_window(check_saving=ask_to_save,check_close=False):
                 self.is_quitting = False # Unlock the quit
                 return # User cancelled or we failed to save, bail
         # Make sure we retain any non-event updated settings
