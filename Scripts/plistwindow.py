@@ -2119,7 +2119,7 @@ class PlistWindow(tk.Toplevel):
                 try: shutil.copystat(path,temp_file)
                 except: pass
                 # Update the accessed and modified times
-                update_timestamp = int(time.time())
+                update_timestamp = time.time()
                 try: os.utime(temp_file,(update_timestamp,update_timestamp))
                 except: pass
             # Copy the temp over
