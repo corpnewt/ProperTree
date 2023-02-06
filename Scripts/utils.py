@@ -13,7 +13,7 @@ class Utils:
         self.name = name
         # Init our colors before we need to print anything
         cwd = os.getcwd()
-        os.chdir(os.path.dirname(os.path.realpath(__file__)))
+        os.chdir(os.path.abspath(os.path.dirname(__file__)))
         if os.path.exists("colors.json"):
             self.colors_dict = json.load(open("colors.json"))
         else:
