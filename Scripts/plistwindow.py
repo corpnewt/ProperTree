@@ -2114,6 +2114,14 @@ class PlistWindow(tk.Toplevel):
                     if sys.version_info >= (3,0):
                         plist_text = plist_text.encode("utf-8")
                     f.write(plist_text)
+            if os.path.isfile(path):
+                # We are overwriting an existing file - try to clone the perms and ownership
+                try: shutil.copystat(path,temp_file)
+                except: pass
+                # Update the accessed and modified times
+                update_timestamp = datetime.datetime.now().timestamp()
+                try: os.utime(temp_file,(update_timestamp,update_timestamp))
+                except: pass
             # Copy the temp over
             shutil.copy(temp_file,path)
             # Let's ensure the md5 of the temp file and saved file are the same
