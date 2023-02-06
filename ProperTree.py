@@ -20,12 +20,12 @@ try:
 except NameError:  # Python 3
     unicode = str
 # Add this script's dir to the local PATH var - may improve import consistency
-sys.path.append(os.path.abspath(os.path.dirname(os.path.realpath(__file__))))
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 from Scripts import plist, plistwindow, downloader
 
 def _check_for_update(queue, version_url = None, user_initiated = False):
     args = [sys.executable]
-    file_path = os.path.join(os.path.abspath(os.path.dirname(os.path.realpath(__file__))),"Scripts","update_check.py")
+    file_path = os.path.join(os.path.abspath(os.path.dirname(__file__)),"Scripts","update_check.py")
     if os.path.exists(file_path):
         args.append(file_path)
     else:
@@ -390,7 +390,7 @@ class ProperTree:
             self.tk.bind_all("<{}-comma>".format(key), lambda event, x=self.settings_window:self.show_window(x))
         
         cwd = os.getcwd()
-        os.chdir(os.path.dirname(os.path.realpath(__file__)))
+        os.chdir(os.path.abspath(os.path.dirname(__file__)))
         #
         # Load the settings - current available settings are:
         # 
@@ -501,7 +501,7 @@ class ProperTree:
 
     def get_case_insensitive(self):
         # Helper function to check our file path, change case, and see if os.path.exists() still works
-        our_path = os.path.realpath(__file__)
+        our_path = os.path.abspath(__file__)
         # Walk our chars and find the first alpha character
         # then reverse it's case - and see if the path still exists
         for i,x in enumerate(our_path):
@@ -1393,12 +1393,12 @@ class ProperTree:
         # set its path as our current_plist value
         path = fd.askopenfilename(title = "Select plist file") # ,parent=current_window) # Apparently parent here breaks on 10.15?
         if not len(path): return # User cancelled - bail
-        path = os.path.realpath(os.path.expanduser(path))
+        path = os.path.abspath(os.path.expanduser(path))
         return self.pre_open_with_path(path)
 
     def pre_open_with_path(self, path, current_window = None):
         if not path: return # Hmmm... shouldn't happen, but just in case
-        path = os.path.realpath(os.path.expanduser(path))
+        path = os.path.abspath(os.path.expanduser(path))
         windows = self.stackorder(self.tk)
         if current_window == None and len(windows) == 1 and windows[0] == self.start_window and windows[0].edited == False and windows[0].current_plist == None:
             # Fresh window - replace the contents
@@ -1414,7 +1414,7 @@ class ProperTree:
 
     def open_plist_with_path(self, event = None, path = None, current_window = None):
         if not path: return # Uh... wut?
-        path = os.path.realpath(os.path.expanduser(path))
+        path = os.path.abspath(os.path.expanduser(path))
         # Let's try to load the plist
         try:
             with open(path,"rb") as f:
@@ -1518,7 +1518,7 @@ class ProperTree:
         self.tk.destroy()
         # Attempt to save the settings
         cwd = os.getcwd()
-        os.chdir(os.path.dirname(os.path.realpath(__file__)))
+        os.chdir(os.path.abspath(os.path.dirname(__file__)))
         try:
             json.dump(self.settings,open("Scripts/settings.json","w"),indent=4)
         except:
