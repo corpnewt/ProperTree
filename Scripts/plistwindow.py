@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys, os, plistlib, base64, binascii, datetime, tempfile, shutil, re, subprocess, math, hashlib
+import sys, os, plistlib, base64, binascii, datetime, tempfile, shutil, re, subprocess, math, hashlib, time
 
 from collections import OrderedDict
 from Scripts import config_tex_info
@@ -2119,7 +2119,7 @@ class PlistWindow(tk.Toplevel):
                 try: shutil.copystat(path,temp_file)
                 except: pass
                 # Update the accessed and modified times
-                update_timestamp = datetime.datetime.now().timestamp()
+                update_timestamp = int(time.time())
                 try: os.utime(temp_file,(update_timestamp,update_timestamp))
                 except: pass
             # Copy the temp over
