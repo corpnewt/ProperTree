@@ -116,7 +116,7 @@ def select_py(py_versions,min_tk,pt_current):
 def main(use_current=False,path_list=None):
     # Let's check for an existing app - remove it if it exists,
     # then create and format a new bundle
-    os.chdir(os.path.dirname(os.path.realpath(__file__)))
+    os.chdir(os.path.abspath(os.path.dirname(__file__)))
     os.chdir("../")
     temp = None
     pt_current = None
