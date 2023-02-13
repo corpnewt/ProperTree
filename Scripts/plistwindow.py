@@ -3211,15 +3211,20 @@ class PlistWindow(tk.Toplevel):
         # for this to provide the correct info
         # for now this is a cheap hack to a Configuration.tex in the same location as ProperTree
         pt_path = os.path.normpath(sys.path[0])
+        # Add a check for next to the script
+        config_tex_paths = [os.path.join(pt_path,"Configuration.tex")]
         pt_path_parts = pt_path.split(os.sep)
         if len(pt_path_parts) >= 3 and pt_path_parts[-2:] == ["Contents","MacOS"] \
             and pt_path_parts[-3].lower().endswith(".app"):
             for x in range(3):
                 # Remove the last 3 path components as we're in a .app bundle
                 pt_path = os.path.dirname(pt_path)
-        config_tex_path = os.path.join(pt_path,"Configuration.tex")
-        if not os.path.isfile(config_tex_path): return
-        return config_tex_path
+                # Add a check for next to the .app bundle
+                config_tex_paths.append(os.path.join(pt_path,"Configuration.tex"))
+        # Iterate any paths we need to check and return the first match
+        for path in config_tex_paths:
+            if os.path.isfile(path):
+                return path
 
     def show_config_info(self, event = None):
         # find the path of selected cell
