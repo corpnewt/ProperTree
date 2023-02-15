@@ -1,4 +1,4 @@
 {
-    "version": "0.1.8",
-    "changes": "- Leverage multiprocessing for update checks to prevent UI blocking.\n- Correct some keybind issues."
+    "version": "0.1.9",
+    "changes": "- Add OC 0.8.9 hashes.\n- Add preliminary Configuration.tex support.\n- Misc bug fixes and QOL improvements."
 }
