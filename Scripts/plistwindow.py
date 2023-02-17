@@ -2358,8 +2358,10 @@ class PlistWindow(tk.Toplevel):
             self._tree.item(i, values=(self.get_type(value),value.strftime("%b %d, %Y %I:%M:%S %p"),"" if parentNode == "" else self.drag_code,))
         elif isinstance(value, (int,long)) and not isinstance(value, bool) and self.int_type_string.get().lower() == "hex":
             value = int(value)
+            # Get the type before converting to hex string
+            value_type = self.get_type(value)
             if value >= 0: value = "0x"+hex(value).upper()[2:]
-            self._tree.item(i, values=(self.get_type(value),value,"" if parentNode == "" else self.drag_code,))
+            self._tree.item(i, values=(value_type,value,"" if parentNode == "" else self.drag_code,))
         elif isinstance(value, bool):
             self._tree.item(i, values=(self.get_type(value),self.b_true() if value else self.b_false(),"" if parentNode == "" else self.drag_code,))
         else:
