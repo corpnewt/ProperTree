@@ -1,4 +1,4 @@
 {
-    "version": "0.1.9",
-    "changes": "- Add OC 0.8.9 hashes.\n- Add preliminary Configuration.tex support.\n- Misc bug fixes and QOL improvements."
+    "version": "0.2.0",
+    "changes": "- Add OC 0.9.0 hashes.\n- Fix mis-typing hex number values on open."
 }
