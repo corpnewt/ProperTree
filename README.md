@@ -49,6 +49,18 @@ git clone https://github.com/corpnewt/ProperTree
 
 ## FAQ
 
+* **What does OC Snapshot do?**
+
+  The OC Snapshot function will prompt you to select an OC folder, then walk the contents of the ACPI, Kexts, Tools, and Drivers directories within that folder - comparing all entries to the current document's `ACPI -> Add`, `Kernel -> Add`, `Misc -> Tools`, and `UEFI -> Drivers` respectively.  It will add or remove entries as needed, and also ensures kext load order by comparing each kext's `CFBundleIdentifier` to all other kexts' `OSBundleLibraries` within their Info.plist - making sure that any kext that is relied on by others is loaded before them.  It will also warn if it detects duplicate `CFBundleIdentifiers` (with support for `MinKernel`, `MaxKernel`, and `MatchKernel` overlap checks), and offer to disable all after the first found.  It checks for disabled parent kexts with enabled child kexts as well.  The schema used is (by default) determined by comparing the MD5 hash of the `OpenCore.efi` file to a known list of Acidanthera debug/release versions.  If the MD5 hash does not match any known version, it will fall back to the newest schema in the script's `snapshot.plist`.  This behavior can be customized in the Settings per the `OC Snapshot Target Version` menu.
+
+* **What is the difference between OC Snapshot and OC Clean Snapshot?**
+
+  Both snapshot variants accomplish the same tasks - they just leverage different starting points.  An OC **Clean** Snapshot will first clear out `ACPI -> Add`, `Kernel -> Add`, `Misc -> Tools`, and `UEFI -> Drivers`, then add everything from within the respective ACPI, Kexts, Tools, and Drivers directory anew.  A regular OC Snapshot starts with the information within the current document for those four locations, and only pulls changes - adding and removing entries as needed.
+  
+* **When should I use an OC Clean Snapshot vs an OC Snapshot?**
+
+  Typically, an OC **Clean** Snapshot should only be used the first time you snapshot to ensure any sample entries in the config.plist are removed and added anew.  Every subsequent snapshot should be a regular OC Snapshot to ensure any customizations you've made are preserved.
+
 * **ProperTree opens a black window on macOS Monterey (12.x)**
 
   It appears the default tk implementation that ships with macOS Monterey doesn't display correctly.  A workaround is to download and install the latest build of python 3 from python.org (found [here](https://www.python.org/downloads/macos/)) which has a compatible tk bundled, then use the `buildapp-select.command` located in ProperTree's `Scripts` directory to build an application bundle targeting the installed python's path.  You can then leverage the `ProperTree.app` bundle it creates.
