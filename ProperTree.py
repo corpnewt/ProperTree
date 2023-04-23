@@ -1022,7 +1022,6 @@ class ProperTree:
             return
         path = os.path.normpath(path)
         if not (os.path.exists(path) and os.path.isfile(path)):
-            self.rem_recent(path)
             self.tk.bell()
             mb.showerror("An Error Occurred While Opening {}".format(os.path.basename(path)), "The path '{}' does not exist.".format(path))
             return
