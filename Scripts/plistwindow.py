@@ -342,6 +342,7 @@ class PlistWindow(tk.Toplevel):
         self.type_menu.add_command(label="Data", command=lambda:self.change_type(self.menu_code + " Data"))
         self.type_menu.add_command(label="Date", command=lambda:self.change_type(self.menu_code + " Date"))
         self.type_menu.add_command(label="Number", command=lambda:self.change_type(self.menu_code + " Number"))
+        self.type_menu.add_command(label="UID", command=lambda:self.change_type(self.menu_code + " UID"))
         self.type_menu.add_command(label="String", command=lambda:self.change_type(self.menu_code + " String"))
 
         # Set up the Root node type menu - only supports Array and Dict
@@ -521,7 +522,7 @@ class PlistWindow(tk.Toplevel):
         f_label.grid(row=0,column=0,sticky="e")
         r_label = tk.Label(self.find_frame, text="Replace:")
         r_label.grid(row=1,column=0,sticky="e")
-        self.f_options = ["Key", "Boolean", "Data", "Date", "Number", "String"]
+        self.f_options = ["Key", "Boolean", "Data", "Date", "Number", "UID", "String"]
         self.find_type = self.f_options[0]
         self.f_text = EntryPlus(self.find_frame,self)
         self.f_text.bind("<Return>", self.find_next)
@@ -654,7 +655,7 @@ class PlistWindow(tk.Toplevel):
         return b
 
     def set_find_type_by_index(self, index = None, zero_based = False):
-        if not isinstance(index,int):
+        if not isinstance(index,(int,long)):
             # Try to get the keysym
             try: index = int(getattr(index,"keysym",None).replace("KP_",""))
             except: return # Borked value
@@ -728,7 +729,7 @@ class PlistWindow(tk.Toplevel):
                     except:
                         return (False,"Invalid Number Data","Couldn't convert to an integer or float.")
             # Check if we're saving an integer that's out of range
-            if isinstance(value,int) and not (-1 << 63 <= value < 1 << 63):
+            if isinstance(value,(int,long)) and not (-1 << 63 <= value < 1 << 63):
                 # Convert it to a float which will force it into scientific notation
                 value = float(value)
             if self.int_type_string.get().lower() == "hex" and not isinstance(value,float) and value >= 0:
@@ -739,6 +740,22 @@ class PlistWindow(tk.Toplevel):
             if not value.lower() in self.all_b(lower=True):
                 return (False,"Invalid Boolean Data","Booleans can only be {}.".format(", ".join(self.all_b())))
             value = self.b_true() if value.lower() in self.all_b_true(lower=True) else self.b_false()
+        elif value_type == "uid":
+            # UIDs are not stored as hex, but we'll allow hex input
+            if value.lower().startswith("0x"):
+                try:
+                    value = int(value,16)
+                except:
+                    return (False,"Invalid Hex Data", "Couldn't convert the passed hex string to an integer.")
+            else:
+                value = value.replace(",","")
+                try:
+                    value = int(value)
+                except:
+                    return (False,"Invalid Integer Data","Couldn't convert the passed string to an integer.")
+            if not 0 <= value < 1 << 32:
+                return (False,"Invalid Integer Value","UIDs cannot not be negative, and must be less than 2**32 (4294967296)")
+            value = str(value)
         return (True,value)
 
     def draw_frames(self, event=None, changed=None):
@@ -910,9 +927,9 @@ class PlistWindow(tk.Toplevel):
         elif node_type == "string":
             if (text in value if case_sensitive else text.lower() in value.lower()):
                 return True
-        elif node_type in ("date","boolean","number"):
+        elif node_type in ("date","boolean","number","uid"):
             if text.lower() == value.lower():
-                # Can only return if we find the same date
+                # Can only return if we find the same value
                 return True
         # If we got here, we didn't find it
         return False
@@ -1207,7 +1224,7 @@ class PlistWindow(tk.Toplevel):
         #
         # Let's make sure we have the ACPI -> Add sections in our config
 
-        tree_dict = self.nodes_to_values()
+        tree_dict = self.nodes_to_values(binary=False)
         # We're going to replace the whole list
         if not "ACPI" in tree_dict or not isinstance(tree_dict["ACPI"],dict):
             tree_dict["ACPI"] = {"Add":[]}
@@ -2092,16 +2109,17 @@ class PlistWindow(tk.Toplevel):
             if not len(path):
                 # User cancelled - no changes
                 return None
+        # Check if it should be binary
+        binary = self.plist_type_string.get().lower() == "binary"
         # Should have the save path
-        plist_data = self.nodes_to_values()
+        plist_data = self.nodes_to_values(binary=binary)
         # Create a temp folder and save there first
         temp = tempfile.mkdtemp()
         temp_file = os.path.join(temp, os.path.basename(path))
         try:
-            if self.plist_type_string.get().lower() == "binary":
+            if binary:
                 with open(temp_file,"wb") as f:
                     plist.dump(plist_data,f,sort_keys=self.controller.settings.get("sort_dict",False),fmt=plist.FMT_BINARY)
-            # elif not self.xcode_data:
             elif not self.controller.settings.get("xcode_data",True):
                 with open(temp_file,"wb") as f:
                     plist.dump(plist_data,f,sort_keys=self.controller.settings.get("sort_dict",False))
@@ -2155,7 +2173,7 @@ class PlistWindow(tk.Toplevel):
         # Opened it correctly - let's load it, and set our values
         self.plist_type_string.set(plist_type)
         self._tree.delete(*self._tree.get_children())
-        self.add_node(plist_data)
+        self.add_node(plist_data,check_binary=plist_type.lower() == "binary")
         self.current_plist = os.path.normpath(path) if path else path
         if path is None:
             self._ensure_edited(title=path or "Untitled.plist")
@@ -2209,7 +2227,7 @@ class PlistWindow(tk.Toplevel):
             # Nothing to copy
             return
         try:
-            clipboard_string = plist.dumps(self.nodes_to_values(node,None),sort_keys=self.controller.settings.get("sort_dict",False))
+            clipboard_string = plist.dumps(self.nodes_to_values(node),sort_keys=self.controller.settings.get("sort_dict",False))
             if self.controller.settings.get("xcode_data",True):
                 clipboard_string = self._format_data_string(clipboard_string)
             # Get just the values
@@ -2223,7 +2241,7 @@ class PlistWindow(tk.Toplevel):
             # Nothing to copy
             return
         try:
-            plist_data = self.nodes_to_values(node,None)
+            plist_data = self.nodes_to_values(node)
             if isinstance(plist_data,dict) and len(plist_data):
                 # Set it to the first key's value
                 plist_data = plist_data[list(plist_data)[0]]
@@ -2237,7 +2255,7 @@ class PlistWindow(tk.Toplevel):
 
     def copy_all(self, event = None):
         try:
-            clipboard_string = plist.dumps(self.nodes_to_values(self.get_root_node(),None),sort_keys=self.controller.settings.get("sort_dict",False))
+            clipboard_string = plist.dumps(self.nodes_to_values(self.get_root_node()),sort_keys=self.controller.settings.get("sort_dict",False))
             if self.controller.settings.get("xcode_data",True):
                 clipboard_string = self._format_data_string(clipboard_string)
             # Get just the values
@@ -2330,7 +2348,7 @@ class PlistWindow(tk.Toplevel):
     # Converstion to/from Dict and Treeview Functions #
     ###                                             ###
 
-    def add_node(self, value, parentNode="", key=None):
+    def add_node(self, value, parentNode="", key=None, check_binary=False):
         if key is None:
             key = "Root" # Show the Root
         if isinstance(value,(list,tuple)):
@@ -2344,14 +2362,21 @@ class PlistWindow(tk.Toplevel):
         i = self._tree.insert(parentNode, "end", text=key, values=values)
 
         if isinstance(value, dict):
-            self._tree.item(i, open=True)
-            dict_list = list(value.items()) if not self.controller.settings.get("sort_dict",False) else sorted(list(value.items()))
-            for (key,val) in dict_list:
-                self.add_node(val, i, key)
+            if (not check_binary or (check_binary and self.plist_type_string.get().lower() != "binary")) \
+            and len(value) == 1 and "CF$UID" in value and isinstance(value["CF$UID"],(int,long)) \
+            and 0 <= value["CF$UID"] < 1 << 32:
+                # Got a UID - ensure it's within the unsigned 32-bit int bounds
+                value = value["CF$UID"]
+                self._tree.item(i, values=(self.get_type(value,override="UID"),value,"" if parentNode == "" else self.drag_code,))
+            else:
+                self._tree.item(i, open=True)
+                dict_list = list(value.items()) if not self.controller.settings.get("sort_dict",False) else sorted(list(value.items()))
+                for (key,val) in dict_list:
+                    self.add_node(val, i, key, check_binary=check_binary)
         elif isinstance(value, (list,tuple)):
             self._tree.item(i, open=True)
             for (key,val) in enumerate(value):
-                self.add_node(val, i, key)
+                self.add_node(val, i, key, check_binary=check_binary)
         elif self.is_data(value):
             self._tree.item(i, values=(self.get_type(value),self.get_data(value),"" if parentNode == "" else self.drag_code,))
         elif isinstance(value, datetime.datetime):
@@ -2364,11 +2389,13 @@ class PlistWindow(tk.Toplevel):
             self._tree.item(i, values=(value_type,value,"" if parentNode == "" else self.drag_code,))
         elif isinstance(value, bool):
             self._tree.item(i, values=(self.get_type(value),self.b_true() if value else self.b_false(),"" if parentNode == "" else self.drag_code,))
+        elif isinstance(value,plist.UID) or (hasattr(plistlib,"UID") and isinstance(value,plistlib.UID)):
+            self._tree.item(i, values=(self.get_type(value),value.data,"" if parentNode == "" else self.drag_code,))
         else:
             self._tree.item(i, values=(self.get_type(value),value,"" if parentNode == "" else self.drag_code,))
         return i
 
-    def get_value_from_node(self,node=""):
+    def get_value_from_node(self,node="",binary=False):
         values = self.get_padded_values(node, 3)
         value = values[1]
         check_type = self.get_check_type(node).lower()
@@ -2393,6 +2420,13 @@ class PlistWindow(tk.Toplevel):
                         value = float(value)
                     except:
                         value = 0 # default to 0 if we have to have something
+        elif check_type == "uid":
+            try:
+                value = int(value)
+            except:
+                value = 0 # Same principle as the integer
+            # UIDs behave differently depending on XML vs binary context
+            value = plist.UID(value) if binary else {"CF$UID":value}
         elif check_type == "data":
             if self.data_type_string.get().lower() == "hex":
                 # Convert the hex
@@ -2410,14 +2444,14 @@ class PlistWindow(tk.Toplevel):
             value = datetime.datetime.strptime(value,"%b %d, %Y %I:%M:%S %p")
         return value
 
-    def nodes_to_values(self,node="",parent=None):
+    def nodes_to_values(self,node="",parent=None,binary=False):
         if node in ("",None,self.get_root_node()):
             # Top level - set the parent to the type of our Root
             node = self.get_root_node()
             parent = self.get_root_type()
-            if parent is None: return self.get_value_from_node(node) # Return the raw value - we don't have a collection
+            if parent is None: return self.get_value_from_node(node,binary=binary) # Return the raw value - we don't have a collection
             for child in self._tree.get_children(node):
-                parent = self.nodes_to_values(child,parent)
+                parent = self.nodes_to_values(child,parent=parent,binary=binary)
             return parent
         # Not top - process
         if parent is None:
@@ -2430,10 +2464,10 @@ class PlistWindow(tk.Toplevel):
                 # Get the type based on our prefs
                 parent = [] if self.get_check_type(p).lower() == "array" else {} if self.controller.settings.get("sort_dict",False) else OrderedDict()
         name = self._tree.item(node,"text")
-        value = self.get_value_from_node(node)
+        value = self.get_value_from_node(node,binary=binary)
         # At this point, we should have the name and value
         for child in self._tree.get_children(node):
-            value = self.nodes_to_values(child,value)
+            value = self.nodes_to_values(child,parent=value,binary=binary)
         if isinstance(parent,list):
             parent.append(value)
         elif isinstance(parent,dict):
@@ -2443,8 +2477,10 @@ class PlistWindow(tk.Toplevel):
                 parent[str(name)] = value
         return parent
 
-    def get_type(self, value):
-        if isinstance(value, dict):
+    def get_type(self, value, override=None):
+        if override and isinstance(override,str):
+            return self.menu_code + " " + override
+        elif isinstance(value, dict):
             return self.menu_code + " Dictionary"
         elif isinstance(value, list):
             return self.menu_code + " Array"
@@ -2458,6 +2494,8 @@ class PlistWindow(tk.Toplevel):
             return self.menu_code + " Number"
         elif isinstance(value, (str,unicode)):
             return self.menu_code + " String"
+        elif isinstance(value,plist.UID) or (hasattr(plistlib,"UID") and isinstance(value,plistlib.UID)):
+            return self.menu_code + " UID"
         else:
             return self.menu_code + str(type(value))
 
@@ -2490,7 +2528,7 @@ class PlistWindow(tk.Toplevel):
         # create a unique name
         num = start # Initialize our counter
         while True:
-            temp_name = str(name+num) if isinstance(name,int) else name if num == start else name+str(sep)+str(num)
+            temp_name = str(name+num) if isinstance(name,(int,long)) else name if num == start else name+str(sep)+str(num)
             if not temp_name in names: break
             num += 1
         return temp_name
@@ -2608,7 +2646,7 @@ class PlistWindow(tk.Toplevel):
 
     def set_type_by_index(self, index = None, menu = None, zero_based = False):
         # Set our type based on index value
-        if not isinstance(index,int):
+        if not isinstance(index,(int,long)):
             # Try to get the keysym
             try: index = int(getattr(index,"keysym",None).replace("KP_",""))
             except: return # Borked value
@@ -2683,6 +2721,8 @@ class PlistWindow(tk.Toplevel):
             values[1] = datetime.datetime.now().strftime("%b %d, %Y %I:%M:%S %p")
         elif value.lower() == "data":
             values[1] = "<>" if self.data_type_string.get().lower() == "hex" else ""
+        elif value.lower() == "uid":
+            values[1] = "0"
         else:
             values[1] = ""
         # Set the values
