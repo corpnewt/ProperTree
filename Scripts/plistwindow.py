@@ -1330,12 +1330,18 @@ class PlistWindow(tk.Toplevel):
             kexts.append(kext)
         new_kexts = []
         for kext in kexts:
-            if not isinstance(kext,dict):
-                # Not a dict - skip it
+            if not isinstance(kext,dict) or not kext.get("BundlePath"):
+                # Not a dict, or missing BundlePath - skip it
                 continue
-            if not kext.get("BundlePath","").lower() in [x[0]["BundlePath"].lower() for x in kext_list]:
+            # Get our first match based on BundlePath which should be unique
+            kext_match = next((k for k,i in kext_list if k["BundlePath"].lower() == kext["BundlePath"].lower()),None)
+            if kext_match is None:
                 # Not there, skip it
                 continue
+            # Make sure the ExecutablePath and PlistPath are updated if different
+            for check in ("ExecutablePath","PlistPath"):
+                if kext.get(check,"") != kext_match.get(check,""):
+                    kext[check] = kext_match.get(check,"")
             new_kexts.append(kext)
         # Let's check inheritance via the info
         # We need to ensure that no 2 kexts consider each other as parents
