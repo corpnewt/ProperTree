@@ -1,4 +1,4 @@
 {
-    "version": "0.2.2",
-    "changes": "- Add OC 0.9.2 hashes.\n- Add support for UIDs in binary plists.\n- Fix bug with Kernel -> Add types in OC Snapshot."
+    "version": "0.2.3",
+    "changes": "- Add OC 0.9.3 hashes.\n- Ensure ExecutablePath and PlistPath update in Snapshot."
 }
