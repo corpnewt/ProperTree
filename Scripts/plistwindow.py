@@ -1863,7 +1863,6 @@ class PlistWindow(tk.Toplevel):
             # Let's set the drag start globals
             self.drag_start = (event.x, event.y)
             self.drag_undo = None
-            self.dragging = True
             return
         # Find how far we've drug so far
         if not self.dragging:
@@ -1872,6 +1871,8 @@ class PlistWindow(tk.Toplevel):
             if drag_distance < self.controller.drag_scale.get():
                 # Not drug enough
                 return
+            # We've passed the threshold, start dragging
+            self.dragging = True
         # Save a reference to the item
         if not self.drag_undo:
             self.drag_undo = {"from":self._tree.parent(target),"index":self._tree.index(target),"name":self._tree.item(target,"text")}
