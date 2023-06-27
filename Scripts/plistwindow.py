@@ -332,6 +332,10 @@ class PlistWindow(tk.Toplevel):
         self.dragging = False
         self.drag_start = None
         self.drag_open = None
+        self.key_history = ""
+        self.last_key = 0
+        self.last_node_result = None
+        self.last_key_threhsold = 1 # Ignore after 1 second
         self.show_find_replace = False
         self.show_type = False
         self.type_menu = tk.Menu(self, tearoff=0)
@@ -426,6 +430,7 @@ class PlistWindow(tk.Toplevel):
         self._tree.bind("<BackSpace>", self.remove_row)
         self._tree.bind("<Return>", self.start_editing)
         self._tree.bind("<KP_Enter>", self.start_editing)
+        self._tree.bind("<KeyPress>", self.quick_search)
         self.bind("<FocusIn>", self.got_focus)
 
         # Set type and bool bindings
@@ -571,6 +576,73 @@ class PlistWindow(tk.Toplevel):
         self.draw_frames()
         self.entry_popup = None
         self.controller.set_window_opacity(window=self)
+
+    def quick_search(self, event=None):
+        # Check if we have a char, or a tab
+        char = getattr(event,"char",None)
+        if not char:
+            if event.keysym=="Tab":
+                char = "\t"
+            else:
+                return # No key we care about was pressed
+        event_time = time.time()
+        # Helper to match key starts, case-insensitively
+        def get_match(nodes,text,full=False):
+            for node in nodes:
+                parent_type = self.get_check_type(self._tree.parent(node)).lower()
+                if parent_type == "array": continue
+                # We can check the name
+                name = self._tree.item(node,"text")
+                if (full and name.lower() == text.lower()) or (not full and name.lower().startswith(text.lower())):
+                    # Got a match - return the first
+                    return node
+            return None # Found nothing
+        # Get all the visible nodes
+        nodes  = self.iter_nodes()
+        # Gather our event info
+        if event_time - self.last_key >= self.last_key_threhsold:
+            # We're beyond our time - reset the search
+            self.key_history = char.strip("\t")
+            # Reset the node
+            self.last_node_result = self._tree.focus()
+        else:
+            # Just append - still within our threshold
+            self.key_history += char.strip("\t")
+        # Ensure we have a node result set
+        self.last_node_result = self.last_node_result or self._tree.focus()
+        # Save the new event_time
+        self.last_key = event_time
+        reverse = False
+        # Check if we just pressed tab this time
+        if char == "\t":
+            if event.state & 1: # Shift+tab, reverse the search
+                reverse = True
+            # We're just tab searching - override the last node result
+            self.last_node_result = self._tree.focus()
+            # Set the key history to the last node's key if we don't have a search result
+            if not self.key_history:
+                parent_type = self.get_check_type(self._tree.parent(self.last_node_result)).lower()
+                if parent_type == "array":
+                    return # Bail - can't tab through arrays
+                self.key_history = self._tree.item(self.last_node_result,"text")
+        # Build the search list to focus on the next item
+        before = []
+        after = []
+        found = False
+        for n in nodes:
+            if n == self.last_node_result:
+                found = True
+                continue # Skip the current node so we don't try to match it
+            if not found:
+                before.append(n)
+            else:
+                after.append(n)
+        # Set our starting point at the current node's index - omitting the current node
+        search = after+before
+        # Search for the next match
+        m = get_match(search[::-1] if reverse else search,self.key_history)
+        if m: # Got something - select it
+            self.select(m,see=True,alternate=False)
 
     def _get_menu_commands(self, menu = None, label = False):
         if not menu: return []
