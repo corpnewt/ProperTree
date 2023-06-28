@@ -430,8 +430,12 @@ class PlistWindow(tk.Toplevel):
         self._tree.bind("<BackSpace>", self.remove_row)
         self._tree.bind("<Return>", self.start_editing)
         self._tree.bind("<KP_Enter>", self.start_editing)
-        self._tree.bind("<KeyPress>", self.quick_search)
         self.bind("<FocusIn>", self.got_focus)
+        # Only bind quick_search if we're on macOS or Windows - Linux
+        # seems to pass the ctrl key in every event which breaks this
+        # functionality.
+        if os.name=="nt" or sys.platform=="darwin":
+            self._tree.bind("<KeyPress>", self.quick_search)
 
         # Set type and bool bindings
         self._tree.bind("<{}-Up>".format(key), lambda x:self.cycle_type(increment=False))
@@ -588,9 +592,9 @@ class PlistWindow(tk.Toplevel):
         # Check for everything except shift (0x1), caps lock (0x2), and/or num lock (0x10)
         # 0xFFEC = 0xFFFF - (0x0001 + 0x0002 + 0x0010)
         mod_mask = 0xFFEC
-        if sys.platform != "darwin":
+        if os.name == "nt":
             # If we're not on macOS - also allow 0x0008, this seems to be passed by default in 
-            # Windows (at least).
+            # Windows.
             mod_mask -= 0x0008
         if event.state & mod_mask:
             return # Some other modifier was held - bail
@@ -2280,7 +2284,8 @@ class PlistWindow(tk.Toplevel):
     def close_window(self, event = None, check_saving = True, check_close = True):
         # Check if we need to save first, then quit if we didn't cancel
         if check_saving and (self.saving or self.check_save() is None):
-            # User cancelled or we failed to save, bail
+            # User cancelled or we failed to save, lift the window and bail
+            self.controller.lift_window(self)
             return None
         # Destroy our current window - and initiate a check in the controller
         self.destroy()
