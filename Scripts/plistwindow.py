@@ -585,6 +585,10 @@ class PlistWindow(tk.Toplevel):
                 char = "\t"
             else:
                 return # No key we care about was pressed
+        # Check for everything except shift (0x1), caps lock (0x2), and/or num lock (0x10)
+        # 0xFFEC = 0xFFFF - (0x0001 + 0x0002 + 0x0010)
+        if event.state & 0xFFEC:
+            return # Some other modifier was held - bail
         event_time = time.time()
         # Helper to match key starts, case-insensitively
         def get_match(nodes,text,full=False):
@@ -615,7 +619,7 @@ class PlistWindow(tk.Toplevel):
         reverse = False
         # Check if we just pressed tab this time
         if char == "\t":
-            if event.state & 1: # Shift+tab, reverse the search
+            if event.state & 0x0001: # Shift+tab, reverse the search
                 reverse = True
             # We're just tab searching - override the last node result
             self.last_node_result = self._tree.focus()
