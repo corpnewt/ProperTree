@@ -587,7 +587,12 @@ class PlistWindow(tk.Toplevel):
                 return # No key we care about was pressed
         # Check for everything except shift (0x1), caps lock (0x2), and/or num lock (0x10)
         # 0xFFEC = 0xFFFF - (0x0001 + 0x0002 + 0x0010)
-        if event.state & 0xFFEC:
+        mod_mask = 0xFFEC
+        if sys.platform != "darwin":
+            # If we're not on macOS - also allow 0x0008, this seems to be passed by default in 
+            # Windows (at least).
+            mod_mask -= 0x0008
+        if event.state & mod_mask:
             return # Some other modifier was held - bail
         event_time = time.time()
         # Helper to match key starts, case-insensitively
