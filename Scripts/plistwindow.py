@@ -336,6 +336,7 @@ class PlistWindow(tk.Toplevel):
         self.last_key = 0
         self.last_node_result = None
         self.last_key_threhsold = 1 # Ignore after 1 second
+        self.mod_bitmask = self.get_mod_bitmask() # Get a bit mask for excluded modifier keys
         self.show_find_replace = False
         self.show_type = False
         self.type_menu = tk.Menu(self, tearoff=0)
@@ -431,11 +432,7 @@ class PlistWindow(tk.Toplevel):
         self._tree.bind("<Return>", self.start_editing)
         self._tree.bind("<KP_Enter>", self.start_editing)
         self.bind("<FocusIn>", self.got_focus)
-        # Only bind quick_search if we're on macOS or Windows - Linux
-        # seems to pass the ctrl key in every event which breaks this
-        # functionality.
-        if os.name=="nt" or sys.platform=="darwin":
-            self._tree.bind("<KeyPress>", self.quick_search)
+        self._tree.bind("<KeyPress>", self.quick_search)
 
         # Set type and bool bindings
         self._tree.bind("<{}-Up>".format(key), lambda x:self.cycle_type(increment=False))
@@ -581,7 +578,33 @@ class PlistWindow(tk.Toplevel):
         self.entry_popup = None
         self.controller.set_window_opacity(window=self)
 
+    def get_mod_bitmask(self):
+        # Helper to return a bitmask for modifier keys based on the OS we're running
+        bit_mask = 0xFFFFFFFF # Start with a full mask, then whitelist as we go
+        if os.name == "nt": # Windows
+            bit_mask -= 0x1 # Shift
+            bit_mask -= 0x2 # Caps Lock
+            # bit_mask -= 0x4 # Ctrl, don't whitelist - used for keybinds
+            bit_mask -= 0x8 # Num Lock
+            # bit_mask -= 0x20000 # Alt, don't whitelist - used for File keybinds
+        elif sys.platform == "darwin": # macOS
+            bit_mask -= 0x1 # Shift
+            bit_mask -= 0x2 # Caps Lock
+            bit_mask -= 0x4 # Ctrl
+            # bit_mask -= 0x8 # Cmd, don't whitelist - used for keybinds
+            bit_mask -= 0x10 # Alt
+        else: # Assume Linux at this point
+            bit_mask -= 0x1 # Shift
+            bit_mask -= 0x2 # Caps Lock
+            # bit_mask -= 0x4 # Ctrl, don't whitelist - used for keybinds
+            bit_mask -= 0x8 # Alt
+            bit_mask -= 0x10 # Num Lock
+            bit_mask -= 0x40 # Winkey
+        return bit_mask
+
     def quick_search(self, event=None):
+        if event.state & self.mod_bitmask:
+            return # Some disallowed modifier was held - bail
         # Check if we have a char, or a tab
         char = getattr(event,"char",None)
         if not char:
@@ -589,15 +612,6 @@ class PlistWindow(tk.Toplevel):
                 char = "\t"
             else:
                 return # No key we care about was pressed
-        # Check for everything except shift (0x1), caps lock (0x2), and/or num lock (0x10)
-        # 0xFFEC = 0xFFFF - (0x0001 + 0x0002 + 0x0010)
-        mod_mask = 0xFFEC
-        if os.name == "nt":
-            # If we're not on macOS - also allow 0x0008, this seems to be passed by default in 
-            # Windows.
-            mod_mask -= 0x0008
-        if event.state & mod_mask:
-            return # Some other modifier was held - bail
         event_time = time.time()
         # Helper to match key starts, case-insensitively
         def get_match(nodes,text,full=False):
