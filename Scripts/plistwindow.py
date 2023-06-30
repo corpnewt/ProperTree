@@ -426,8 +426,10 @@ class PlistWindow(tk.Toplevel):
         self._tree.bind("<Button-1>",self.clicked)
         self._tree.bind("<{}-=>".format(key), self.new_row)
         self._tree.bind("<{}-plus>".format(key), self.new_row)
+        self._tree.bind("<{}-KP_Add>".format(key), self.new_row)
         self._tree.bind("<{}-minus>".format(key), self.remove_row)
         self._tree.bind("<{}-_>".format(key), self.remove_row)
+        self._tree.bind("<{}-KP_Subtract>".format(key), self.remove_row)
         self._tree.bind("<Delete>", self.remove_row)
         self._tree.bind("<BackSpace>", self.remove_row)
         self._tree.bind("<Return>", self.start_editing)
@@ -594,6 +596,7 @@ class PlistWindow(tk.Toplevel):
             bit_mask -= 0x4 # Ctrl
             # bit_mask -= 0x8 # Cmd, don't whitelist - used for keybinds
             bit_mask -= 0x10 # Alt
+            bit_mask -= 0x20 # Num Lock - any key pressed on the numpad uses this state
         else: # Assume Linux at this point
             bit_mask -= 0x1 # Shift
             bit_mask -= 0x2 # Caps Lock
