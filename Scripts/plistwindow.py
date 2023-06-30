@@ -428,7 +428,7 @@ class PlistWindow(tk.Toplevel):
         self._tree.bind("<{}-plus>".format(key), self.new_row)
         self._tree.bind("<{}-KP_Add>".format(key), self.new_row)
         self._tree.bind("<{}-minus>".format(key), self.remove_row)
-        self._tree.bind("<{}-_>".format(key), self.remove_row)
+        self._tree.bind("<{}-underscore>".format(key), self.remove_row)
         self._tree.bind("<{}-KP_Subtract>".format(key), self.remove_row)
         self._tree.bind("<Delete>", self.remove_row)
         self._tree.bind("<BackSpace>", self.remove_row)
