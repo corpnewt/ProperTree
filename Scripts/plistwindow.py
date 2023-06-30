@@ -424,9 +424,10 @@ class PlistWindow(tk.Toplevel):
         self._tree.bind("<B1-Motion>", self.move_selection)
         self._tree.bind("<ButtonRelease-1>",self.confirm_drag)
         self._tree.bind("<Button-1>",self.clicked)
-        self._tree.bind("=", self.new_row)
-        self._tree.bind("+", self.new_row)
-        self._tree.bind("-", self.remove_row)
+        self._tree.bind("<{}-=>".format(key), self.new_row)
+        self._tree.bind("<{}-plus>".format(key), self.new_row)
+        self._tree.bind("<{}-minus>".format(key), self.remove_row)
+        self._tree.bind("<{}-_>".format(key), self.remove_row)
         self._tree.bind("<Delete>", self.remove_row)
         self._tree.bind("<BackSpace>", self.remove_row)
         self._tree.bind("<Return>", self.start_editing)
@@ -3066,15 +3067,15 @@ class PlistWindow(tk.Toplevel):
         if cell in ("",self.get_root_node()):
             # Top level - get the Root
             if self.get_check_type(self.get_root_node()).lower() in ("array","dictionary"):
-                popup_menu.add_command(label="New top level entry{}".format(" (+)" if is_mac else ""), command=lambda:self.new_row(self.get_root_node()),accelerator=None if is_mac else "(+)")
+                popup_menu.add_command(label="New top level entry{}".format(" (Cmd +)" if is_mac else ""), command=lambda:self.new_row(self.get_root_node()),accelerator=None if is_mac else "(Ctrl +)")
         else:
             if self.get_check_type(cell).lower() in ("dictionary","array") and (self._tree.item(cell,"open") or not len(self._tree.get_children(cell))):
-                popup_menu.add_command(label="New child under '{}'{}".format(self._tree.item(cell,"text")," (+)" if is_mac else ""), command=lambda:self.new_row(cell),accelerator=None if is_mac else "(+)")
+                popup_menu.add_command(label="New child under '{}'{}".format(self._tree.item(cell,"text")," (Cmd +)" if is_mac else ""), command=lambda:self.new_row(cell),accelerator=None if is_mac else "(Ctrl +)")
                 popup_menu.add_command(label="New sibling of '{}'".format(self._tree.item(cell,"text")), command=lambda:self.new_row(cell,True))
-                popup_menu.add_command(label="Remove '{}' and any children{}".format(self._tree.item(cell,"text")," (-)" if is_mac else ""), command=lambda:self.remove_row(cell),accelerator=None if is_mac else "(-)")
+                popup_menu.add_command(label="Remove '{}' and any children{}".format(self._tree.item(cell,"text")," (Cmd -)" if is_mac else ""), command=lambda:self.remove_row(cell),accelerator=None if is_mac else "(Ctrl -)")
             else:
-                popup_menu.add_command(label="New sibling of '{}'{}".format(self._tree.item(cell,"text")," (+)" if is_mac else ""), command=lambda:self.new_row(cell),accelerator=None if is_mac else "(+)")
-                popup_menu.add_command(label="Remove '{}'{}".format(self._tree.item(cell,"text")," (-)" if is_mac else ""), command=lambda:self.remove_row(cell),accelerator=None if is_mac else "(-)")
+                popup_menu.add_command(label="New sibling of '{}'{}".format(self._tree.item(cell,"text")," (Cmd +)" if is_mac else ""), command=lambda:self.new_row(cell),accelerator=None if is_mac else "(Ctrl +)")
+                popup_menu.add_command(label="Remove '{}'{}".format(self._tree.item(cell,"text")," (Cmd -)" if is_mac else ""), command=lambda:self.remove_row(cell),accelerator=None if is_mac else "(Ctrl -)")
         # Let's get our sorting menus
         parent = cell if cell in ("",self.get_root_node()) else self._tree.parent(cell)
         if self.get_check_type(parent).lower() in ("dictionary","array"):
