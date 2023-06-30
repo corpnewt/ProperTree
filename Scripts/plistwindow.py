@@ -424,7 +424,7 @@ class PlistWindow(tk.Toplevel):
         self._tree.bind("<B1-Motion>", self.move_selection)
         self._tree.bind("<ButtonRelease-1>",self.confirm_drag)
         self._tree.bind("<Button-1>",self.clicked)
-        self._tree.bind("<{}-=>".format(key), self.new_row)
+        self._tree.bind("<{}-equal>".format(key), self.new_row)
         self._tree.bind("<{}-plus>".format(key), self.new_row)
         self._tree.bind("<{}-KP_Add>".format(key), self.new_row)
         self._tree.bind("<{}-minus>".format(key), self.remove_row)
