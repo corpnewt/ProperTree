@@ -1985,8 +1985,11 @@ class PlistWindow(tk.Toplevel):
         else:
             move_to = self._tree.index(self._tree.identify_row(event.y))
         tv_item = self._tree.identify('item', event.x, event.y)
-        tv_item = self.get_root_node() if tv_item == "" else tv_item # Force Root node as needed
-        if not self.get_check_type(tv_item).lower() in ("dictionary","array") or not self._tree.item(tv_item,"open"):
+        tv_item = tv_item or self.get_root_node() # Force Root node as needed
+        # Check if it's not a collection - or if it is, if it has children and is closed,
+        # then keep it a sibling.
+        if not self.get_check_type(tv_item).lower() in ("dictionary","array") \
+        or (len(self._tree.get_children(tv_item)) and not self._tree.item(tv_item,"open")):
             # Keep it a sibling
             if not tv_item == self.get_root_node():
                 tv_item = self._tree.parent(tv_item)
@@ -1998,13 +2001,16 @@ class PlistWindow(tk.Toplevel):
             try:
                 x,y,width,height = self._tree.bbox(rowid, column)
             except:
-                # We drug outside the possible bounds - ignore this
+                # We drug outside the possible bounds
+                if move_to == len(self.iter_nodes()): # Drug down
+                    self._tree.move(target,self.get_root_node(),move_to)
                 return
             if y+(height/2)<=event.y<y+height and self._tree.parent(tv_item) != "":
                 # Just above should add as a sibling
                 tv_item = self._tree.parent(tv_item)
             else:
-                # Just below should add it at item 0
+                # Just below should add it at item 0 and make sure the element is opened
+                self._tree.item(tv_item,open=True)
                 move_to = 0
         # Retain the open state, and make sure the selected node is closed
         if self.drag_open is None: self.drag_open = self._tree.item(target,"open")
@@ -2410,10 +2416,9 @@ class PlistWindow(tk.Toplevel):
             # Nothing to paste
             return 'break'
         node = "" if not len(self._tree.selection()) else self._tree.selection()[0]
-        to_open = self._tree.item(node,"open")
         # Verify the type - or get the parent
         t = self.get_check_type(node).lower()
-        if not node == "" and not (t in ("dictionary","array") and self._tree.item(node,"open")):
+        if not node == "" and (not t in ("dictionary","array") or (self._tree.get_children(node) and not self._tree.item(node,"open"))):
             node = self._tree.parent(node)
         node = self.get_root_node() if node == "" else node # Force Root node if need be
         t = self.get_check_type(node).lower()
@@ -2448,7 +2453,7 @@ class PlistWindow(tk.Toplevel):
                     names.append(key)
                 last = self.add_node(val, node, key)
                 add_list.append({"type":"add","cell":last})
-                self._tree.item(last,open=to_open)
+                self._tree.item(last,open=True)
         first = self.get_root_node() if not len(add_list) else add_list[0].get("cell")
         self.add_undo(add_list)
         self._ensure_edited()
