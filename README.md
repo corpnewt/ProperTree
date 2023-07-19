@@ -61,9 +61,9 @@ git clone https://github.com/corpnewt/ProperTree
 
   Typically, an OC **Clean** Snapshot should only be used the first time you snapshot to ensure any sample entries in the config.plist are removed and added anew.  Every subsequent snapshot should be a regular OC Snapshot to ensure any customizations you've made are preserved.
 
-* **ProperTree opens a black window on macOS Monterey (12.x)**
+* **ProperTree opens a black window on macOS Monterey (12.x) and Newer**
 
-  It appears the default tk implementation that ships with macOS Monterey doesn't display correctly.  A workaround is to download and install the latest build of python 3 from python.org (found [here](https://www.python.org/downloads/macos/)) which has a compatible tk bundled, then use the `buildapp-select.command` located in ProperTree's `Scripts` directory to build an application bundle targeting the installed python's path.  You can then leverage the `ProperTree.app` bundle it creates.
+  It appears the default tk implementation that ships with macOS Monterey (and the version installed with the Command Line Tools) doesn't display correctly.  A workaround is to download and install the latest build of python from python.org (found [here](https://www.python.org/downloads/macos/)) which has a compatible tk bundled, then use the `buildapp-select.command` located in ProperTree's `Scripts` directory to build an application bundle targeting the installed python's path.  You can then leverage the `ProperTree.app` bundle it creates.
   
 * **ProperTree cannot open or save plist files on macOS Monterey (12.x)**
 
