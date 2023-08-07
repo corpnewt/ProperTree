@@ -1,4 +1,4 @@
 {
-    "version": "0.2.3",
-    "changes": "- Add OC 0.9.3 hashes.\n- Ensure ExecutablePath and PlistPath update in Snapshot."
+    "version": "0.2.4",
+    "changes": "- Add OC 0.9.4 hashes.\n- Add quick search functionality.\n- Fix dragging dead zone.\n- Require modifiers with +/- to add/remove nodes."
 }
