@@ -658,6 +658,12 @@ class ProperTree:
                 title="No Updates Available",
                 message="You are currently running the latest version of ProperTree ({}).".format(our_version)
             )
+        
+        else:
+            # Nothing to notify about - and not user initiated
+            return self.reset_update_button()
+        
+        # Reset the update button after notifying
         self.reset_update_button()
         # If we got here - we displayed some message, let's lift our window to the top
         windows = self.stackorder(self.tk,include_defaults=True)
