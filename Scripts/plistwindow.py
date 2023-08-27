@@ -589,6 +589,7 @@ class PlistWindow(tk.Toplevel):
             bit_mask -= 0x2 # Caps Lock
             # bit_mask -= 0x4 # Ctrl, don't whitelist - used for keybinds
             bit_mask -= 0x8 # Num Lock
+            bit_mask -= 0x20 # Scroll Lock
             # bit_mask -= 0x20000 # Alt, don't whitelist - used for File keybinds
         elif sys.platform == "darwin": # macOS
             bit_mask -= 0x1 # Shift
