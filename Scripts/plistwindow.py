@@ -2419,7 +2419,9 @@ class PlistWindow(tk.Toplevel):
         node = "" if not len(self._tree.selection()) else self._tree.selection()[0]
         # Verify the type - or get the parent
         t = self.get_check_type(node).lower()
+        index = 0
         if not node == "" and (not t in ("dictionary","array") or (self._tree.get_children(node) and not self._tree.item(node,"open"))):
+            index = self._tree.index(node)+1
             node = self._tree.parent(node)
         node = self.get_root_node() if node == "" else node # Force Root node if need be
         t = self.get_check_type(node).lower()
@@ -2447,12 +2449,14 @@ class PlistWindow(tk.Toplevel):
         if isinstance(plist_data,dict):
             dict_list = list(plist_data.items()) if not self.controller.settings.get("sort_dict",False) else sorted(list(plist_data.items()))
             names = [self._tree.item(x,"text") for x in self._tree.get_children(node)] if t == "dictionary" else []
-            for (key,val) in dict_list:
+            for (key,val) in dict_list[::-1]:
                 if t == "dictionary":
                     # create a unique name
                     key = self.get_unique_name(str(key),names)
                     names.append(key)
                 last = self.add_node(val, node, key)
+                # Move it into place
+                self._tree.move(last,node,index)
                 add_list.append({"type":"add","cell":last})
                 self._tree.item(last,open=True)
         first = self.get_root_node() if not len(add_list) else add_list[0].get("cell")
@@ -2656,7 +2660,9 @@ class PlistWindow(tk.Toplevel):
         if target == self.get_root_node() and not self.get_check_type(self.get_root_node()).lower() in ("array","dictionary"):
             return # Can't add to a non-collection!
         new_cell = None
+        index = 0
         if not self.get_check_type(target).lower() in ("dictionary","array") or force_sibling or (not self._tree.item(target,"open") and len(self._tree.get_children(target))):
+            index = self._tree.index(target)+1
             target = self._tree.parent(target)
         target = self.get_root_node() if target == "" else target # Force the Root node if need be
         # create a unique name
@@ -2664,7 +2670,7 @@ class PlistWindow(tk.Toplevel):
         if self.get_check_type(target).lower() == "dictionary":
             names = [self._tree.item(x,"text")for x in self._tree.get_children(target)]
             name = self.get_unique_name("New String",names)
-        new_cell = self._tree.insert(target, "end", text=name, values=(self.menu_code + " String","",self.drag_code,))
+        new_cell = self._tree.insert(target, index, text=name, values=(self.menu_code + " String","",self.drag_code,))
         # Verify that array names are updated to show the proper indexes
         if self.get_check_type(target).lower() == "array":
             self.update_array_counts(target)
