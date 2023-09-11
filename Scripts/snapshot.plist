@@ -16,6 +16,7 @@
 			<string>ed86ac6bb825eff2e48ec359a1a31dcc</string>
 			<string>1d5cba95ef289a3b30f792b0170a259f</string>
 			<string>547eb836f5db2831ed86c9769fbab658</string>
+			<string>7135c321c1d28ba13adf01bdd0fa3a08</string>
 		</array>
 		<key>kext_add</key>
 		<dict>
@@ -41,6 +42,7 @@
 			<string>44a58f86045ad4c0783bdb78b9e21c2e</string>
 			<string>fd45ddeb808efd977ac0fbeb549286ec</string>
 			<string>ebe83ed9e53fba523af024f31ee55605</string>
+			<string>d6567203f0d222a026b5ecfcbaea81c4</string>
 		</array>
 		<key>tool_add</key>
 		<dict>
