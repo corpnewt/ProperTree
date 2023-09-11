@@ -1,4 +1,4 @@
 {
-    "version": "0.2.4",
-    "changes": "- Add OC 0.9.4 hashes.\n- Add quick search functionality.\n- Fix dragging dead zone.\n- Require modifiers with +/- to add/remove nodes."
+    "version": "0.2.5",
+    "changes": "- Add OC 0.9.5 hashes.\n- Ignore scroll lock in the mod_bitmask on Windows.\n- Create and paste nodes under the selected node."
 }
