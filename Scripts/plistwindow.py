@@ -2905,7 +2905,7 @@ class PlistWindow(tk.Toplevel):
             cell = self._tree.parent(current_cell)
             if not self.get_check_type(cell).lower() == "array":
                 # Our name isn't just a number add the key
-                path.append(self._tree.item(current_cell,"text").replace("/","\/"))
+                path.append(self._tree.item(current_cell,"text").replace("/","\\/"))
             else:
                 path.append("*")
             current_cell = cell            
