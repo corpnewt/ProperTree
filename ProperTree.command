@@ -13,6 +13,10 @@ target="${script%.*}.py"
 #   FORCE = Use py3
 use_py3="TRUE"
 
+# We'll parse if the first argument passed is
+# --install-python and if so, we'll just install
+just_installing="FALSE"
+
 tempdir=""
 
 compare_to_version () {
@@ -123,11 +127,15 @@ download_py () {
     echo "Cleaning up..."
     cleanup
     echo
-    # Now we check for py again
-    echo "Rechecking py..."
-    downloaded="TRUE"
-    clear
-    main
+    if [ "$just_installing" == "TRUE" ]; then
+        echo "Done."
+    else
+        # Now we check for py again
+        echo "Rechecking py..."
+        downloaded="TRUE"
+        clear
+        main
+    fi
 }
 
 cleanup () {
@@ -298,4 +306,9 @@ downloaded="FALSE"
 # our OS version is 10.15 or greater.
 check_py3_stub="$(compare_to_version "3" "10.15")"
 trap cleanup EXIT
-main
+if [ "$1" == "--install-python" ]; then
+    just_installing="TRUE"
+    download_py
+else
+    main
+fi
