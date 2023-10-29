@@ -534,7 +534,7 @@ class ProperTree:
     def get_dark(self):
         if os.name=="nt":
             # Get the registry entry to tell us if we're in dark/light mode
-            p = subprocess.Popen(["reg","query","HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize","/v","AppsUseLightTheme"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            p = subprocess.Popen(["reg","query","HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize","/v","AppsUseLightTheme"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             c = p.communicate()
             return c[0].decode("utf-8", "ignore").strip().lower().split(" ")[-1] in ("","0x0")
         elif str(sys.platform) != "darwin":
