@@ -61,6 +61,10 @@ git clone https://github.com/corpnewt/ProperTree
 
   Typically, an OC **Clean** Snapshot should only be used the first time you snapshot to ensure any sample entries in the config.plist are removed and added anew.  Every subsequent snapshot should be a regular OC Snapshot to ensure any customizations you've made are preserved.
 
+* **Can't click anything on Sonoma (14.x) and Newer**
+
+  This appears to manifest when using python 3.11.x and older due to some isssue with tk and macOS.  Updating to at least python 3.12.0 (found [here](https://www.python.org/downloads/macos/)) appears to fix it.  If you are unable to update your python version, you can also move the window around before trying to click the elements in the treeview.
+
 * **ProperTree opens a black window on macOS Monterey (12.x) and Newer**
 
   It appears the default tk implementation that ships with macOS Monterey (and the version installed with the Command Line Tools) doesn't display correctly.  A workaround is to download and install the latest build of python from python.org (found [here](https://www.python.org/downloads/macos/)) which has a compatible tk bundled, then use the `buildapp-select.command` located in ProperTree's `Scripts` directory to build an application bundle targeting the installed python's path.  You can then leverage the `ProperTree.app` bundle it creates.
