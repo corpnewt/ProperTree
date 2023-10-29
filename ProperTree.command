@@ -108,6 +108,7 @@ download_py () {
     fi
     echo
     echo "Running python install package..."
+    echo
     sudo installer -pkg "$tempdir/python.pkg" -target /
     if [ "$?" != "0" ]; then
         echo
@@ -115,15 +116,24 @@ download_py () {
         echo
         exit $?
     fi
-    echo
+    # Now we expand the package and look for a shell update script
+    pkgutil --expand "$tempdir/python.pkg" "$tempdir/python"
+    if [ -e "$tempdir/python/Python_Shell_Profile_Updater.pkg/Scripts/postinstall" ]; then
+        # Run the script
+        echo
+        echo "Updating PATH..."
+        echo
+        "$tempdir/python/Python_Shell_Profile_Updater.pkg/Scripts/postinstall"
+    fi
     vers_folder="Python $(echo "$vers" | cut -d'.' -f1 -f2)"
     if [ -f "/Applications/$vers_folder/Install Certificates.command" ]; then
         # Certs script exists - let's execute that to make sure our certificates are updated
+        echo
         echo "Updating Certificates..."
         echo
         "/Applications/$vers_folder/Install Certificates.command"
-        echo 
     fi
+    echo
     echo "Cleaning up..."
     cleanup
     echo
