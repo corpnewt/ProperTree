@@ -1,4 +1,4 @@
 {
-    "version": "0.2.5",
-    "changes": "- Add OC 0.9.5 hashes.\n- Ignore scroll lock in the mod_bitmask on Windows.\n- Create and paste nodes under the selected node."
+    "version": "0.2.6",
+    "changes": "- Add OC 0.9.6 hashes."
 }
