@@ -1238,7 +1238,7 @@ class PlistWindow(tk.Toplevel):
         return "" # Couldn't determine hash :(
 
     def oc_snapshot(self, event = None, clean = False):
-        target_dir = os.path.dirname(self.current_plist) if self.current_plist and os.path.exists(os.path.dirname(self.current_plist)) else None
+        target_dir = self.controller.settings.get("last_snapshot_path") or (os.path.dirname(self.current_plist) if self.current_plist and os.path.exists(os.path.dirname(self.current_plist)) else None)
         oc_folder = fd.askdirectory(title="Select OC Folder:",initialdir=target_dir)
         self.controller.lift_window(self) # Lift the window to continue catching events
         if not len(oc_folder):
@@ -1274,8 +1274,8 @@ class PlistWindow(tk.Toplevel):
                 mb.showerror("Incorrect OC Folder Structure", "{} exists, but is not a directory.\nPlease make sure you're selecting a valid OC folder.".format(x), parent=self)
                 return
 
-        # Folders are valid - lets work through each section
-
+        # Folders are valid - let's save a reference for next time and work through each section
+        self.controller.settings["last_snapshot_path"] = oc_folder
         # Let's get the hash of OpenCore.efi, compare to a known list, and then compare that version to our snapshot_version if found
         oc_hash = self.get_hash(oc_efi)
         # Let's get the version of the snapshot that matches our target, and that matches our hash if any
@@ -1365,6 +1365,28 @@ class PlistWindow(tk.Toplevel):
             new_add.append(aml)
             # Check path length
             long_paths.extend(self.check_path_length(aml))
+        # Make sure we don't have duplicates
+        acpi_enabled = []
+        acpi_duplicates = []
+        acpi_duplicates_disabled = []
+        for a in new_add:
+            if a.get("Enabled"):
+                if a.get("Path","") in acpi_enabled:
+                    # Got a dupe - shallow copy and disable
+                    new_a = {}
+                    for key in a: new_a[key] = a[key]
+                    new_a["Enabled"] = False
+                    acpi_duplicates_disabled.append(new_a)
+                    if not a.get("Path","") in acpi_duplicates:
+                        acpi_duplicates.append(a.get("Path",""))
+                else:
+                    # First hit - add the Path to acpi_enabled
+                    acpi_enabled.append(a.get("Path",""))
+                    acpi_duplicates_disabled.append(a)
+        if len(acpi_duplicates):
+            if mb.askyesno("Duplicate ACPI Paths","Disable the following ACPI entries with duplicate Paths?\n\n{}".format("\n".join(acpi_duplicates)),parent=self):
+                new_add = acpi_duplicates_disabled
+        # Save the results
         tree_dict["ACPI"]["Add"] = new_add
 
         # Now we need to walk the kexts
@@ -1439,7 +1461,7 @@ class PlistWindow(tk.Toplevel):
                 continue
             # Get our first match based on BundlePath which should be unique
             kext_match = next((k for k,i in kext_list if k["BundlePath"].lower() == kext["BundlePath"].lower()),None)
-            if kext_match is None:
+            if not kext_match:
                 # Not there, skip it
                 continue
             # Make sure the ExecutablePath and PlistPath are updated if different
@@ -1451,13 +1473,13 @@ class PlistWindow(tk.Toplevel):
         # We need to ensure that no 2 kexts consider each other as parents
         unordered_kexts = []
         for x in new_kexts:
-            x = next((y for y in kext_list if y[0].get("BundlePath","") == x.get("BundlePath","")),None)
-            if not x: continue
-            parents = [next(((z,y[1]) for z in new_kexts if z.get("BundlePath","") == y[0].get("BundlePath","")),[]) for y in kext_list if y[1].get("cfbi",None) in x[1].get("osbl",[])]
-            children = [next((z for z in new_kexts if z.get("BundlePath","") == y[0].get("BundlePath","")),[]) for y in kext_list if x[1].get("cfbi",None) in y[1].get("osbl",[])]
-            parents = [y for y in parents if not y[0] in children and not y[0].get("BundlePath","") == x[0].get("BundlePath","")]
+            info = next((y[1] for y in kext_list if y[0].get("BundlePath","") == x.get("BundlePath","")),None)
+            if not info: continue
+            parents = [(z,y[1]) for z in new_kexts for y in kext_list if z.get("BundlePath","") == y[0].get("BundlePath","") if y[1].get("cfbi",None) in info.get("osbl",[])]
+            children = [next((z for z in new_kexts if z.get("BundlePath","") == y[0].get("BundlePath","")),[]) for y in kext_list if info.get("cfbi",None) in y[1].get("osbl",[])]
+            parents = [y for y in parents if not y[0] in children and not y[0].get("BundlePath","") == x.get("BundlePath","")]
             unordered_kexts.append({
-                "kext":x[0],
+                "kext":x,
                 "parents":parents
             })
         ordered_kexts = []
@@ -1468,10 +1490,7 @@ class PlistWindow(tk.Toplevel):
                 # Gather a list of enabled/disabled parents - and ensure we properly populate
                 # our disabled_parents list
                 enabled_parents = [x[1].get("cfbi") for x in kext["parents"] if x[0].get("Enabled")]
-                disabled_add = [x for x in kext["parents"] if x[0].get("Enabled") == False and not x[1].get("cfbi") in enabled_parents and not any((x[1].get("cfbi")==y[1].get("cfbi") for y in disabled_parents))]
-                # Get any existing kext we're referencing
-                k = next((x for x in original_kexts if x.get("BundlePath")==kext["kext"].get("BundlePath")),None)
-                if not k or k.get("Enabled"):
+                if kext["kext"].get("Enabled"):
                     for p in kext["parents"]:
                         p_cf = p[1].get("cfbi")
                         if not p_cf: continue # Broken - can't check
@@ -1482,7 +1501,7 @@ class PlistWindow(tk.Toplevel):
                 if not all(x[0] in ordered_kexts for x in kext["parents"]):
                     unordered_kexts.append(kext)
                     continue
-            ordered_kexts.append(next(x for x in new_kexts if x.get("BundlePath","") == kext["kext"].get("BundlePath","")))
+            ordered_kexts.append(kext["kext"])
         # Let's compare against the original load order - to prevent mis-prompting
         missing_kexts = [x for x in ordered_kexts if not x in original_kexts]
         original_kexts.extend(missing_kexts)
@@ -1500,10 +1519,10 @@ class PlistWindow(tk.Toplevel):
                 ordered_kexts = original_kexts # We didn't want to update it
         if len(disabled_parents):
             if mb.askyesno("Disabled Parent Kexts","Enable the following disabled parent kexts?\n\n{}".format("\n".join([x[0].get("BundlePath","") for x in disabled_parents])),parent=self):
-                for x in ordered_kexts: # Walk our kexts and enable the parents
-                    if any((x.get("BundlePath","") == y[0].get("BundlePath","") for y in disabled_parents)): x["Enabled"] = True
+                for p in disabled_parents: p[0]["Enabled"] = True
         # Finally - we walk the kexts and ensure that we're not loading the same CFBundleIdentifier more than once
         enabled_kexts = []
+        bundles_enabled = []
         duplicate_bundles = []
         duplicates_disabled = []
         for kext in ordered_kexts:
@@ -1515,28 +1534,38 @@ class PlistWindow(tk.Toplevel):
             duplicates_disabled.append(temp_kext)
             # Ignore if alreday disabled
             if not temp_kext.get("Enabled",False): continue
-            # Get the original info
-            info = next((x for x in kext_list if x[0].get("BundlePath","") == temp_kext.get("BundlePath","")),None)
-            if not info or not info[1].get("cfbi",None): continue # Broken info
-            # Let's see if it's already in enabled_kexts - and compare the Min/Max/Match Kernel options
-            temp_min,temp_max = self.get_min_max_from_kext(temp_kext,"MatchKernel" in kext_add)
-            # Gather a list of like IDs
-            comp_kexts = [x for x in enabled_kexts if x[1]["cfbi"] == info[1]["cfbi"]]
-            # Walk the comp_kexts, and disable if we find an overlap
-            for comp_info in comp_kexts:
-                comp_kext = comp_info[0]
-                # Gather our min/max
-                comp_min,comp_max = self.get_min_max_from_kext(comp_kext,"MatchKernel" in kext_add)
-                # Let's see if we don't overlap
-                if temp_min > comp_max or temp_max < comp_min: # We're good, continue
-                    continue
-                # We overlapped - let's disable it
+            # Ensure we haven't already seen this BundlePath before
+            if temp_kext.get("BundlePath","") in bundles_enabled+duplicate_bundles:
                 temp_kext["Enabled"] = False
-                # Add it to the list - then break out of this loop
-                duplicate_bundles.append(temp_kext.get("BundlePath",""))
-                break
+                # Make sure we keep a reference to the bundle if needed
+                if not temp_kext.get("BundlePath","") in duplicate_bundles:
+                    duplicate_bundles.append(temp_kext.get("BundlePath",""))
+            else:
+                # Get the original info
+                info = next((x[1] for x in kext_list if x[0].get("BundlePath","") == temp_kext.get("BundlePath","")),None)
+                if not info or not info.get("cfbi",None): continue # Broken info
+                # Let's see if it's already in enabled_kexts - and compare the Min/Max/Match Kernel options
+                temp_min,temp_max = self.get_min_max_from_kext(temp_kext,"MatchKernel" in kext_add)
+                # Gather a list of like IDs
+                comp_kexts = [x for x in enabled_kexts if x[1]["cfbi"] == info["cfbi"]]
+                # Walk the comp_kexts, and disable if we find an overlap
+                for comp_info in comp_kexts:
+                    comp_kext = comp_info[0]
+                    # Gather our min/max
+                    comp_min,comp_max = self.get_min_max_from_kext(comp_kext,"MatchKernel" in kext_add)
+                    # Let's see if we don't overlap
+                    if temp_min > comp_max or temp_max < comp_min: # We're good, continue
+                        continue
+                    # We overlapped - let's disable it
+                    temp_kext["Enabled"] = False
+                    # Add it to the list - then break out of this 
+                    if not temp_kext.get("BundlePath","") in duplicate_bundles:
+                        duplicate_bundles.append(temp_kext.get("BundlePath",""))
+                    break
             # Check if we ended up disabling temp_kext, and if not - add it to the enabled_kexts list
-            if temp_kext.get("Enabled",False): enabled_kexts.append((temp_kext,info[1]))
+            if temp_kext.get("Enabled",False):
+                bundles_enabled.append(temp_kext.get("BundlePath",""))
+                enabled_kexts.append((temp_kext,info))
         # Check if we have duplicates - and offer to disable them
         if len(duplicate_bundles):
             if mb.askyesno("Duplicate CFBundleIdentifiers","Disable the following kexts with duplicate CFBundleIdentifiers?\n\n{}".format("\n".join(duplicate_bundles)),parent=self):
@@ -1564,7 +1593,13 @@ class PlistWindow(tk.Toplevel):
                             "Path":os.path.join(path,name)[len(oc_tools):].replace("\\", "/").lstrip("/") # Strip the /Volumes/EFI/
                         }
                         # Add our snapshot custom entries, if any
-                        for x in tool_add: new_tool_entry[x] = tool_add[x]
+                        for x in tool_add:
+                            if x == "Flavour" and new_tool_entry["Name"].lower().endswith("shell.efi"):
+                                # Adjust the Flavour to reflect what type of shell it is - we can use OpenShell:UEFIShell:Shell
+                                # to reflect this
+                                new_tool_entry[x] = "OpenShell:UEFIShell:Shell"
+                            else:
+                                new_tool_entry[x] = tool_add[x]
                         tools_list.append(OrderedDict(sorted(new_tool_entry.items(),key=lambda x:str(x[0]).lower())))
             tools = [] if clean else tree_dict["Misc"]["Tools"]
             for tool in sorted(tools_list, key=lambda x: x.get("Path","").lower()):
@@ -1584,6 +1619,28 @@ class PlistWindow(tk.Toplevel):
                 new_tools.append(tool)
                 # Check path length
                 long_paths.extend(self.check_path_length(tool))
+            # Make sure we don't have duplicates
+            tools_enabled = []
+            tools_duplicates = []
+            tools_duplicates_disabled = []
+            for t in new_tools:
+                if t.get("Enabled"):
+                    if t.get("Path","") in tools_enabled:
+                        # Got a dupe - shallow copy and disable
+                        new_t = {}
+                        for key in t: new_t[key] = t[key]
+                        new_t["Enabled"] = False
+                        tools_duplicates_disabled.append(new_t)
+                        if not t.get("Path","") in tools_duplicates:
+                            tools_duplicates.append(t.get("Path",""))
+                    else:
+                        # First hit - add the Path to tools_enabled
+                        tools_enabled.append(t.get("Path",""))
+                        tools_duplicates_disabled.append(t)
+            if len(tools_duplicates):
+                if mb.askyesno("Duplicate Tools","Disable the following Tools with duplicate Paths?\n\n{}".format("\n".join(tools_duplicates)),parent=self):
+                    new_tools = tools_duplicates_disabled
+            # Save the results
             tree_dict["Misc"]["Tools"] = new_tools
         else:
             # Make sure our Tools list is empty
@@ -1638,6 +1695,39 @@ class PlistWindow(tk.Toplevel):
                 new_drivers.append(driver)
                 # Check path length
                 long_paths.extend(self.check_path_length(driver))
+            # Make sure we don't have duplicates
+            drivers_enabled = []
+            drivers_duplicates = []
+            drivers_duplicates_disabled = []
+            for d in new_drivers:
+                if isinstance(d,dict):
+                    # The new way
+                    if d.get("Enabled"):
+                        if d.get("Path","") in drivers_enabled:
+                            # Got a dupe - shallow copy and disable
+                            new_d = {}
+                            for key in d: new_d[key] = d[key]
+                            new_d["Enabled"] = False
+                            drivers_duplicates_disabled.append(new_d)
+                            if not d.get("Path","") in drivers_duplicates:
+                                drivers_duplicates.append(d.get("Path",""))
+                        else:
+                            # First hit - add the Path to drivers_enabled
+                            drivers_enabled.append(d.get("Path",""))
+                            drivers_duplicates_disabled.append(d)
+                else:
+                    # The old way
+                    if d in drivers_enabled:
+                        # Got a dupe
+                        if not d in drivers_duplicates:
+                            drivers_duplicates.append(d)
+                    else:
+                        drivers_enabled.append(d)
+                        drivers_duplicates_disabled.append(d)
+            if len(drivers_duplicates):
+                if mb.askyesno("Duplicate Drivers","Disable the following Drivers with duplicate Paths?\n\n{}".format("\n".join(drivers_duplicates)),parent=self):
+                    new_drivers = drivers_duplicates_disabled
+            # Save the results
             tree_dict["UEFI"]["Drivers"] = new_drivers
         else:
             # Make sure our Drivers list is empty
