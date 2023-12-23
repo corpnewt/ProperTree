@@ -3215,7 +3215,7 @@ class PlistWindow(tk.Toplevel):
         # Add rbits option
         cell_search = [x for x in self.split(cell_path) if not x=="*"]
         if cell_search and cell_search[0] == "Root": cell_search = cell_search[1:]
-        if cell_search and self.get_configuration_path():
+        if cell_search and os.path.isfile(self.controller.get_best_tex_path()):
             popup_menu.add_separator()
             popup_menu.add_command(label="Show info for \"{}\"{}".format(
                 " -> ".join(cell_search), " (Cmd+I)" if is_mac else ""), command=self.show_config_info, accelerator=None if is_mac else "(Ctrl+I)")
@@ -3468,26 +3468,6 @@ class PlistWindow(tk.Toplevel):
                 tags.append("odd" if x % 2 else "even")
             self._tree.item(item, tags=tags)
 
-    def get_configuration_path(self):
-        # will need path to a Configuration.tex based for the version of OpenCore being used
-        # for this to provide the correct info
-        # for now this is a cheap hack to a Configuration.tex in the same location as ProperTree
-        pt_path = os.path.normpath(sys.path[0])
-        # Add a check for next to the script
-        config_tex_paths = [os.path.join(pt_path,"Configuration.tex")]
-        pt_path_parts = pt_path.split(os.sep)
-        if len(pt_path_parts) >= 3 and pt_path_parts[-2:] == ["Contents","MacOS"] \
-            and pt_path_parts[-3].lower().endswith(".app"):
-            for x in range(3):
-                # Remove the last 3 path components as we're in a .app bundle
-                pt_path = os.path.dirname(pt_path)
-                # Add a check for next to the .app bundle
-                config_tex_paths.append(os.path.join(pt_path,"Configuration.tex"))
-        # Iterate any paths we need to check and return the first match
-        for path in config_tex_paths:
-            if os.path.isfile(path):
-                return path
-
     def show_config_info(self, event = None):
         # find the path of selected cell
         cell = "" if not len(self._tree.selection()) else self._tree.selection()[0]
@@ -3505,8 +3485,8 @@ class PlistWindow(tk.Toplevel):
         check_title = '"{}" Info'.format(" -> ".join([x for x in search_list if not x=="*"]))
         window = next((x for x in self.controller.stackorder(self.controller.tk,include_defaults=True) if x.title() == check_title),None)
         if not window:
-            config_tex_path = self.get_configuration_path()
-            if config_tex_path:
+            config_tex_path = self.controller.get_best_tex_path()
+            if config_tex_path and os.path.isfile(config_tex_path):
                 # pass mouse pointer location as location to open info window
                 mx = self.root.winfo_pointerx()
                 my = self.root.winfo_pointery()
