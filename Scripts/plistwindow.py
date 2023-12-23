@@ -1238,7 +1238,14 @@ class PlistWindow(tk.Toplevel):
         return "" # Couldn't determine hash :(
 
     def oc_snapshot(self, event = None, clean = False):
-        target_dir = (os.path.dirname(self.current_plist) if self.current_plist and os.path.exists(os.path.dirname(self.current_plist)) else None) or self.controller.settings.get("last_snapshot_path")
+        # Get the target directory from our current file's directory - if any, and if it exists
+        target_dir = os.path.dirname(self.current_plist) if self.current_plist and os.path.isdir(os.path.dirname(self.current_plist)) else None
+        # If it doesn't exist, get the last_snapshot_path, if any
+        target_dir = target_dir or self.controller.settings.get("last_snapshot_path")
+        # Ensure it's a directory if we have something
+        if target_dir and not os.path.isdir(target_dir):
+            target_dir = None # Reset to nothing
+        # Prompt for the OC folder
         oc_folder = fd.askdirectory(title="Select OC Folder:",initialdir=target_dir)
         self.controller.lift_window(self) # Lift the window to continue catching events
         if not len(oc_folder):
