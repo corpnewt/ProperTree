@@ -774,12 +774,22 @@ class ProperTree:
             tex_path = self.get_best_tex_path()
             if os.path.isfile(tex_path):
                 version = self.get_tex_version(file_path=tex_path)
-                if version:
+                if not version:
+                    self.tk.bell()
+                    mb.showerror(
+                        title="An Error Occurred Downloading Configuration.tex",
+                        message="Something went wrong when getting the latest Configuration.tex."
+                    )
+                else:
                     mb.showinfo(
                         title="Updated Configuration.tex",
                         message="Configuration.tex ({}) saved to:\n\n{}".format(version,tex_path)
                     )
         self.reset_tex_button()
+        # If we got here - we displayed some message, let's lift our window to the top
+        windows = self.stackorder(self.tk,include_defaults=True)
+        if not len(windows): return
+        self.lift_window(windows[-1])
 
     def text_color(self, hex_color, invert = False):
         hex_color = hex_color.lower()
