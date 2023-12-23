@@ -8,6 +8,10 @@ min_tk_version = {
 }
 min_only_suggestion = True
 test_load_tk = True
+preserve_paths = (
+    "ProperTree.app/Contents/MacOS/Scripts/settings.json",
+    "ProperTree.app/Contents/MacOS/Configuration.tex"
+)
 
 def _decode(value, encoding="utf-8", errors="ignore"):
         # Helper method to only decode if bytes type
@@ -150,10 +154,11 @@ def main(use_current=False,path_list=None):
     print("Checking for existing ProperTree.app...")
     if os.path.exists("ProperTree.app"):
         print(" - Found, removing...")
-        if os.path.exists("ProperTree.app/Contents/MacOS/Scripts/settings.json"):
-            print(" --> Found settings.json - preserving...")
-            temp = tempfile.mkdtemp()
-            shutil.copy("ProperTree.app/Contents/MacOS/Scripts/settings.json", os.path.join(temp, "settings.json"))
+        for path in preserve_paths:
+            if os.path.exists(path):
+                print(" --> Found {} - preserving...".format(os.path.basename(path)))
+                temp = temp or tempfile.mkdtemp()
+                shutil.copy(path,os.path.join(temp,os.path.basename(path)))
         shutil.rmtree("ProperTree.app")
     # Make the directory structure
     print("Creating bundle structure...")
@@ -210,8 +215,11 @@ def main(use_current=False,path_list=None):
     with open("ProperTree.app/Contents/Info.plist","wb") as f:
         plist.dump(info,f)
     if temp:
-        print("Restoring settings.json...")
-        shutil.copy(os.path.join(temp, "settings.json"),"ProperTree.app/Contents/MacOS/Scripts/settings.json")
+        for path in preserve_paths:
+            t_path = os.path.join(temp,os.path.basename(path))
+            if os.path.exists(t_path):
+                print("Restoring {}...".format(os.path.basename(path)))
+                shutil.copy(t_path,path)
         shutil.rmtree(temp,ignore_errors=True)
     final_path = os.path.join(os.getcwd(),"ProperTree.app")
     print("{} to: {}".format(
