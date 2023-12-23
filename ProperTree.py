@@ -50,10 +50,34 @@ def _check_for_update(queue, version_url = None, user_initiated = False):
         })
     queue.put(json_data)
 
+def _update_tex(queue, tex_url = None, tex_path = None):
+    args = [sys.executable]
+    file_path = os.path.join(os.path.abspath(os.path.dirname(__file__)),"Scripts","update_check.py")
+    if os.path.exists(file_path):
+        args.extend([file_path,"-m","tex","-t",tex_path])
+    else:
+        return queue.put({
+            "exception":"Could not locate update_check.py.",
+            "error":"Missing Required Files"
+        })
+    if tex_url: args.extend(["-u",tex_url])
+    proc = subprocess.Popen(args,stdout=subprocess.PIPE)
+    o,e = proc.communicate()
+    if sys.version_info >= (3,0): o = o.decode("utf-8")
+    try:
+        json_data = json.loads(o)
+    except:
+        return queue.put({
+            "exception":"Could not serialize returned JSON data.",
+            "error":"An Error Occurred Downloading Configuration.tex"
+        })
+    queue.put(json_data)
+
 class ProperTree:
     def __init__(self, plists = []):
-        # Create a new queue for multiprocessing
+        # Create new queues for multiprocessing
         self.queue = multiprocessing.Queue()
+        self.tex_queue = multiprocessing.Queue()
         # Create the new tk object
         self.tk = tk.Tk()
         self.tk.withdraw() # Try to remove before it's drawn
@@ -236,6 +260,8 @@ class ProperTree:
         self.notify_once_check.grid(row=17,column=0,sticky="w",padx=10,pady=(0,10))
         self.update_button = tk.Button(self.settings_window,text="Check Now",command=lambda:self.check_for_updates(user_initiated=True))
         self.update_button.grid(row=17,column=1,sticky="w",padx=10,pady=(0,10))
+        self.tex_button = tk.Button(self.settings_window,text="Get Configuration.tex",command=self.get_latest_tex)
+        self.tex_button.grid(row=17,column=3,sticky="we",padx=10,pady=(0,10))
         reset_settings = tk.Button(self.settings_window,text="Restore All Defaults",command=self.reset_settings)
         reset_settings.grid(row=17,column=4,sticky="we",padx=10,pady=(0,10))
 
@@ -447,8 +473,9 @@ class ProperTree:
             except: pass
         os.chdir(cwd)
 
-        # Apply the version to the update button text
-        self.update_button.configure(text="Check Now ({})".format(self.version.get("version","?.?.?")))
+        # Apply the version to the update and tex buttons
+        self.reset_update_button()
+        self.reset_tex_button()
 
         # Setup the settings page to reflect our settings.json file
 
@@ -466,6 +493,7 @@ class ProperTree:
         self.check_dark_mode()
 
         self.version_url = "https://raw.githubusercontent.com/corpnewt/ProperTree/master/Scripts/version.json"
+        self.tex_url = "https://raw.githubusercontent.com/acidanthera/OpenCorePkg/master/Docs/Configuration.tex"
         self.repo_url = "https://github.com/corpnewt/ProperTree"
 
         # Implement a simple boolean lock, and check for updates if needed
@@ -669,6 +697,89 @@ class ProperTree:
         windows = self.stackorder(self.tk,include_defaults=True)
         if not len(windows): return
         self.lift_window(windows[-1])
+
+    def get_best_tex_path(self):
+        pt_path = os.path.abspath(os.path.dirname(__file__))
+        # Add a check for next to the script
+        config_tex_paths = [os.path.join(pt_path,"Configuration.tex")]
+        pt_path_parts = pt_path.split(os.sep)
+        if len(pt_path_parts) >= 3 and pt_path_parts[-2:] == ["Contents","MacOS"] \
+            and pt_path_parts[-3].lower().endswith(".app"):
+            for x in range(3):
+                # Remove the last 3 path components as we're in a .app bundle
+                pt_path = os.path.dirname(pt_path)
+                # Add a check for next to the .app bundle
+                config_tex_paths.append(os.path.join(pt_path,"Configuration.tex"))
+        # Iterate any paths we need to check and return the first match
+        for path in config_tex_paths:
+            if os.path.isfile(path):
+                return path
+        # If none were found - return the first entry
+        if config_tex_paths:
+            return config_tex_paths[0]
+
+    def get_tex_version(self, file_path = None):
+        file_path = file_path or self.get_best_tex_path()
+        if not file_path or not os.path.isfile(file_path):
+            return None
+        try:
+            with open(file_path,"r") as f:
+                t = f.read()
+            for line in t.split("\n"):
+                line = line.strip().lower()
+                if line.startswith("reference manual (") and line.endswith(")"):
+                    return line.split("(")[-1].split(")")[0]
+        except: pass
+        return None
+
+    def reset_tex_button(self, version = None):
+        tex_version = version or self.get_tex_version()
+        self.tex_button.configure(
+            state="normal",
+            text="Get Configuration.tex{}".format(
+                " ({})".format(tex_version) if tex_version else ""
+            )
+        )
+
+    def get_latest_tex(self):
+        tex_version = self.get_tex_version()
+        self.tex_button.configure(
+            state="disabled",
+            text="Downloading...{}".format(
+                " ({})".format(tex_version) if tex_version else ""
+            )
+        )
+        # We'll leverage multiprocessing to avoid UI locks if the update checks take too long
+        p = multiprocessing.Process(target=_update_tex,args=(self.tex_queue,self.tex_url,self.get_best_tex_path()))
+        p.daemon = True
+        p.start()
+        self.check_tex_process(p)
+
+    def check_tex_process(self, p):
+        # Helper to watch until an update is done
+        if p.is_alive():
+            self.tk.after(100,self.check_tex_process,p)
+            return
+        # Check if we got anything from the queue
+        if self.tex_queue.empty(): # Nothing in the queue, bail
+            return self.reset_tex_button()
+        output_dict = self.tex_queue.get()
+        # Check if we got an error or exception
+        if "exception" in output_dict or "error" in output_dict:
+            error = output_dict.get("error","An Error Occurred Downloading Configuration.tex")
+            excep = output_dict.get("exception","Something went wrong when getting the latest Configuration.tex.")
+            self.tk.bell()
+            mb.showerror(error,excep)
+        else:
+            tex_path = self.get_best_tex_path()
+            if os.path.isfile(tex_path):
+                version = self.get_tex_version(file_path=tex_path)
+                if version:
+                    mb.showinfo(
+                        title="Updated Configuration.tex",
+                        message="Configuration.tex ({}) saved to:\n\n{}".format(version,tex_path)
+                    )
+        self.reset_tex_button()
 
     def text_color(self, hex_color, invert = False):
         hex_color = hex_color.lower()
