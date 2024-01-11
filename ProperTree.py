@@ -543,10 +543,57 @@ class ProperTree:
         check_dark = self.get_dark()
         if check_dark != self.use_dark and any((x not in self.settings for x in ("alternating_color_1","alternating_color_2","background_color"))):
             # Mode changed
+            # Update colors as needed
+            color_check = [x for x in self.default_dark if not x in self.settings]
+            if color_check: # We have something to animate
+                color_list = []
+                from_dict,to_dict = (self.default_dark,self.default_light) if self.use_dark \
+                               else (self.default_light,self.default_dark)
+                for name in color_check:
+                    if name.startswith("invert_"):
+                        continue # Skip boolean checks
+                    color_list.append((
+                        name,
+                        from_dict[name],
+                        to_dict[name]
+                    ))
+                # Queue up the animations
+                self.color_animate(color_list)
             self.use_dark = check_dark
+        # Continue the loop every 3 seconds
+        self.tk.after(1500, lambda:self.check_dark_mode())
+
+    def color_animate(self, colors, step=1, steps=5, delay=35):
+        for name,start,end in colors:
+            # Get the start and end as ints #rrggbb
+            start_r = int(start[1:3],16)
+            start_g = int(start[3:5],16)
+            start_b = int(start[5:7],16)
+            end_r = int(end[1:3],16)
+            end_g = int(end[3:5],16)
+            end_b = int(end[5:7],16)
+            # Get and apply the steps
+            r_now = int((((end_r-start_r)/steps)*step)+start_r)
+            g_now = int((((end_g-start_g)/steps)*step)+start_g)
+            b_now = int((((end_b-start_b)/steps)*step)+start_b)
+            # Set our target color
+            result = "#{}{}{}".format(
+                hex(r_now)[2:].upper(),
+                hex(g_now)[2:].upper(),
+                hex(b_now)[2:].upper()
+            )
+            self.settings[name] = result
+        # Update the windows
+        if step < steps:
+            self.update_canvases()
+            self.tk.after(delay, lambda:self.color_animate(
+                colors, step=step+1, steps=steps, delay=delay
+            ))
+        else:
+            # Remove the adjusted colors from the settings
+            for c in colors:
+                self.settings.pop(c[0],None)
             self.update_settings()
-        # Continue the loop
-        self.tk.after(10000, lambda:self.check_dark_mode())
 
     def should_set_header_text(self):
         # In macOS, the header colors are only affected by the background
@@ -956,6 +1003,23 @@ class ProperTree:
             else: self.settings[x] = color_dict[x]
         self.update_settings()
 
+    def update_canvases(self):
+        default_color = self.default_dark if self.use_dark else self.default_light
+        color_1 = "".join([x for x in self.settings.get("alternating_color_1",default_color["alternating_color_1"]) if x.lower() in "0123456789abcdef"])
+        color_2 = "".join([x for x in self.settings.get("alternating_color_2",default_color["alternating_color_2"]) if x.lower() in "0123456789abcdef"])
+        color_h = "".join([x for x in self.settings.get("highlight_color"    ,default_color["highlight_color"    ]) if x.lower() in "0123456789abcdef"])
+        color_b = "".join([x for x in self.settings.get("background_color"   ,default_color["background_color"   ]) if x.lower() in "0123456789abcdef"])
+        self.r1_canvas.configure(background="#"+color_1 if len(color_1) == 6 else default_color["alternating_color_1"])
+        self.r2_canvas.configure(background="#"+color_2 if len(color_2) == 6 else default_color["alternating_color_2"])
+        self.hl_canvas.configure(background="#"+color_h if len(color_h) == 6 else default_color["highlight_color"])
+        self.bg_canvas.configure(background="#"+color_b if len(color_b) == 6 else default_color["background_color"])
+        self.ig_bg_check.set(self.settings.get("header_text_ignore_bg_color",False))
+        self.bg_inv_check.set(self.settings.get("invert_background_text_color",False))
+        self.r1_inv_check.set(self.settings.get("invert_row1_text_color",False))
+        self.r2_inv_check.set(self.settings.get("invert_row2_text_color",False))
+        self.hl_inv_check.set(self.settings.get("invert_hl_text_color",False))
+        self.update_colors()
+
     def reset_settings(self, event = None):
         self.settings = {}
         self.update_settings()
@@ -1002,20 +1066,6 @@ class ProperTree:
         except: opacity = 100 # failsafe
         self.op_scale.set(opacity)
         self.set_window_opacity(opacity)
-        default_color = self.default_dark if self.use_dark else self.default_light
-        color_1 = "".join([x for x in self.settings.get("alternating_color_1",default_color["alternating_color_1"]) if x.lower() in "0123456789abcdef"])
-        color_2 = "".join([x for x in self.settings.get("alternating_color_2",default_color["alternating_color_2"]) if x.lower() in "0123456789abcdef"])
-        color_h = "".join([x for x in self.settings.get("highlight_color"    ,default_color["highlight_color"    ]) if x.lower() in "0123456789abcdef"])
-        color_b = "".join([x for x in self.settings.get("background_color"   ,default_color["background_color"   ]) if x.lower() in "0123456789abcdef"])
-        self.r1_canvas.configure(background="#"+color_1 if len(color_1) == 6 else default_color["alternating_color_1"])
-        self.r2_canvas.configure(background="#"+color_2 if len(color_2) == 6 else default_color["alternating_color_2"])
-        self.hl_canvas.configure(background="#"+color_h if len(color_h) == 6 else default_color["highlight_color"])
-        self.bg_canvas.configure(background="#"+color_b if len(color_b) == 6 else default_color["background_color"])
-        self.ig_bg_check.set(self.settings.get("header_text_ignore_bg_color",False))
-        self.bg_inv_check.set(self.settings.get("invert_background_text_color",False))
-        self.r1_inv_check.set(self.settings.get("invert_row1_text_color",False))
-        self.r2_inv_check.set(self.settings.get("invert_row2_text_color",False))
-        self.hl_inv_check.set(self.settings.get("invert_hl_text_color",False))
         self.drag_scale.set(self.settings.get("drag_dead_zone",20))
         self.font_string.set(self.settings.get("font_size",self.default_font["size"]))
         self.custom_font.set(self.settings.get("use_custom_font_size",False))
@@ -1023,7 +1073,7 @@ class ProperTree:
         self.font_var.set(self.settings.get("use_custom_font",False))
         self.font_command()
         self.font_select()
-        self.update_colors()
+        self.update_canvases()
 
     def update_canvas_text(self, canvas = None):
         if canvas == None: # Update all
