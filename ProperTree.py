@@ -301,8 +301,8 @@ class ProperTree:
         # Setup the from/to option menus
         self.f_title = tk.StringVar(self.tk)
         self.t_title = tk.StringVar(self.tk)
-        f_option = tk.OptionMenu(self.tk, self.f_title, "Ascii", "Base64", "Decimal", "Hex", command=self.change_from_type)
-        t_option = tk.OptionMenu(self.tk, self.t_title, "Ascii", "Base64", "Decimal", "Hex", command=self.change_to_type)
+        f_option = tk.OptionMenu(self.tk, self.f_title, "Ascii", "Base64", "Decimal", "Hex", "Binary", command=self.change_from_type)
+        t_option = tk.OptionMenu(self.tk, self.t_title, "Ascii", "Base64", "Decimal", "Hex", "Binary", command=self.change_to_type)
         f_option.grid(row=0,column=1,sticky="we")
         t_option.grid(row=1,column=1,sticky="we")
 
@@ -483,7 +483,7 @@ class ProperTree:
         self.allowed_data  = ("Hex","Base64")
         self.allowed_int   = ("Decimal","Hex")
         self.allowed_bool  = ("True/False","YES/NO","On/Off","1/0",u"\u2714/\u274c")
-        self.allowed_conv  = ("Ascii","Base64","Decimal","Hex")
+        self.allowed_conv  = ("Ascii","Base64","Decimal","Hex","Binary")
         self.update_settings()
 
         self.case_insensitive = self.get_case_insensitive()
@@ -1420,9 +1420,10 @@ class ProperTree:
                 mb.showerror("Invalid Hex Data","Invalid character in passed hex data.") # ,parent=self.tk)
                 return
         try:
-            if from_type == "decimal":
+            if from_type in ("decimal","binary"):
                 # Convert to hex bytes
-                from_value = "{:x}".format(int(from_value))
+                from_value = "".join(from_value.split()) # Remove whitespace
+                from_value = "{:x}".format(int(from_value,10 if from_type=="decimal" else 2))
                 if len(from_value) % 2:
                     from_value = "0"+from_value
             # Handle the from data
@@ -1437,7 +1438,7 @@ class ProperTree:
                     self.f_text.delete(0,tk.END)
                     self.f_text.insert(0,from_value)
                 from_value = base64.b64decode(self.get_bytes(from_value))
-            elif from_type in ("hex","decimal"):
+            elif from_type in ("hex","decimal","binary"):
                 if len(from_value) % 2:
                     # Ensure we pad our hex
                     from_value = "0"+from_value
@@ -1454,11 +1455,13 @@ class ProperTree:
                 to_value = binascii.hexlify(self.get_bytes(from_value))
             elif to_type == "decimal":
                 to_value = str(int(binascii.hexlify(self.get_bytes(from_value)),16))
-            if not to_type == "decimal":
+            elif to_type == "binary":
+                to_value = "{:b}".format(int(binascii.hexlify(self.get_bytes(from_value)),16))
+            if not to_type in ("decimal","binary"):
                 to_value = self.get_string(to_value)
             if to_type == "hex":
                 # Capitalize it, and pad with spaces
-                to_value = "{}".format(" ".join((to_value[0+i:8+i] for i in range(0, len(to_value), 8))).upper())
+                to_value = " ".join((to_value[0+i:8+i] for i in range(0, len(to_value), 8))).upper()
             # Set the text box
             self.t_text.configure(state='normal')
             self.t_text.delete(0,tk.END)
