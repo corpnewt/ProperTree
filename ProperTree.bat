@@ -57,19 +57,26 @@ if not exist "!thisDir!\!script_name!" (
 goto checkpy
 
 :getsyspath <variable_name>
-REM Helper method to return the "proper" path to cmd.exe, reg.exe, and where.exe by walking the ComSpec var
-REM Prep the LF variable to use the "line feed" approach
-(SET LF=^
+REM Helper method to return a valid path to cmd.exe, reg.exe, and where.exe by
+REM walking the ComSpec var - will also repair it in memory if need be
+REM Strip double semi-colons
+call :undouble "syspath" "%ComSpec%" ";"
+
+REM Dirty hack to leverage the "line feed" approach - there are some odd side
+REM effects with this.  Do not use this variable name in comments near this
+REM line - as it seems to behave erradically.
+(set LF=^
 %=this line is empty=%
 )
-REM Strip double semi-colons
-call :undouble "ComSpec" "%ComSpec%" ";"
-set "testpath=%ComSpec:;=!LF!%"
+REM Replace instances of semi-colons with a line feed and wrap
+REM in parenthesis to work around some strange batch behavior
+set "testpath=%syspath:;=!LF!%"
+
 REM Let's walk each path and test if cmd.exe, reg.exe, and where.exe exist there
 set /a found=0
 for /f "tokens=* delims=" %%i in ("!testpath!") do (
     REM Only continue if we haven't found it yet
-    if NOT "%%i" == "" (
+    if not "%%i" == "" (
         if !found! lss 1 (
             set "temppath=%%i"
             REM Remove "cmd.exe" from the end if it exists
@@ -77,7 +84,7 @@ for /f "tokens=* delims=" %%i in ("!testpath!") do (
                 set "temppath=!temppath:~0,-7!"
             )
             REM Pad the end with a backslash if needed
-            if NOT "!temppath:~-1!" == "\" (
+            if not "!temppath:~-1!" == "\" (
                 set "temppath=!temppath!\"
             )
             REM Let's see if cmd, reg, and where exist there - and set it if so
@@ -103,7 +110,7 @@ for /f "USEBACKQ tokens=2* delims= " %%i in (`!syspath!reg.exe query "HKLM\SYSTE
 if not "%spath%" == "" (
     REM We got something in the system path
     set "PATH=%spath%"
-    if not "!upath!" == "" (
+    if not "%upath%" == "" (
         REM We also have something in the user path
         set "PATH=%PATH%;%upath%"
     )
@@ -117,11 +124,13 @@ goto :EOF
 :undouble <string_name> <string_value> <character>
 REM Helper function to strip doubles of a single character out of a string recursively
 set "string_value=%~2"
+:undouble_continue
 set "check=!string_value:%~3%~3=%~3!"
 if not "!check!" == "!string_value!" (
-    set "%~1=!check!"
-    call :undouble "%~1" "!check!" "%~3"
+    set "string_value=!check!"
+    goto :undouble_continue
 )
+set "%~1=!check!"
 goto :EOF
 
 :checkpy
@@ -278,7 +287,7 @@ pushd "%TEMP%"
 for /f "tokens=9 delims=< " %%x in ('findstr /i /c:"Latest Python !targetpy! Release" pyurl.txt') do ( set "release=%%x" )
 popd
 
-echo Found Python !release! -  Downloading...
+echo Found Python !release! - Downloading...
 REM Let's delete our txt file now - we no longer need it
 del "%TEMP%\pyurl.txt"
 
