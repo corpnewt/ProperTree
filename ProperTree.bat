@@ -30,11 +30,18 @@ call :getsyspath "syspath"
 
 REM Make sure the syspath exists
 if "!syspath!" == "" (
+    set /a gotpath=0
     if exist "%SYSTEMROOT%\system32\cmd.exe" (
-        REM Fall back on the default path if it exists
-        set "ComSpec=%SYSTEMROOT%\system32\cmd.exe"
-        set "syspath=%SYSTEMROOT%\system32\"
-    ) else (
+        if exist "%SYSTEMROOT%\system32\reg.exe" (
+            if exist "%SYSTEMROOT%\system32\where.exe" (
+                REM Fall back on the default path if it exists
+                set "ComSpec=%SYSTEMROOT%\system32\cmd.exe"
+                set "syspath=%SYSTEMROOT%\system32\"
+                set /a gotpath=1
+            )
+        )
+    )
+    if !gotpath! lss 1 (
         cls
         echo   ###     ###
         echo  # Warning #
@@ -89,7 +96,7 @@ call :undouble "temppath" "%ComSpec%" ";"
 
 REM Dirty hack to leverage the "line feed" approach - there are some odd side
 REM effects with this.  Do not use this variable name in comments near this
-REM line - as it seems to behave erratically.
+REM line - as it seems to behave erradically.
 (set LF=^
 %=this line is empty=%
 )
