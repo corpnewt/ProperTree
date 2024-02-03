@@ -28,6 +28,31 @@ set "just_installing=FALSE"
 REM Get the system32 (or equivalent) path
 call :getsyspath "syspath"
 
+REM Make sure the syspath exists
+if "!syspath!" == "" (
+    if exist "%SYSTEMROOT%\system32\cmd.exe" (
+        REM Fall back on the default path if it exists
+        set "ComSpec=%SYSTEMROOT%\system32\cmd.exe"
+        set "syspath=%SYSTEMROOT%\system32\"
+    ) else (
+        cls
+        echo   ###     ###
+        echo  # Warning #
+        echo ###     ###
+        echo.
+        echo Could not locate cmd.exe, reg.exe, or where.exe
+        echo.
+        echo Please ensure your ComSpec environment variable is properly configured and
+        echo points directly to cmd.exe, then try again.
+        echo.
+        echo Current CompSpec Value: "%ComSpec%"
+        echo.
+        echo Press [enter] to quit.
+        pause > nul
+        exit /b 1
+    )
+)
+
 if "%~1" == "--install-python" (
     set "just_installing=TRUE"
     goto installpy
@@ -60,7 +85,7 @@ goto checkpy
 REM Helper method to return a valid path to cmd.exe, reg.exe, and where.exe by
 REM walking the ComSpec var - will also repair it in memory if need be
 REM Strip double semi-colons
-call :undouble "syspath" "%ComSpec%" ";"
+call :undouble "temppath" "%ComSpec%" ";"
 
 REM Dirty hack to leverage the "line feed" approach - there are some odd side
 REM effects with this.  Do not use this variable name in comments near this
@@ -70,7 +95,7 @@ REM line - as it seems to behave erradically.
 )
 REM Replace instances of semi-colons with a line feed and wrap
 REM in parenthesis to work around some strange batch behavior
-set "testpath=%syspath:;=!LF!%"
+set "testpath=%temppath:;=!LF!%"
 
 REM Let's walk each path and test if cmd.exe, reg.exe, and where.exe exist there
 set /a found=0
@@ -78,22 +103,22 @@ for /f "tokens=* delims=" %%i in ("!testpath!") do (
     REM Only continue if we haven't found it yet
     if not "%%i" == "" (
         if !found! lss 1 (
-            set "temppath=%%i"
+            set "checkpath=%%i"
             REM Remove "cmd.exe" from the end if it exists
-            if /i "!temppath:~-7!" == "cmd.exe" (
-                set "temppath=!temppath:~0,-7!"
+            if /i "!checkpath:~-7!" == "cmd.exe" (
+                set "checkpath=!checkpath:~0,-7!"
             )
             REM Pad the end with a backslash if needed
-            if not "!temppath:~-1!" == "\" (
-                set "temppath=!temppath!\"
+            if not "!checkpath:~-1!" == "\" (
+                set "checkpath=!checkpath!\"
             )
             REM Let's see if cmd, reg, and where exist there - and set it if so
-            if EXIST "!temppath!cmd.exe" (
-                if EXIST "!temppath!reg.exe" (
-                    if EXIST "!temppath!where.exe" (
+            if EXIST "!checkpath!cmd.exe" (
+                if EXIST "!checkpath!reg.exe" (
+                    if EXIST "!checkpath!where.exe" (
                         set /a found=1
-                        set "ComSpec=!temppath!cmd.exe"
-                        set "%~1=!temppath!"
+                        set "ComSpec=!checkpath!cmd.exe"
+                        set "%~1=!checkpath!"
                     )
                 )
             )
