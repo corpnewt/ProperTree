@@ -89,7 +89,7 @@ call :undouble "temppath" "%ComSpec%" ";"
 
 REM Dirty hack to leverage the "line feed" approach - there are some odd side
 REM effects with this.  Do not use this variable name in comments near this
-REM line - as it seems to behave erradically.
+REM line - as it seems to behave erratically.
 (set LF=^
 %=this line is empty=%
 )
