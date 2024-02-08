@@ -46,6 +46,7 @@ if "%errorlevel%"=="0" (
     "!regpath!" delete "HKCU\Software\Microsoft\Windows\CurrentVersion\ApplicationAssociationToasts" /v "Applications\%target%_.plist" /f 2> nul
 )
 set arg=\"%path%\%target%\" \"%%1\"
+set "icon=%path%\Scripts\shortcut.ico"
 echo.
 echo Adding registry values...
 echo.
@@ -54,6 +55,7 @@ echo.
 "!regpath!" add "HKCR\.plist" /t REG_SZ /d ".plist_auto_file" /f
 "!regpath!" add "HKCR\.plist_auto_file\shell\Open" /t REG_SZ /d "Open with %name%" /f
 "!regpath!" add "HKCR\.plist_auto_file\shell\Open\command" /t REG_SZ /d "%arg%" /f
+"!regpath!" add "HKCR\.plist_auto_file\DefaultIcon" /t REG_SZ /d "%icon%" /f
 "!regpath!" add "HKCU\Software\Microsoft\Windows\CurrentVersion\ApplicationAssociationToasts" /v "Applications\%target%_.plist" /t REG_DWORD /d 0 /f
 echo.
 echo Press [enter] to exit...
