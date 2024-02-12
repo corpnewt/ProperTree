@@ -1492,10 +1492,18 @@ class ProperTree:
         window = windows[-1] # Get the last item (most recent)
         if window in self.default_windows:
             return
-        title = window.title()[:-len(" - Edited") if window.edited else None]+" - Copy"
         plist_data = window.nodes_to_values()
         new_window = plistwindow.PlistWindow(self, self.tk)
-        new_window.open_plist(None,plist_data)
+        # Ensure the window titlebar color is updated
+        if os.name == "nt": new_window.set_win_titlebar(mode=int(self.use_dark))
+        # Ensure our duplicated plist and data types are reflected
+        new_window.plist_type_string.set(window.plist_type_string.get())
+        new_window.data_type_string.set(window.data_type_string.get())
+        new_window.int_type_string.set(window.int_type_string.get())
+        new_window.bool_type_string.set(window.bool_type_string.get())
+        # Populate the new window with the plist data - but no file path
+        # ensuring it remains "edited"
+        new_window.open_plist(None,plist_data,auto_expand=self.settings.get("expand_all_items_on_open",True))
         # Update the Open Recent menu
         if str(sys.platform) != "darwin": self.update_recents_for_target(new_window)
         self.lift_window(new_window)
