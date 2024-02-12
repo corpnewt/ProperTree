@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys, os, plistlib, base64, binascii, datetime, tempfile, shutil, re, subprocess, math, hashlib, time
+import sys, os, plistlib, base64, binascii, datetime, tempfile, shutil, re, subprocess, math, hashlib, time, ctypes
 
 from collections import OrderedDict
 from Scripts import config_tex_info
@@ -456,10 +456,10 @@ class PlistWindow(tk.Toplevel):
         self.recent_menu = None
         # Setup menu bar (hopefully per-window) - only happens on non-mac systems
         if not str(sys.platform) == "darwin":
-            main_menu = tk.Menu(self)
+            self.main_menu = tk.Menu(self)
             file_menu = tk.Menu(self, tearoff=0)
             self.recent_menu = tk.Menu(self, tearoff=0)
-            main_menu.add_cascade(label="File", menu=file_menu)
+            self.main_menu.add_cascade(label="File", menu=file_menu)
             file_menu.add_command(label="New", command=self.controller.new_plist, accelerator="Ctrl+N")
             file_menu.add_command(label="Open", command=self.controller.open_plist, accelerator="Ctrl+O")
             file_menu.add_cascade(label="Open Recent", menu=self.recent_menu)
@@ -481,7 +481,7 @@ class PlistWindow(tk.Toplevel):
             file_menu.add_command(label="Toggle Plist/Data/Int/Bool Type Pane",command=self.hide_show_type, accelerator="Ctrl+P")
             file_menu.add_separator()
             file_menu.add_command(label="Quit", command=self.controller.quit, accelerator="Ctrl+Q")
-            self.config(menu=main_menu)
+            self.config(menu=self.main_menu)
 
         # Get the right click menu options
         cwd = os.getcwd()
@@ -3511,3 +3511,33 @@ class PlistWindow(tk.Toplevel):
                 window = self # Ensure we're lifted again
         # Ensure window is lifted
         self.controller.lift_window(window)
+
+    def set_win_titlebar(self, mode=1):
+        if not os.name == "nt":
+            return # Only change on Windows
+        try:
+            # Update the window
+            self.update()
+            # Configure the window attributes
+            DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1 = 19
+            DWMWA_USE_IMMERSIVE_DARK_MODE = 20
+            set_window_attribute = ctypes.windll.dwmapi.DwmSetWindowAttribute
+            get_parent = ctypes.windll.user32.GetParent
+            hwnd_inst = get_parent(self.winfo_id())
+            value = ctypes.c_int(mode) # Mode is 0 for light, 1 for dark
+            set_window_attribute(hwnd_inst, DWMWA_USE_IMMERSIVE_DARK_MODE, ctypes.byref(value),
+                                ctypes.sizeof(value))
+            set_window_attribute(hwnd_inst, DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1, ctypes.byref(value),
+                                ctypes.sizeof(value))
+            # Ensure we set the menubar color to match
+            self.main_menu.configure(background="black" if mode else "white")
+            # Update the Window size to ensure the changes happen
+            for x in (1,-1):
+                self.geometry("{}x{}".format(
+                    self.winfo_width()+x,
+                    self.winfo_height()+x
+                ))
+        except:
+            # Something went wrong - but this is cosmetic only,
+            # so we just continue on as normal
+            pass
