@@ -1616,7 +1616,7 @@ class ProperTree:
             # Need to create one first
             current_window = plistwindow.PlistWindow(self, self.tk)
         # Ensure the window titlebar color is updated
-        if os.name == "nt": window.set_win_titlebar(mode=int(self.use_dark))
+        if os.name == "nt": current_window.set_win_titlebar(mode=int(self.use_dark))
         # Ensure our default data type is reflected
         current_window.data_type_string.set(self.data_type_string.get())
         current_window.int_type_string.set(self.int_type_string.get())
