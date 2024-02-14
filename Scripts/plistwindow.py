@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys, os, plistlib, base64, binascii, datetime, tempfile, shutil, re, subprocess, math, hashlib, time, ctypes
+import sys, os, plistlib, base64, binascii, datetime, tempfile, shutil, re, subprocess, math, hashlib, time
 
 from collections import OrderedDict
 from Scripts import config_tex_info
@@ -3507,35 +3507,8 @@ class PlistWindow(tk.Toplevel):
                 window.protocol("WM_DELETE_WINDOW", lambda x=window:self.controller.close_window(window=x))
                 window.bind("<{}-w>".format("Command" if sys.platform == "darwin" else "Control"), self.controller.close_window)
                 self.controller.set_window_opacity(window=window)
+                self.controller.set_win_titlebar(windows=window)
             else:
                 window = self # Ensure we're lifted again
         # Ensure window is lifted
         self.controller.lift_window(window)
-
-    def set_win_titlebar(self, mode=1):
-        if not os.name == "nt":
-            return # Only change on Windows
-        try:
-            # Update the window
-            self.update()
-            # Configure the window attributes
-            DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1 = 19
-            DWMWA_USE_IMMERSIVE_DARK_MODE = 20
-            set_window_attribute = ctypes.windll.dwmapi.DwmSetWindowAttribute
-            get_parent = ctypes.windll.user32.GetParent
-            hwnd_inst = get_parent(self.winfo_id())
-            value = ctypes.c_int(mode) # Mode is 0 for light, 1 for dark
-            set_window_attribute(hwnd_inst, DWMWA_USE_IMMERSIVE_DARK_MODE, ctypes.byref(value),
-                                ctypes.sizeof(value))
-            set_window_attribute(hwnd_inst, DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1, ctypes.byref(value),
-                                ctypes.sizeof(value))
-            # Update the Window size to ensure the changes happen
-            for x in (1,-1):
-                self.geometry("{}x{}".format(
-                    self.winfo_width()+x,
-                    self.winfo_height()+x
-                ))
-        except:
-            # Something went wrong - but this is cosmetic only,
-            # so we just continue on as normal
-            pass
