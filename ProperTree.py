@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys, os, binascii, base64, json, re, subprocess, webbrowser, multiprocessing, signal
+import sys, os, binascii, base64, json, re, subprocess, webbrowser, multiprocessing, signal, ctypes
 from collections import OrderedDict
 try:
     import Tkinter as tk
@@ -519,6 +519,10 @@ class ProperTree:
         # Set up our event loop "poker" to keep the event loop processing
         self.tk.after(200,self.sigint_check)
 
+        # Set our titlebar colors
+        for w in (self.tk, self.settings_window):
+            self.set_win_titlebar(windows=w)
+
         # Start our run loop
         tk.mainloop()
 
@@ -562,11 +566,49 @@ class ProperTree:
             self.use_dark = check_dark
             if os.name == "nt":
                 # Iterate all the windows
-                for window in self.stackorder(self.tk):
-                    # Ensure the window titlebar color is updated
-                    window.set_win_titlebar(mode=int(self.use_dark))
+                self.set_win_titlebar()
         # Continue the loop every 3 seconds
         self.tk.after(1500, lambda:self.check_dark_mode())
+
+    def set_win_titlebar(self, windows=None, mode=None):
+        if not os.name == "nt":
+            return # Only change on Windows
+        if windows is None:
+            windows = self.stackorder(self.tk, include_defaults=True)
+        elif not isinstance(windows,(list,tuple)):
+            windows = [windows]
+        try:
+            # Set up the values
+            if mode is None:
+                mode = int(self.use_dark)
+            value = ctypes.c_int(mode) # Mode is 0 for light, 1 for dark
+            # Configure the window attributes
+            DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1 = 19
+            DWMWA_USE_IMMERSIVE_DARK_MODE = 20
+            set_window_attribute = ctypes.windll.dwmapi.DwmSetWindowAttribute
+            get_parent = ctypes.windll.user32.GetParent
+        except:
+            # Something went wrong - bail
+            return
+        for window in windows:
+            try:
+                # Update the window
+                window.update()
+                hwnd_inst = get_parent(window.winfo_id())
+                set_window_attribute(hwnd_inst, DWMWA_USE_IMMERSIVE_DARK_MODE, ctypes.byref(value),
+                                    ctypes.sizeof(value))
+                set_window_attribute(hwnd_inst, DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1, ctypes.byref(value),
+                                    ctypes.sizeof(value))
+                # Update the Window size to ensure the changes happen
+                for x in (1,-1):
+                    window.geometry("{}x{}".format(
+                        window.winfo_width()+x,
+                        window.winfo_height()+x
+                    ))
+            except:
+                # Something went wrong - but this is cosmetic only,
+                # so we just continue on as normal
+                continue
 
     def color_animate(self, colors, step=1, steps=5, delay=35):
         for name,start,end in colors:
@@ -1495,7 +1537,7 @@ class ProperTree:
         plist_data = window.nodes_to_values()
         new_window = plistwindow.PlistWindow(self, self.tk)
         # Ensure the window titlebar color is updated
-        if os.name == "nt": new_window.set_win_titlebar(mode=int(self.use_dark))
+        if os.name == "nt": self.set_win_titlebar(windows=new_window)
         # Ensure our duplicated plist and data types are reflected
         new_window.plist_type_string.set(window.plist_type_string.get())
         new_window.data_type_string.set(window.data_type_string.get())
@@ -1571,7 +1613,7 @@ class ProperTree:
         # Update the Open Recent menu
         if str(sys.platform) != "darwin": self.update_recents_for_target(window)
         # Ensure the window titlebar color is updated
-        if os.name == "nt": window.set_win_titlebar(mode=int(self.use_dark))
+        if os.name == "nt": self.set_win_titlebar(windows=window)
         # Ensure our default plist and data types are reflected
         window.plist_type_string.set(self.plist_type_string.get())
         window.data_type_string.set(self.data_type_string.get())
@@ -1586,7 +1628,10 @@ class ProperTree:
         # Prompt the user to open a plist, attempt to load it, and if successful,
         # set its path as our current_plist value
         path = fd.askopenfilename(title = "Select plist file") # ,parent=current_window) # Apparently parent here breaks on 10.15?
-        if not len(path): return # User cancelled - bail
+        if not len(path):
+            # Lift the last window that was focused
+            self.lift_window()
+            return # User cancelled - bail
         path = os.path.abspath(os.path.expanduser(path))
         return self.pre_open_with_path(path)
 
@@ -1624,7 +1669,7 @@ class ProperTree:
             # Need to create one first
             current_window = plistwindow.PlistWindow(self, self.tk)
         # Ensure the window titlebar color is updated
-        if os.name == "nt": current_window.set_win_titlebar(mode=int(self.use_dark))
+        if os.name == "nt": self.set_win_titlebar(windows=current_window)
         # Ensure our default data type is reflected
         current_window.data_type_string.set(self.data_type_string.get())
         current_window.int_type_string.set(self.int_type_string.get())
