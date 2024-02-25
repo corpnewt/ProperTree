@@ -304,13 +304,25 @@ def parse_configuration_tex(config_file, search_list, width, valid_only, show_ur
         search_terms.append(sub_search)
         search_terms.append("texttt{" + text_search)
 
+    # keep a set of prefixes that would break us out of our search
+    disallowed = set()
     # move down the Configuration.tex to the section we want
     for i in range(0, len(search_terms)):
         while True:
             line = config.readline()
             if not line:
                 return result
+            line = line.strip()
+            # Check for disallowed
+            if line.startswith(tuple(disallowed)):
+                # We've broken out of our current scope - bail
+                return result
             if search_terms[i] in line:
+                # Make sure parent search prefixes get added
+                # to the disallowed set
+                if not search_terms[i].startswith("texttt{"):
+                    # Retain the prefix as needed
+                    disallowed.add(search_terms[i].split("{")[0]+"{")
                 break
 
     align = False
