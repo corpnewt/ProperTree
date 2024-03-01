@@ -314,7 +314,7 @@ def parse_configuration_tex(config_file, search_list, width, valid_only, show_ur
                 return result
             line = line.strip()
             # Check for disallowed
-            if line.startswith(tuple(disallowed)):
+            if line.startswith(tuple(disallowed)) and (search_terms[0] != "\\section{NVRAM" or not "\\label{nvram" in line):
                 # We've broken out of our current scope - bail
                 return result
             if search_terms[i] in line:
