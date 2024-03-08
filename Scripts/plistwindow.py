@@ -1744,12 +1744,20 @@ class PlistWindow(tk.Toplevel):
         if self.controller.settings.get("force_snapshot_schema",False):
             ignored = ["Comment","Enabled","Path","BundlePath","ExecutablePath","PlistPath","Name"]
             for entries,values in ((tree_dict["ACPI"]["Add"],acpi_add),(tree_dict["Kernel"]["Add"],kext_add),(tree_dict["Misc"]["Tools"],tool_add),(tree_dict["UEFI"]["Drivers"],driver_add)):
+                values["Comment"] = ""
+                values["Enabled"] = True
                 if not values: continue # Skip if nothing to check
                 for entry in entries:
                     to_remove = [x for x in entry if not x in values and not x in ignored]
                     to_add =    [x for x in values if not x in entry]
-                    for add in to_add:    entry[add] = os.path.basename(entry.get("Path",values[add])) if add.lower() == "comment" else values[add]
-                    for rem in to_remove: entry.pop(rem,None)
+                    for add in to_add:
+                        if add.lower() == "comment":
+                            val = os.path.basename(entry.get("Path",entry.get("BundlePath",values[add])))
+                        else:
+                            val = values[add]
+                        entry[add] = val
+                    for rem in to_remove:
+                        entry.pop(rem,None)
         
         # Now we remove the original tree - then replace it
         undo_list = []
