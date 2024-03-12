@@ -1,4 +1,4 @@
 {
-    "version": "0.2.7",
-    "changes": "- Add OC 0.9.7 and 0.9.8 hashes.\n- Add option to download Configuration.tex.\n- Add binary to value converter."
+    "version": "0.2.8",
+    "changes": "- Add OC 0.9.9 hashes.\n- Windows dark mode UI updates.\n- Fix some .tex related bugs.\n- Update .bat and .command starters."
 }
