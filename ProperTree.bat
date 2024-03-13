@@ -236,13 +236,11 @@ if not exist "%TEMP%\pyurl.txt" (
         goto checkpy
     )
 )
-
 echo Parsing for latest...
 pushd "%TEMP%"
 :: Version detection code slimmed by LussacZheng (https://github.com/corpnewt/gibMacOS/issues/20)
 for /f "tokens=9 delims=< " %%x in ('findstr /i /c:"Latest Python !targetpy! Release" pyurl.txt') do ( set "release=%%x" )
 popd
-
 if "!release!" == "" (
     if /i "!just_installing!" == "TRUE" (
         echo Failed to get python version
@@ -251,11 +249,9 @@ if "!release!" == "" (
         goto checkpy
     )
 )
-
 echo Found Python !release! - Downloading...
 REM Let's delete our txt file now - we no longer need it
 del "%TEMP%\pyurl.txt"
-
 REM At this point - we should have the version number.
 REM We can build the url like so: "https://www.python.org/ftp/python/[version]/python-[version]-amd64.exe"
 set "url=https://www.python.org/ftp/python/!release!/python-!release!-amd64.exe"
