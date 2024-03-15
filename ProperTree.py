@@ -605,6 +605,7 @@ class ProperTree:
                         window.winfo_width()+x,
                         window.winfo_height()+x
                     ))
+                    window.update()
             except:
                 # Something went wrong - but this is cosmetic only,
                 # so we just continue on as normal
