@@ -118,16 +118,19 @@ class ProperTree:
         self.sort_dict_keys = tk.IntVar()
         self.comment_ignore_case = tk.IntVar()
         self.comment_check_string = tk.IntVar()
+        self.dragDropEnabledBool = tk.BooleanVar()
         self.force_schema = tk.IntVar()
         self.expand_check = tk.Checkbutton(self.settings_window,text="Expand Children When Opening Plist",variable=self.expand_on_open,command=self.expand_command)
         self.xcode_check = tk.Checkbutton(self.settings_window,text="Use Xcode-Style <data> Tags (Inline) in XML Plists",variable=self.use_xcode_data,command=self.xcode_command)
         self.sort_check = tk.Checkbutton(self.settings_window,text="Ignore Dictionary Key Order",variable=self.sort_dict_keys,command=self.sort_command)
         self.ignore_case_check = tk.Checkbutton(self.settings_window,text="Ignore Case When Stripping Comments",variable=self.comment_ignore_case,command=self.ignore_case_command)
+        self.toggle_drag_drop = tk.Checkbutton(self.settings_window,text="Enable Row Drag-And-Drop", variable=self.dragDropEnabledBool,command=self.drag_drop_command)
         self.check_string_check = tk.Checkbutton(self.settings_window,text="Check String Values When Stripping Comments",variable=self.comment_check_string,command=self.check_string_command)
         self.expand_check.grid(row=1,column=0,columnspan=2,sticky="w",padx=10)
         self.xcode_check.grid(row=2,column=0,columnspan=2,sticky="w",padx=10)
         self.sort_check.grid(row=3,column=0,columnspan=2,sticky="w",padx=10)
         self.ignore_case_check.grid(row=4,column=0,columnspan=2,sticky="w",padx=10)
+        self.toggle_drag_drop.grid(row=4,column=1,columnspan=2,sticky="we",padx=10)
         self.check_string_check.grid(row=5,column=0,columnspan=2,sticky="w",padx=10)
         comment_prefix_label = tk.Label(self.settings_window,text="Comment Prefix (default is #):")
         comment_prefix_label.grid(row=6,column=0,sticky="w",padx=10)
@@ -928,6 +931,9 @@ class ProperTree:
     def check_string_command(self, event = None):
         self.settings["comment_strip_check_string"] = True if self.comment_check_string.get() else False
 
+    def drag_drop_command(self, event = None):
+        self.settings["dragDropEnabledBool"] = True if self.dragDropEnabledBool.get() else False
+    
     def check_ig_bg_command(self, event = None):
         self.settings["header_text_ignore_bg_color"] = True if self.ig_bg_check.get() else False
         self.update_colors()
@@ -1098,6 +1104,7 @@ class ProperTree:
         self.snapshot_string.set(snapshot_name if snapshot_name in snapshot_choices else "Auto-detect")
         self.force_schema.set(self.settings.get("force_snapshot_schema",False))
         self.comment_ignore_case.set(self.settings.get("comment_strip_ignore_case",False))
+        self.dragDropEnabledBool.set(self.settings.get("dragDropEnabledBool",False))
         self.comment_check_string.set(self.settings.get("comment_strip_check_string",True))
         self.update_int.set(self.settings.get("check_for_updates_at_startup",True))
         self.notify_once_int.set(self.settings.get("notify_once_per_version",True))
