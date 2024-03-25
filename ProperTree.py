@@ -98,9 +98,9 @@ class ProperTree:
         self.settings_window.title("ProperTree Settings")
         self.settings_window.resizable(False, False)
         self.settings_window.columnconfigure(0,weight=1)
-        self.settings_window.columnconfigure(1,weight=1)
-        self.settings_window.columnconfigure(3,weight=1)
+        self.settings_window.columnconfigure(2,weight=1)
         self.settings_window.columnconfigure(4,weight=1)
+        self.settings_window.columnconfigure(5,weight=1)
 
         # Set the default max undo/redo steps to retain
         self.max_undo = 200
@@ -109,7 +109,7 @@ class ProperTree:
         
         # Let's add some checkboxes and stuffs
         sep_func = ttk.Separator(self.settings_window,orient="horizontal")
-        sep_func.grid(row=0,column=1,columnspan=1,sticky="we",padx=10,pady=10)
+        sep_func.grid(row=0,column=2,columnspan=1,sticky="we",padx=10,pady=10)
         func_label = tk.Label(self.settings_window,text="Functionality Options:")
         func_label.grid(row=0,column=0,sticky="w",padx=10,pady=10)
 
@@ -118,105 +118,109 @@ class ProperTree:
         self.sort_dict_keys = tk.IntVar()
         self.comment_ignore_case = tk.IntVar()
         self.comment_check_string = tk.IntVar()
-        self.dragDropEnabledBool = tk.BooleanVar()
         self.force_schema = tk.IntVar()
         self.expand_check = tk.Checkbutton(self.settings_window,text="Expand Children When Opening Plist",variable=self.expand_on_open,command=self.expand_command)
         self.xcode_check = tk.Checkbutton(self.settings_window,text="Use Xcode-Style <data> Tags (Inline) in XML Plists",variable=self.use_xcode_data,command=self.xcode_command)
         self.sort_check = tk.Checkbutton(self.settings_window,text="Ignore Dictionary Key Order",variable=self.sort_dict_keys,command=self.sort_command)
         self.ignore_case_check = tk.Checkbutton(self.settings_window,text="Ignore Case When Stripping Comments",variable=self.comment_ignore_case,command=self.ignore_case_command)
-        self.toggle_drag_drop = tk.Checkbutton(self.settings_window,text="Enable Row Drag-And-Drop", variable=self.dragDropEnabledBool,command=self.drag_drop_command)
         self.check_string_check = tk.Checkbutton(self.settings_window,text="Check String Values When Stripping Comments",variable=self.comment_check_string,command=self.check_string_command)
-        self.expand_check.grid(row=1,column=0,columnspan=2,sticky="w",padx=10)
-        self.xcode_check.grid(row=2,column=0,columnspan=2,sticky="w",padx=10)
-        self.sort_check.grid(row=3,column=0,columnspan=2,sticky="w",padx=10)
-        self.ignore_case_check.grid(row=4,column=0,columnspan=2,sticky="w",padx=10)
-        self.toggle_drag_drop.grid(row=4,column=1,columnspan=2,sticky="we",padx=10)
-        self.check_string_check.grid(row=5,column=0,columnspan=2,sticky="w",padx=10)
+        self.expand_check.grid(row=1,column=0,columnspan=3,sticky="w",padx=10)
+        self.xcode_check.grid(row=2,column=0,columnspan=3,sticky="w",padx=10)
+        self.sort_check.grid(row=3,column=0,columnspan=3,sticky="w",padx=10)
+        self.ignore_case_check.grid(row=4,column=0,columnspan=3,sticky="w",padx=10)
+        self.check_string_check.grid(row=5,column=0,columnspan=3,sticky="w",padx=10)
         comment_prefix_label = tk.Label(self.settings_window,text="Comment Prefix (default is #):")
         comment_prefix_label.grid(row=6,column=0,sticky="w",padx=10)
         self.comment_prefix_text = tk.Entry(self.settings_window)
-        self.comment_prefix_text.grid(row=6,column=1,sticky="we",padx=10)
+        self.comment_prefix_text.grid(row=6,column=1,columnspan=2,sticky="we",padx=10)
         self.plist_type_string = tk.StringVar(self.settings_window)
         self.plist_type_menu = tk.OptionMenu(self.settings_window, self.plist_type_string, "XML","Binary", command=self.change_plist_type)
         plist_label = tk.Label(self.settings_window,text="Default New Plist Type:")
         plist_label.grid(row=7,column=0,sticky="w",padx=10)
-        self.plist_type_menu.grid(row=7,column=1,sticky="we",padx=10)
+        self.plist_type_menu.grid(row=7,column=1,columnspan=2,sticky="we",padx=10)
         self.data_type_string = tk.StringVar(self.settings_window)
         self.data_type_menu = tk.OptionMenu(self.settings_window, self.data_type_string, "Hex","Base64", command=self.change_data_type)
         data_label = tk.Label(self.settings_window,text="Data Display Default:")
         data_label.grid(row=8,column=0,sticky="w",padx=10)
-        self.data_type_menu.grid(row=8,column=1,sticky="we",padx=10)
+        self.data_type_menu.grid(row=8,column=1,columnspan=2,sticky="we",padx=10)
         self.int_type_string = tk.StringVar(self.settings_window)
         self.int_type_menu = tk.OptionMenu(self.settings_window, self.int_type_string, "Decimal", "Hex", command=self.change_int_type)
         int_label = tk.Label(self.settings_window,text="Integer Display Default:")
         int_label.grid(row=9,column=0,sticky="w",padx=10)
-        self.int_type_menu.grid(row=9,column=1,sticky="we",padx=10)
+        self.int_type_menu.grid(row=9,column=1,columnspan=2,sticky="we",padx=10)
         self.bool_type_string = tk.StringVar(self.settings_window)
         self.bool_type_menu = tk.OptionMenu(self.settings_window, self.bool_type_string, "True/False", "YES/NO", "On/Off", "1/0", u"\u2714/\u274c", command=self.change_bool_type)
         bool_label = tk.Label(self.settings_window,text="Boolean Display Default:")
         bool_label.grid(row=10,column=0,sticky="w",padx=10)
-        self.bool_type_menu.grid(row=10,column=1,sticky="we",padx=10)
+        self.bool_type_menu.grid(row=10,column=1,columnspan=2,sticky="we",padx=10)
         self.snapshot_string = tk.StringVar(self.settings_window)
         self.snapshot_menu = tk.OptionMenu(self.settings_window, self.snapshot_string, "Auto-detect", command=self.change_snapshot_version)
         snapshot_label = tk.Label(self.settings_window,text="OC Snapshot Target Version:")
         snapshot_label.grid(row=11,column=0,sticky="w",padx=10)
-        self.snapshot_menu.grid(row=11,column=1,sticky="we",padx=10)
+        self.snapshot_menu.grid(row=11,column=1,columnspan=2,sticky="we",padx=10)
         self.schema_check = tk.Checkbutton(self.settings_window,text="Force Update Snapshot Schema",variable=self.force_schema,command=self.schema_command)
-        self.schema_check.grid(row=12,column=0,columnspan=2,sticky="w",padx=10)
+        self.schema_check.grid(row=12,column=0,columnspan=3,sticky="w",padx=10)
+        self.enable_drag_and_drop = tk.BooleanVar()
+        self.toggle_drag_drop = tk.Checkbutton(self.settings_window,text="Enable Row Drag & Drop", variable=self.enable_drag_and_drop,command=self.drag_drop_command)
+        self.toggle_drag_drop.grid(row=13,column=0,columnspan=3,sticky="w",padx=10)
         self.drag_label = tk.Label(self.settings_window,text="Drag Dead Zone (1-100 pixels):")
-        self.drag_label.grid(row=13,column=0,sticky="w",padx=10)
-        self.drag_scale = tk.Scale(self.settings_window,from_=1,to=100,orient=tk.HORIZONTAL)
-        self.drag_scale.grid(row=13,column=1,sticky="we",padx=10)
+        self.drag_label.grid(row=14,column=0,sticky="w",padx=10)
+        self.drag_pixels = tk.Label(self.settings_window,text="20")
+        self.drag_pixels.grid(row=14,column=1,sticky="w",padx=(10,0))
+        self.drag_scale = tk.Scale(self.settings_window,from_=1,to=100,orient=tk.HORIZONTAL,command=self.scale_command,showvalue=False)
+        self.drag_scale.grid(row=14,column=2,sticky="we",padx=(0,10))
+        self.drag_disabled = tk.Label(self.settings_window,text="[ Drag & Drop Disabled ]")
+        self.drag_disabled.grid(row=14,column=1,columnspan=2,sticky="we",padx=10)
         undo_max_label = tk.Label(self.settings_window,text="Max Undo (0=unlim, {}=default):".format(self.max_undo))
-        undo_max_label.grid(row=14,column=0,sticky="w",padx=10)
+        undo_max_label.grid(row=15,column=0,sticky="w",padx=10)
         self.undo_max_text = tk.Entry(self.settings_window)
-        self.undo_max_text.grid(row=14,column=1,sticky="we",padx=10)
+        self.undo_max_text.grid(row=15,column=1,columnspan=2,sticky="we",padx=10)
         
         # Left/right separator:
         sep = ttk.Separator(self.settings_window,orient="vertical")
-        sep.grid(row=1,column=2,rowspan=13,sticky="ns",padx=10)
+        sep.grid(row=1,column=3,rowspan=14,sticky="ns",padx=10)
 
         # Right side - theme elements:
         t_func = ttk.Separator(self.settings_window,orient="horizontal")
-        t_func.grid(row=0,column=4,columnspan=1,sticky="we",padx=10,pady=10)
+        t_func.grid(row=0,column=5,columnspan=1,sticky="we",padx=10,pady=10)
         tfunc_label = tk.Label(self.settings_window,text="Appearance Options:")
-        tfunc_label.grid(row=0,column=3,sticky="w",padx=10,pady=10)
+        tfunc_label.grid(row=0,column=4,sticky="w",padx=10,pady=10)
 
         self.op_label = tk.Label(self.settings_window,text="Window Opacity (25-100%):")
-        self.op_label.grid(row=1,column=3,sticky="w",padx=10)
+        self.op_label.grid(row=1,column=4,sticky="w",padx=10)
         self.op_scale = tk.Scale(self.settings_window,from_=25,to=100,orient=tk.HORIZONTAL,command=self.update_opacity)
-        self.op_scale.grid(row=1,column=4,sticky="we",padx=10)
+        self.op_scale.grid(row=1,column=5,sticky="we",padx=10)
         r4_label = tk.Label(self.settings_window,text="Highlight Color:")
-        r4_label.grid(row=2,column=3,sticky="w",padx=10)
+        r4_label.grid(row=2,column=4,sticky="w",padx=10)
         self.hl_canvas = tk.Canvas(self.settings_window, height=20, width=30, background="black", relief="groove", bd=2)
-        self.hl_canvas.grid(row=2,column=4,sticky="we",padx=10)
+        self.hl_canvas.grid(row=2,column=5,sticky="we",padx=10)
         r1_label = tk.Label(self.settings_window,text="Alternating Row Color #1:")
-        r1_label.grid(row=3,column=3,sticky="w",padx=10)
+        r1_label.grid(row=3,column=4,sticky="w",padx=10)
         self.r1_canvas = tk.Canvas(self.settings_window, height=20, width=30, background="black", relief="groove", bd=2)
-        self.r1_canvas.grid(row=3,column=4,sticky="we",padx=10)
+        self.r1_canvas.grid(row=3,column=5,sticky="we",padx=10)
         r2_label = tk.Label(self.settings_window,text="Alternating Row Color #2:")
-        r2_label.grid(row=4,column=3,sticky="w",padx=10)
+        r2_label.grid(row=4,column=4,sticky="w",padx=10)
         self.r2_canvas = tk.Canvas(self.settings_window, height=20, width=30, background="black", relief="groove", bd=2)
-        self.r2_canvas.grid(row=4,column=4,sticky="we",padx=10)
+        self.r2_canvas.grid(row=4,column=5,sticky="we",padx=10)
         r3_label = tk.Label(self.settings_window,text="Column Header/BG Color:")
-        r3_label.grid(row=5,column=3,sticky="w",padx=10)
+        r3_label.grid(row=5,column=4,sticky="w",padx=10)
         self.bg_canvas = tk.Canvas(self.settings_window, height=20, width=30, background="black", relief="groove", bd=2)
-        self.bg_canvas.grid(row=5,column=4,sticky="we",padx=10)
+        self.bg_canvas.grid(row=5,column=5,sticky="we",padx=10)
         self.ig_bg_check = tk.IntVar()
         self.ig_bg = tk.Checkbutton(self.settings_window,text="Header Text Ignores BG Color",variable=self.ig_bg_check,command=self.check_ig_bg_command)
-        self.ig_bg.grid(row=6,column=3,sticky="w",padx=10)
+        self.ig_bg.grid(row=6,column=4,sticky="w",padx=10)
         self.bg_inv_check = tk.IntVar()
         self.bg_inv = tk.Checkbutton(self.settings_window,text="Invert Header Text Color",variable=self.bg_inv_check,command=self.check_bg_invert_command)
-        self.bg_inv.grid(row=6,column=4,sticky="w",padx=10)
+        self.bg_inv.grid(row=6,column=5,sticky="w",padx=10)
         self.r1_inv_check = tk.IntVar()
         self.r1_inv = tk.Checkbutton(self.settings_window,text="Invert Row #1 Text Color",variable=self.r1_inv_check,command=self.check_r1_invert_command)
-        self.r1_inv.grid(row=7,column=4,sticky="w",padx=10)
+        self.r1_inv.grid(row=7,column=5,sticky="w",padx=10)
         self.r2_inv_check = tk.IntVar()
         self.r2_inv = tk.Checkbutton(self.settings_window,text="Invert Row #2 Text Color",variable=self.r2_inv_check,command=self.check_r2_invert_command)
-        self.r2_inv.grid(row=8,column=4,sticky="w",padx=10)
+        self.r2_inv.grid(row=8,column=5,sticky="w",padx=10)
         self.hl_inv_check = tk.IntVar()
         self.hl_inv = tk.Checkbutton(self.settings_window,text="Invert Highlight Text Color",variable=self.hl_inv_check,command=self.check_hl_invert_command)
-        self.hl_inv.grid(row=9,column=4,sticky="w",padx=10)
+        self.hl_inv.grid(row=9,column=5,sticky="w",padx=10)
 
         self.default_font = Font(font='TkTextFont')
         self.custom_font = tk.IntVar()
@@ -224,8 +228,8 @@ class ProperTree:
         self.font_string = tk.StringVar()
         self.font_spinbox = tk.Spinbox(self.settings_window,from_=1,to=128,textvariable=self.font_string)
         self.font_string.trace("w",self.update_font)
-        self.font_check.grid(row=10,column=3,sticky="w",padx=10)
-        self.font_spinbox.grid(row=10,column=4,sticky="we",padx=10)
+        self.font_check.grid(row=10,column=4,sticky="w",padx=10)
+        self.font_spinbox.grid(row=10,column=5,sticky="we",padx=10)
 
         # Custom font picker - wacky implementation.
         self.font_var = tk.IntVar()
@@ -234,39 +238,39 @@ class ProperTree:
         self.font_custom = ttk.Combobox(self.settings_window,state="readonly",textvariable=self.font_family,values=sorted(families()))
         self.font_custom.bind('<<ComboboxSelected>>',self.font_pick)
         self.font_family.trace("w",self.update_font_family)
-        self.font_custom_check.grid(row=11,column=3,stick="w",padx=10)
-        self.font_custom.grid(row=11,column=4,sticky="we",padx=10)
+        self.font_custom_check.grid(row=11,column=4,stick="w",padx=10)
+        self.font_custom.grid(row=11,column=5,sticky="we",padx=10)
 
         r5_label = tk.Label(self.settings_window,text="Restore Appearance Defaults:")
-        r5_label.grid(row=12,column=3,sticky="w",padx=10)
+        r5_label.grid(row=12,column=4,sticky="w",padx=10)
         dt_func = ttk.Separator(self.settings_window,orient="horizontal")
-        dt_func.grid(row=12,column=4,columnspan=1,sticky="we",padx=10)
+        dt_func.grid(row=12,column=5,columnspan=1,sticky="we",padx=10)
 
         default_font = tk.Button(self.settings_window,text="Font Defaults",command=self.font_defaults)
-        default_font.grid(row=13,column=3,sticky="we",padx=10)
+        default_font.grid(row=13,column=4,sticky="we",padx=10)
         default_high = tk.Button(self.settings_window,text="Highlight Color",command=lambda:self.swap_colors("highlight"))
-        default_high.grid(row=14,column=3,sticky="we",padx=10)
+        default_high.grid(row=14,column=4,sticky="we",padx=10)
         default_light = tk.Button(self.settings_window,text="Light Mode Colors",command=lambda:self.swap_colors("light"))
-        default_light.grid(row=13,column=4,sticky="we",padx=10)
+        default_light.grid(row=13,column=5,sticky="we",padx=10)
         default_dark = tk.Button(self.settings_window,text="Dark Mode Colors",command=lambda:self.swap_colors("dark"))
-        default_dark.grid(row=14,column=4,sticky="we",padx=10)
+        default_dark.grid(row=14,column=5,sticky="we",padx=10)
 
         sep_theme = ttk.Separator(self.settings_window,orient="horizontal")
-        sep_theme.grid(row=15,column=0,columnspan=5,sticky="we",padx=10,pady=(10,0))
+        sep_theme.grid(row=16,column=0,columnspan=5,sticky="we",padx=10,pady=(10,0))
 
         # Add the check for updates checkbox and button
         self.update_int = tk.IntVar()
         self.update_check = tk.Checkbutton(self.settings_window,text="Check For Updates At Start",variable=self.update_int,command=self.update_command)
-        self.update_check.grid(row=16,column=0,sticky="w",padx=10,pady=(5,0))
+        self.update_check.grid(row=17,column=0,sticky="w",padx=10,pady=(5,0))
         self.notify_once_int = tk.IntVar()
         self.notify_once_check = tk.Checkbutton(self.settings_window,text="Only Notify Once Per Version",variable=self.notify_once_int,command=self.notify_once)
-        self.notify_once_check.grid(row=17,column=0,sticky="w",padx=10,pady=(0,10))
+        self.notify_once_check.grid(row=18,column=0,sticky="w",padx=10,pady=(0,10))
         self.update_button = tk.Button(self.settings_window,text="Check Now",command=lambda:self.check_for_updates(user_initiated=True))
-        self.update_button.grid(row=17,column=1,sticky="w",padx=10,pady=(0,10))
+        self.update_button.grid(row=18,column=1,columnspan=2,sticky="w",padx=10,pady=(0,10))
         self.tex_button = tk.Button(self.settings_window,text="Get Configuration.tex",command=self.get_latest_tex)
-        self.tex_button.grid(row=17,column=3,sticky="we",padx=10,pady=(0,10))
+        self.tex_button.grid(row=18,column=4,sticky="we",padx=10,pady=(0,10))
         reset_settings = tk.Button(self.settings_window,text="Restore All Defaults",command=self.reset_settings)
-        reset_settings.grid(row=17,column=4,sticky="we",padx=10,pady=(0,10))
+        reset_settings.grid(row=18,column=5,sticky="we",padx=10,pady=(0,10))
 
         # Setup the color picker click methods
         self.r1_canvas.bind("<ButtonRelease-1>",lambda x:self.pick_color("alternating_color_1",self.r1_canvas))
@@ -306,8 +310,8 @@ class ProperTree:
         self.t_title = tk.StringVar(self.tk)
         f_option = tk.OptionMenu(self.tk, self.f_title, "Ascii", "Base64", "Decimal", "Hex", "Binary", command=self.change_from_type)
         t_option = tk.OptionMenu(self.tk, self.t_title, "Ascii", "Base64", "Decimal", "Hex", "Binary", command=self.change_to_type)
-        f_option.grid(row=0,column=1,sticky="we")
-        t_option.grid(row=1,column=1,sticky="we")
+        f_option.grid(row=0,column=2,sticky="we")
+        t_option.grid(row=1,column=2,sticky="we")
 
         self.f_text = tk.Entry(self.tk)
         self.f_text.delete(0,tk.END)
@@ -322,7 +326,7 @@ class ProperTree:
         self.t_text.grid(row=1,column=2,columnspan=2,sticky="we",padx=10,pady=10)
 
         self.c_button = tk.Button(self.tk, text="Convert", command=self.convert_values)
-        self.c_button.grid(row=2,column=3,sticky="e",padx=10,pady=10)
+        self.c_button.grid(row=2,column=4,sticky="e",padx=10,pady=10)
         self.s_button = tk.Button(self.tk, text="To <--> From", command=self.swap_convert)
         self.s_button.grid(row=2,column=0,sticky="w",padx=10,pady=10)
 
@@ -445,6 +449,7 @@ class ProperTree:
         # invert_row1_text_color:       bool
         # invert_row2_text_color:       bool
         # invert_hl_text_color:         bool
+        # enable_drag_and_drop:         bool
         # drag_dead_zone:               pixel distance before drag starts (default is 20)
         # open_recent:                  list, paths recently opened
         # recent_max:                   int, max number of recent items
@@ -932,8 +937,21 @@ class ProperTree:
         self.settings["comment_strip_check_string"] = True if self.comment_check_string.get() else False
 
     def drag_drop_command(self, event = None):
-        self.settings["dragDropEnabledBool"] = True if self.dragDropEnabledBool.get() else False
-    
+        self.settings["enable_drag_and_drop"] = True if self.enable_drag_and_drop.get() else False
+        self.scale_command() # Ensure the scale is reflected
+        if self.enable_drag_and_drop.get():
+            self.drag_scale.grid()
+            self.drag_disabled.grid_remove()
+        else:
+            self.drag_disabled.grid()
+            self.drag_scale.grid_remove()
+
+    def scale_command(self, event = None):
+        self.settings["drag_dead_zone"] = self.drag_scale.get()
+        self.drag_pixels.configure(
+            text="{}".format(str(self.drag_scale.get()).rjust(3)) if self.enable_drag_and_drop.get() else ""
+        )
+
     def check_ig_bg_command(self, event = None):
         self.settings["header_text_ignore_bg_color"] = True if self.ig_bg_check.get() else False
         self.update_colors()
@@ -1104,7 +1122,6 @@ class ProperTree:
         self.snapshot_string.set(snapshot_name if snapshot_name in snapshot_choices else "Auto-detect")
         self.force_schema.set(self.settings.get("force_snapshot_schema",False))
         self.comment_ignore_case.set(self.settings.get("comment_strip_ignore_case",False))
-        self.dragDropEnabledBool.set(self.settings.get("dragDropEnabledBool",False))
         self.comment_check_string.set(self.settings.get("comment_strip_check_string",True))
         self.update_int.set(self.settings.get("check_for_updates_at_startup",True))
         self.notify_once_int.set(self.settings.get("notify_once_per_version",True))
@@ -1121,7 +1138,9 @@ class ProperTree:
         except: opacity = 100 # failsafe
         self.op_scale.set(opacity)
         self.set_window_opacity(opacity)
+        self.enable_drag_and_drop.set(self.settings.get("enable_drag_and_drop",True))
         self.drag_scale.set(self.settings.get("drag_dead_zone",20))
+        self.drag_drop_command() # Ensure the drag_scale state is updated as needed
         self.font_string.set(self.settings.get("font_size",self.default_font["size"]))
         self.custom_font.set(self.settings.get("use_custom_font_size",False))
         self.font_family.set(self.settings.get("font_family",self.default_font.actual()["family"]))
@@ -1762,7 +1781,6 @@ class ProperTree:
         except:
             max_undo = self.max_undo
         self.settings["max_undo"] = max_undo
-        self.settings["drag_dead_zone"] = self.drag_scale.get()
         # Actually quit the tkinter session
         self.tk.destroy()
         # Attempt to save the settings
