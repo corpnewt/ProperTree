@@ -1822,8 +1822,11 @@ class PlistWindow(tk.Toplevel):
             return
         rowid = self._tree.identify_row(event.y)
         if rowid and self._tree.bbox(rowid):
-            # Mouse down in a valid node
-            self.clicked_drag = True
+            # If drag-drop is enabled in settings, allow it
+            if self.controller.settings.get("dragDropEnabledBool", True):
+                self.clicked_drag = True
+            else:
+                self.clicked_drag = False
     
     def _change_display(self,new_display,target_funct):
         # Walks the nodes, undo, and redo stacks and runs
