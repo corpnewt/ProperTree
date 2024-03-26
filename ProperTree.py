@@ -105,6 +105,20 @@ class ProperTree:
         # Set the default max undo/redo steps to retain
         self.max_undo = 200
         
+        # Set up our defaults for our option lists
+        self.allowed_types = ("XML","Binary")
+        self.allowed_data  = ("Hex","Base64")
+        self.allowed_int   = ("Decimal","Hex")
+        self.allowed_bool  = ("True/False","YES/NO","On/Off","1/0",u"\u2714/\u274c")
+        self.allowed_conv  = ("Ascii","Base64","Decimal","Hex","Binary")
+
+        # If should_set_header_text() returns None, we're running in macOS
+        # with a window that does not support native dark mode.  The result
+        # of which is that some ttk widget backgrounds do not match the
+        # window background.  We'll try to work around that by using tk in
+        # those cases.
+        tk_or_ttk = tk if self.should_set_header_text() is None else ttk
+
         # Left side - functional elements:
         
         # Let's add some checkboxes and stuffs
@@ -119,11 +133,11 @@ class ProperTree:
         self.comment_ignore_case = tk.IntVar()
         self.comment_check_string = tk.IntVar()
         self.force_schema = tk.IntVar()
-        self.expand_check = ttk.Checkbutton(self.settings_window,text="Expand Children When Opening Plist",variable=self.expand_on_open,command=self.expand_command)
-        self.xcode_check = ttk.Checkbutton(self.settings_window,text="Use Xcode-Style <data> Tags (Inline) in XML Plists",variable=self.use_xcode_data,command=self.xcode_command)
-        self.sort_check = ttk.Checkbutton(self.settings_window,text="Ignore Dictionary Key Order",variable=self.sort_dict_keys,command=self.sort_command)
-        self.ignore_case_check = ttk.Checkbutton(self.settings_window,text="Ignore Case When Stripping Comments",variable=self.comment_ignore_case,command=self.ignore_case_command)
-        self.check_string_check = ttk.Checkbutton(self.settings_window,text="Check String Values When Stripping Comments",variable=self.comment_check_string,command=self.check_string_command)
+        self.expand_check = tk_or_ttk.Checkbutton(self.settings_window,text="Expand Children When Opening Plist",variable=self.expand_on_open,command=self.expand_command)
+        self.xcode_check = tk_or_ttk.Checkbutton(self.settings_window,text="Use Xcode-Style <data> Tags (Inline) in XML Plists",variable=self.use_xcode_data,command=self.xcode_command)
+        self.sort_check = tk_or_ttk.Checkbutton(self.settings_window,text="Ignore Dictionary Key Order",variable=self.sort_dict_keys,command=self.sort_command)
+        self.ignore_case_check = tk_or_ttk.Checkbutton(self.settings_window,text="Ignore Case When Stripping Comments",variable=self.comment_ignore_case,command=self.ignore_case_command)
+        self.check_string_check = tk_or_ttk.Checkbutton(self.settings_window,text="Check String Values When Stripping Comments",variable=self.comment_check_string,command=self.check_string_command)
         self.expand_check.grid(row=1,column=0,columnspan=3,sticky="w",padx=10)
         self.xcode_check.grid(row=2,column=0,columnspan=3,sticky="w",padx=10)
         self.sort_check.grid(row=3,column=0,columnspan=3,sticky="w",padx=10)
@@ -134,42 +148,46 @@ class ProperTree:
         self.comment_prefix_text = tk.Entry(self.settings_window)
         self.comment_prefix_text.grid(row=6,column=1,columnspan=2,sticky="we",padx=10)
         self.plist_type_string = tk.StringVar(self.settings_window)
-        self.plist_type_menu = ttk.OptionMenu(self.settings_window, self.plist_type_string, "XML", "XML","Binary", command=self.change_plist_type)
+        self.plist_type_menu = tk_or_ttk.OptionMenu(self.settings_window, self.plist_type_string, *self.get_option_menu_list(self.allowed_types), command=self.change_plist_type)
         plist_label = tk.Label(self.settings_window,text="Default New Plist Type:")
         plist_label.grid(row=7,column=0,sticky="w",padx=10)
         self.plist_type_menu.grid(row=7,column=1,columnspan=2,sticky="we",padx=10)
         self.data_type_string = tk.StringVar(self.settings_window)
-        self.data_type_menu = ttk.OptionMenu(self.settings_window, self.data_type_string, "Hex", "Hex","Base64", command=self.change_data_type)
+        self.data_type_menu = tk_or_ttk.OptionMenu(self.settings_window, self.data_type_string, *self.get_option_menu_list(self.allowed_data), command=self.change_data_type)
         data_label = tk.Label(self.settings_window,text="Data Display Default:")
         data_label.grid(row=8,column=0,sticky="w",padx=10)
         self.data_type_menu.grid(row=8,column=1,columnspan=2,sticky="we",padx=10)
         self.int_type_string = tk.StringVar(self.settings_window)
-        self.int_type_menu = ttk.OptionMenu(self.settings_window, self.int_type_string, "Decimal", "Decimal","Hex", command=self.change_int_type)
+        self.int_type_menu = tk_or_ttk.OptionMenu(self.settings_window, self.int_type_string, *self.get_option_menu_list(self.allowed_int), command=self.change_int_type)
         int_label = tk.Label(self.settings_window,text="Integer Display Default:")
         int_label.grid(row=9,column=0,sticky="w",padx=10)
         self.int_type_menu.grid(row=9,column=1,columnspan=2,sticky="we",padx=10)
         self.bool_type_string = tk.StringVar(self.settings_window)
-        self.bool_type_menu = ttk.OptionMenu(self.settings_window, self.bool_type_string, "True/False", "True/False","YES/NO","On/Off","1/0",u"\u2714/\u274c", command=self.change_bool_type)
+        self.bool_type_menu = tk_or_ttk.OptionMenu(self.settings_window, self.bool_type_string, *self.get_option_menu_list(self.allowed_bool), command=self.change_bool_type)
         bool_label = tk.Label(self.settings_window,text="Boolean Display Default:")
         bool_label.grid(row=10,column=0,sticky="w",padx=10)
         self.bool_type_menu.grid(row=10,column=1,columnspan=2,sticky="we",padx=10)
         self.snapshot_string = tk.StringVar(self.settings_window)
-        self.snapshot_menu = ttk.OptionMenu(self.settings_window, self.snapshot_string, "Auto-detect", command=self.change_snapshot_version)
+        self.snapshot_menu = tk_or_ttk.OptionMenu(self.settings_window, self.snapshot_string, "Auto-detect", command=self.change_snapshot_version)
         snapshot_label = tk.Label(self.settings_window,text="OC Snapshot Target Version:")
         snapshot_label.grid(row=11,column=0,sticky="w",padx=10)
         self.snapshot_menu.grid(row=11,column=1,columnspan=2,sticky="we",padx=10)
-        self.schema_check = ttk.Checkbutton(self.settings_window,text="Force Update Snapshot Schema",variable=self.force_schema,command=self.schema_command)
+        self.schema_check = tk_or_ttk.Checkbutton(self.settings_window,text="Force Update Snapshot Schema",variable=self.force_schema,command=self.schema_command)
         self.schema_check.grid(row=12,column=0,columnspan=3,sticky="w",padx=10)
         self.enable_drag_and_drop = tk.BooleanVar()
-        self.toggle_drag_drop = ttk.Checkbutton(self.settings_window,text="Enable Row Drag & Drop", variable=self.enable_drag_and_drop,command=self.drag_drop_command)
+        self.toggle_drag_drop = tk_or_ttk.Checkbutton(self.settings_window,text="Enable Row Drag & Drop", variable=self.enable_drag_and_drop,command=self.drag_drop_command)
         self.toggle_drag_drop.grid(row=13,column=0,columnspan=3,sticky="w",padx=10)
         self.drag_label = tk.Label(self.settings_window,text="Drag Dead Zone (1-100 pixels):")
         self.drag_label.grid(row=14,column=0,sticky="w",padx=10)
         self.drag_pixels = tk.Label(self.settings_window,text="20")
         self.drag_pixels.grid(row=14,column=1,sticky="w",padx=(10,0))
-        self.drag_scale = ttk.Scale(self.settings_window,from_=1,to=100,orient=tk.HORIZONTAL,command=self.scale_command)
+        self.drag_scale = tk_or_ttk.Scale(self.settings_window,from_=1,to=100,orient=tk.HORIZONTAL,command=self.scale_command)
+        # Try to hide the value if using tk - will throw an exception in ttk
+        try: self.drag_scale.configure(showvalue=False)
+        except tk.TclError: pass
         self.drag_scale.grid(row=14,column=2,sticky="we",padx=(0,10))
         self.drag_disabled = tk.Label(self.settings_window,text="[ Drag & Drop Disabled ]")
+        self.drag_disabled.configure(state="disabled")
         self.drag_disabled.grid(row=14,column=1,columnspan=2,sticky="we",padx=10)
         undo_max_label = tk.Label(self.settings_window,text="Max Undo (0=unlim, {}=default):".format(self.max_undo))
         undo_max_label.grid(row=15,column=0,sticky="w",padx=10)
@@ -190,7 +208,10 @@ class ProperTree:
         self.op_label.grid(row=1,column=4,sticky="w",padx=10)
         self.op_perc = tk.Label(self.settings_window,text="100")
         self.op_perc.grid(row=1,column=5,sticky="w",padx=(10,0))
-        self.op_scale = ttk.Scale(self.settings_window,from_=25,to=100,orient=tk.HORIZONTAL,command=self.update_opacity)
+        self.op_scale = tk_or_ttk.Scale(self.settings_window,from_=25,to=100,orient=tk.HORIZONTAL,command=self.update_opacity)
+        # Try to hide the value if using tk - will throw an exception in ttk
+        try: self.op_scale.configure(showvalue=False)
+        except tk.TclError: pass
         self.op_scale.grid(row=1,column=6,sticky="we",padx=10)
         r4_label = tk.Label(self.settings_window,text="Highlight Color:")
         r4_label.grid(row=2,column=4,sticky="w",padx=10)
@@ -209,24 +230,24 @@ class ProperTree:
         self.bg_canvas = tk.Canvas(self.settings_window, height=20, width=30, background="black", relief="groove", bd=2)
         self.bg_canvas.grid(row=5,column=5,columnspan=2,sticky="we",padx=10)
         self.ig_bg_check = tk.IntVar()
-        self.ig_bg = ttk.Checkbutton(self.settings_window,text="Header Text Ignores BG Color",variable=self.ig_bg_check,command=self.check_ig_bg_command)
+        self.ig_bg = tk_or_ttk.Checkbutton(self.settings_window,text="Header Text Ignores BG Color",variable=self.ig_bg_check,command=self.check_ig_bg_command)
         self.ig_bg.grid(row=6,column=4,sticky="w",padx=10)
         self.bg_inv_check = tk.IntVar()
-        self.bg_inv = ttk.Checkbutton(self.settings_window,text="Invert Header Text Color",variable=self.bg_inv_check,command=self.check_bg_invert_command)
+        self.bg_inv = tk_or_ttk.Checkbutton(self.settings_window,text="Invert Header Text Color",variable=self.bg_inv_check,command=self.check_bg_invert_command)
         self.bg_inv.grid(row=6,column=5,columnspan=2,sticky="w",padx=10)
         self.r1_inv_check = tk.IntVar()
-        self.r1_inv = ttk.Checkbutton(self.settings_window,text="Invert Row #1 Text Color",variable=self.r1_inv_check,command=self.check_r1_invert_command)
+        self.r1_inv = tk_or_ttk.Checkbutton(self.settings_window,text="Invert Row #1 Text Color",variable=self.r1_inv_check,command=self.check_r1_invert_command)
         self.r1_inv.grid(row=7,column=5,columnspan=2,sticky="w",padx=10)
         self.r2_inv_check = tk.IntVar()
-        self.r2_inv = ttk.Checkbutton(self.settings_window,text="Invert Row #2 Text Color",variable=self.r2_inv_check,command=self.check_r2_invert_command)
+        self.r2_inv = tk_or_ttk.Checkbutton(self.settings_window,text="Invert Row #2 Text Color",variable=self.r2_inv_check,command=self.check_r2_invert_command)
         self.r2_inv.grid(row=8,column=5,columnspan=2,sticky="w",padx=10)
         self.hl_inv_check = tk.IntVar()
-        self.hl_inv = ttk.Checkbutton(self.settings_window,text="Invert Highlight Text Color",variable=self.hl_inv_check,command=self.check_hl_invert_command)
+        self.hl_inv = tk_or_ttk.Checkbutton(self.settings_window,text="Invert Highlight Text Color",variable=self.hl_inv_check,command=self.check_hl_invert_command)
         self.hl_inv.grid(row=9,column=5,columnspan=2,sticky="w",padx=10)
 
         self.default_font = Font(font='TkTextFont')
         self.custom_font = tk.IntVar()
-        self.font_check = ttk.Checkbutton(self.settings_window,text="Use Custom Font Size",variable=self.custom_font,command=self.font_command)
+        self.font_check = tk_or_ttk.Checkbutton(self.settings_window,text="Use Custom Font Size",variable=self.custom_font,command=self.font_command)
         self.font_string = tk.StringVar()
         self.font_spinbox = tk.Spinbox(self.settings_window,from_=1,to=128,textvariable=self.font_string)
         self.font_string.trace("w",self.update_font)
@@ -236,7 +257,7 @@ class ProperTree:
         # Custom font picker - wacky implementation.
         self.font_var = tk.IntVar()
         self.font_family  = tk.StringVar()
-        self.font_custom_check = ttk.Checkbutton(self.settings_window,text="Use Custom Font",variable=self.font_var,command=self.font_select)
+        self.font_custom_check = tk_or_ttk.Checkbutton(self.settings_window,text="Use Custom Font",variable=self.font_var,command=self.font_select)
         self.font_custom = ttk.Combobox(self.settings_window,state="readonly",textvariable=self.font_family,values=sorted(families()))
         self.font_custom.bind('<<ComboboxSelected>>',self.font_pick)
         self.font_family.trace("w",self.update_font_family)
@@ -248,13 +269,13 @@ class ProperTree:
         dt_func = ttk.Separator(self.settings_window,orient="horizontal")
         dt_func.grid(row=12,column=5,columnspan=2,sticky="we",padx=10)
 
-        default_font = ttk.Button(self.settings_window,text="Font Defaults",command=self.font_defaults)
+        default_font = tk_or_ttk.Button(self.settings_window,text="Font Defaults",command=self.font_defaults)
         default_font.grid(row=13,column=4,sticky="we",padx=10)
-        default_high = ttk.Button(self.settings_window,text="Highlight Color",command=lambda:self.swap_colors("highlight"))
+        default_high = tk_or_ttk.Button(self.settings_window,text="Highlight Color",command=lambda:self.swap_colors("highlight"))
         default_high.grid(row=14,column=4,sticky="we",padx=10)
-        default_light = ttk.Button(self.settings_window,text="Light Mode Colors",command=lambda:self.swap_colors("light"))
+        default_light = tk_or_ttk.Button(self.settings_window,text="Light Mode Colors",command=lambda:self.swap_colors("light"))
         default_light.grid(row=13,column=5,columnspan=2,sticky="we",padx=10)
-        default_dark = ttk.Button(self.settings_window,text="Dark Mode Colors",command=lambda:self.swap_colors("dark"))
+        default_dark = tk_or_ttk.Button(self.settings_window,text="Dark Mode Colors",command=lambda:self.swap_colors("dark"))
         default_dark.grid(row=14,column=5,columnspan=2,sticky="we",padx=10)
 
         sep_theme = ttk.Separator(self.settings_window,orient="horizontal")
@@ -262,16 +283,16 @@ class ProperTree:
 
         # Add the check for updates checkbox and button
         self.update_int = tk.IntVar()
-        self.update_check = ttk.Checkbutton(self.settings_window,text="Check For Updates At Start",variable=self.update_int,command=self.update_command)
+        self.update_check = tk_or_ttk.Checkbutton(self.settings_window,text="Check For Updates At Start",variable=self.update_int,command=self.update_command)
         self.update_check.grid(row=17,column=0,sticky="w",padx=10,pady=(5,0))
         self.notify_once_int = tk.IntVar()
-        self.notify_once_check = ttk.Checkbutton(self.settings_window,text="Only Notify Once Per Version",variable=self.notify_once_int,command=self.notify_once)
+        self.notify_once_check = tk_or_ttk.Checkbutton(self.settings_window,text="Only Notify Once Per Version",variable=self.notify_once_int,command=self.notify_once)
         self.notify_once_check.grid(row=18,column=0,sticky="w",padx=10,pady=(0,10))
-        self.update_button = ttk.Button(self.settings_window,text="Check Now",command=lambda:self.check_for_updates(user_initiated=True))
+        self.update_button = tk_or_ttk.Button(self.settings_window,text="Check Now",command=lambda:self.check_for_updates(user_initiated=True))
         self.update_button.grid(row=18,column=1,columnspan=2,sticky="w",padx=10,pady=(0,10))
-        self.tex_button = ttk.Button(self.settings_window,text="Get Configuration.tex",command=self.get_latest_tex)
+        self.tex_button = tk_or_ttk.Button(self.settings_window,text="Get Configuration.tex",command=self.get_latest_tex)
         self.tex_button.grid(row=18,column=4,sticky="we",padx=10,pady=(0,10))
-        reset_settings = ttk.Button(self.settings_window,text="Restore All Defaults",command=self.reset_settings)
+        reset_settings = tk_or_ttk.Button(self.settings_window,text="Restore All Defaults",command=self.reset_settings)
         reset_settings.grid(row=18,column=5,columnspan=2,sticky="we",padx=10,pady=(0,10))
 
         # Setup the color picker click methods
@@ -310,9 +331,8 @@ class ProperTree:
         # Setup the from/to option menus
         self.f_title = tk.StringVar(self.tk)
         self.t_title = tk.StringVar(self.tk)
-        convert_options = ["Ascii","Base64","Decimal","Hex","Binary"]
-        f_option = ttk.OptionMenu(self.tk, self.f_title, convert_options[0], *convert_options, command=self.change_from_type)
-        t_option = ttk.OptionMenu(self.tk, self.t_title, convert_options[0], *convert_options, command=self.change_to_type)
+        f_option = tk_or_ttk.OptionMenu(self.tk, self.f_title, *self.get_option_menu_list(self.allowed_conv), command=self.change_from_type)
+        t_option = tk_or_ttk.OptionMenu(self.tk, self.t_title, *self.get_option_menu_list(self.allowed_conv), command=self.change_to_type)
         f_option.grid(row=0,column=1,sticky="we")
         t_option.grid(row=1,column=1,sticky="we")
 
@@ -328,9 +348,9 @@ class ProperTree:
         self.t_text.configure(state='readonly')
         self.t_text.grid(row=1,column=2,columnspan=3,sticky="we",padx=10,pady=10)
 
-        self.c_button = ttk.Button(self.tk, text="Convert", command=self.convert_values)
+        self.c_button = tk_or_ttk.Button(self.tk, text="Convert", command=self.convert_values)
         self.c_button.grid(row=2,column=4,sticky="e",padx=10,pady=10)
-        self.s_button = ttk.Button(self.tk, text="To <--> From", command=self.swap_convert)
+        self.s_button = tk_or_ttk.Button(self.tk, text="To <--> From", command=self.swap_convert)
         self.s_button.grid(row=2,column=0,columnspan=2,sticky="w",padx=10,pady=10)
 
         self.f_text.bind("<Return>", self.convert_values)
@@ -489,12 +509,6 @@ class ProperTree:
         self.reset_tex_button()
 
         # Setup the settings page to reflect our settings.json file
-
-        self.allowed_types = ("XML","Binary")
-        self.allowed_data  = ("Hex","Base64")
-        self.allowed_int   = ("Decimal","Hex")
-        self.allowed_bool  = ("True/False","YES/NO","On/Off","1/0",u"\u2714/\u274c")
-        self.allowed_conv  = ("Ascii","Base64","Decimal","Hex","Binary")
         self.update_settings()
 
         self.case_insensitive = self.get_case_insensitive()
@@ -654,6 +668,21 @@ class ProperTree:
                 self.settings.pop(c[0],None)
             self.update_settings()
 
+    def get_option_menu_list(self, option_list):
+        # Helper to return OptionMenu lists depending on whether
+        # we're using tk or ttk.  The latter requires the default
+        # element listed - for which we'll just pick the first
+        # element in the option_list
+        if self.should_set_header_text() is None:
+            # This should only happen on macOS when the window
+            # doesn't support native dark mode - this results in
+            # the background of some ttk widgets not matching the
+            # window background
+            return option_list
+        # We should be using ttk, which requires the default element
+        # before the options
+        return [option_list[0]]+list(option_list)
+
     def should_set_header_text(self):
         # In macOS, the header colors are only affected by the background
         # when in dark mode on specific python build
@@ -663,7 +692,7 @@ class ProperTree:
             # Ask the window if it's in dark mode - only works when supported
             return bool(self.tk.call("tk::unsupported::MacWindowStyle","isdark",self.tk))
         except Exception as e:
-            return False # If this fails, window doesn't support dark mode
+            return None # If this fails, window doesn't support dark mode
 
     def get_dark(self):
         if os.name=="nt":
@@ -1124,7 +1153,7 @@ class ProperTree:
         for choice in snapshot_choices:
             self.snapshot_menu["menu"].add_command(label=choice,command=tk._setit(self.snapshot_string,choice,self.change_snapshot_version))
         snapshot_vers = self.settings.get("snapshot_version","Auto-detect")
-        snapshot_name = next((x for x in snapshot_choices if x.split(" ")[0] == snapshot_vers))
+        snapshot_name = next((x for x in snapshot_choices if x.split(" ")[0] == snapshot_vers),None)
         self.snapshot_string.set(snapshot_name if snapshot_name in snapshot_choices else "Auto-detect")
         self.force_schema.set(self.settings.get("force_snapshot_schema",False))
         self.comment_ignore_case.set(self.settings.get("comment_strip_ignore_case",False))

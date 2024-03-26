@@ -378,6 +378,13 @@ class PlistWindow(tk.Toplevel):
         self.set_font_size()
         self.set_font_family()
 
+        # If should_set_header_text() returns None, we're running in macOS
+        # with a window that does not support native dark mode.  The result
+        # of which is that some ttk widget backgrounds do not match the
+        # window background.  We'll try to work around that by using tk in
+        # those cases.
+        tk_or_ttk = tk if self.controller.should_set_header_text() is None else ttk
+
         # Create the treeview
         self._tree_frame = tk.Frame(self)
         # self._tree = ttk.Treeview(self._tree_frame, columns=("Type","Value","Drag"), selectmode="browse", style=self.style_name)
@@ -504,16 +511,16 @@ class PlistWindow(tk.Toplevel):
         in_label = tk.Label(self.display_frame,text="Display Ints as:")
         bl_label = tk.Label(self.display_frame,text="Display Bools as:")
         self.plist_type_string = tk.StringVar(self.display_frame)
-        self.plist_type_menu = ttk.OptionMenu(self.display_frame, self.plist_type_string, self.controller.allowed_types[0], *self.controller.allowed_types, command=self.change_plist_type)
+        self.plist_type_menu = tk_or_ttk.OptionMenu(self.display_frame, self.plist_type_string, *self.controller.get_option_menu_list(self.controller.allowed_types), command=self.change_plist_type)
         self.plist_type_string.set(self.controller.allowed_types[0])
         self.data_type_string = tk.StringVar(self.display_frame)
-        self.data_type_menu = ttk.OptionMenu(self.display_frame, self.data_type_string, self.controller.allowed_data[0], *self.controller.allowed_data, command=self.change_data_type)
+        self.data_type_menu = tk_or_ttk.OptionMenu(self.display_frame, self.data_type_string, *self.controller.get_option_menu_list(self.controller.allowed_data), command=self.change_data_type)
         self.data_type_string.set(self.controller.allowed_data[0])
         self.int_type_string = tk.StringVar(self.display_frame)
-        self.int_type_menu = ttk.OptionMenu(self.display_frame, self.int_type_string, self.controller.allowed_int[0], *self.controller.allowed_int, command=self.change_int_type)
+        self.int_type_menu = tk_or_ttk.OptionMenu(self.display_frame, self.int_type_string, *self.controller.get_option_menu_list(self.controller.allowed_int), command=self.change_int_type)
         self.int_type_string.set(self.controller.allowed_int[0])
         self.bool_type_string = tk.StringVar(self.display_frame)
-        self.bool_type_menu = ttk.OptionMenu(self.display_frame, self.bool_type_string, self.controller.allowed_bool[0], *self.controller.allowed_bool, command=self.change_bool_type)
+        self.bool_type_menu = tk_or_ttk.OptionMenu(self.display_frame, self.bool_type_string, *self.controller.get_option_menu_list(self.controller.allowed_bool), command=self.change_bool_type)
         self.bool_type_string.set(self.controller.allowed_bool[0])
         pt_label.grid(row=1,column=1,pady=10,sticky="w")
         dt_label.grid(row=1,column=3,pady=10,sticky="w")
@@ -547,20 +554,20 @@ class PlistWindow(tk.Toplevel):
         self.r_text.grid(row=1,column=2,columnspan=1,sticky="we",padx=10,pady=10)
         self.f_title = tk.StringVar(self.find_frame)
         self.f_title.set(self.find_type)
-        f_option = ttk.OptionMenu(self.find_frame, self.f_title, *self.f_options, command=self.change_find_type)
+        f_option = tk_or_ttk.OptionMenu(self.find_frame, self.f_title, *self.controller.get_option_menu_list(self.f_options), command=self.change_find_type)
         f_option['menu'].insert_separator(1)
         f_option.grid(row=0,column=1)
-        self.fp_button = tk.Button(self.find_frame,text="< Prev",width=8,command=self.find_prev)
+        self.fp_button = tk_or_ttk.Button(self.find_frame,text="< Prev",width=8,command=self.find_prev)
         self.fp_button.grid(row=0,column=3,sticky="e",padx=0,pady=10)
-        self.fn_button = tk.Button(self.find_frame,text="Next >",width=8,command=self.find_next)
+        self.fn_button = tk_or_ttk.Button(self.find_frame,text="Next >",width=8,command=self.find_next)
         self.fn_button.grid(row=0,column=4,sticky="w",padx=0,pady=10)
-        self.r_button = tk.Button(self.find_frame,text="Replace",command=self.replace)
+        self.r_button = tk_or_ttk.Button(self.find_frame,text="Replace",command=self.replace)
         self.r_button.grid(row=1,column=4,sticky="we",padx=10,pady=10)
         self.r_all_var = tk.IntVar()
-        self.r_all = tk.Checkbutton(self.find_frame,text="Replace All",variable=self.r_all_var)
+        self.r_all = tk_or_ttk.Checkbutton(self.find_frame,text="Replace All",variable=self.r_all_var)
         self.r_all.grid(row=1,column=5,sticky="w")
         self.f_case_var = tk.IntVar()
-        self.f_case = tk.Checkbutton(self.find_frame,text="Case-Sensitive",variable=self.f_case_var)
+        self.f_case = tk_or_ttk.Checkbutton(self.find_frame,text="Case-Sensitive",variable=self.f_case_var)
         self.f_case.grid(row=0,column=5,sticky="w")
 
         # Set find_frame bindings - also bind to child widgets to ensure keybinds are captured
