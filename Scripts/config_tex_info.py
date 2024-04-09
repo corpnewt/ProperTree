@@ -15,7 +15,7 @@ class ConfigurationLoadError(Exception):
     pass
 
 
-def display_info_window(config_tex, search_list, width, valid_only, show_urls, mx, my, font=None, fg="white", bg="black"):
+def display_info_window(config_tex, search_list, width, valid_only, show_urls, calling_window, font=None, fg="white", bg="black"):
     # probably a simpler way to set up the formatted text
     # but found this format online and it works for now
     class FormattedText(tk.Text):
@@ -216,16 +216,17 @@ def display_info_window(config_tex, search_list, width, valid_only, show_urls, m
         return
 
     # Fit the line width to our max line length topping out at our width value
-    # text.configure(width=min(max([len(x)+1 for x in text.get("1.0","end-1c").split("\n")]),width))
-    # move window to mx, my
     # Adjust the width to a fancy mess
-    # max_w += 30
     max_mono_w = text.mono_font.measure("-"*width)
+    width      = min((max_w, max_mono_w))+pad_pixels
+    height     = total_h+bar_height+5
+    # Calculate our x,y based on the calling window - attempting to center the info window
+    # horizontally, but only lowering it by 30 pixels
     info_window.geometry("{}x{}+{}+{}".format(
-        min((max_w, max_mono_w))+pad_pixels,
-        total_h+bar_height+5,
-        mx,
-        my
+        width,
+        height,
+        int(calling_window.winfo_rootx()+(calling_window.winfo_width()/2)-(width/2)),
+        int(calling_window.winfo_rooty()+30)
     ))
     info_window.deiconify()
     # text.configure(width=final_w)

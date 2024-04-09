@@ -3501,17 +3501,15 @@ class PlistWindow(tk.Toplevel):
         if not window:
             config_tex_path = self.controller.get_best_tex_path()
             if config_tex_path and os.path.isfile(config_tex_path):
-                # pass mouse pointer location as location to open info window
-                mx = self.root.winfo_pointerx()
-                my = self.root.winfo_pointery()
+                # Ensure the selected cell is visible
+                self._tree.see(cell)
                 window = config_tex_info.display_info_window(
                     config_tex_path,
                     search_list,
                     120,
                     False,
                     False,
-                    mx,
-                    my,
+                    self, # Pass our window as the caller
                     font=self.font,
                     fg=self.r1t,
                     bg=self.r1
