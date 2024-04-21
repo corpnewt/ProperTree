@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import sys, os, plistlib, base64, binascii, datetime, tempfile, shutil, re, subprocess, math, hashlib, time
 
-from collections import OrderedDict
+from collections import OrderedDict, deque
 from Scripts import config_tex_info
 
 try:
@@ -2445,10 +2445,17 @@ class PlistWindow(tk.Toplevel):
         # Gather our args for the potential clipboard commands Windows -> macOS -> Linux
         for args in (["clip"],) if os.name=="nt" else (["pbcopy"],) if sys.platform=="darwin" else (["xclip","-sel","c"],["xsel","-ib"],):
             # Try to start a subprocess to mirror the tkinter clipboard contents
-            try: clipboard = subprocess.Popen(args,stdin=subprocess.PIPE)
-            except: continue
+            try:
+                clipboard = subprocess.Popen(
+                    args,
+                    stdin=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    stdout=subprocess.PIPE
+                )
+            except:
+                continue
             # Dirty py2 check to see if we need to encode the data or not
-            clipboard.stdin.write(clipboard_string if 2/3==0 else clipboard_string.encode("utf-8"))
+            clipboard.stdin.write(clipboard_string if 2/3==0 else clipboard_string.encode())
             break # Break out of the loop as needed
 
     def copy_selection(self, event = None):
@@ -2582,6 +2589,27 @@ class PlistWindow(tk.Toplevel):
     ###                                             ###
 
     def add_node(self, value, parentNode="", key=None, check_binary=False):
+        node_stack = deque()
+        node_stack.append((value,parentNode,key,check_binary))
+        top_node = None
+        while node_stack:
+            node = node_stack.popleft()
+            last_check,remaining = self._add_node(*node)
+            if top_node is None and last_check is not None:
+                # Retain the top_node as needed
+                top_node = last_check
+            if remaining is None:
+                # We don't have to add any more
+                continue
+            elif isinstance(remaining,list):
+                # Got entries to add
+                node_stack.extend(remaining)
+        # We exited the loop - return the top_node if any
+        return top_node
+
+    def _add_node(self, value, parentNode, key, check_binary):
+        if value is None:
+            return (None,None)
         if key is None:
             key = "Root" # Show the Root
         if isinstance(value,(list,tuple)):
@@ -2593,7 +2621,7 @@ class PlistWindow(tk.Toplevel):
         else:
             values = (self.get_type(value),value,"" if parentNode == "" else self.drag_code)
         i = self._tree.insert(parentNode, "end", text=key, values=values)
-
+        remaining = None
         if isinstance(value, dict):
             if (not check_binary or (check_binary and self.plist_type_string.get().lower() != "binary")) \
             and len(value) == 1 and "CF$UID" in value and isinstance(value["CF$UID"],(int,long)) \
@@ -2604,12 +2632,12 @@ class PlistWindow(tk.Toplevel):
             else:
                 self._tree.item(i, open=True)
                 dict_list = list(value.items()) if not self.controller.settings.get("sort_dict",False) else sorted(list(value.items()))
-                for (key,val) in dict_list:
-                    self.add_node(val, i, key, check_binary=check_binary)
+                # Iterate our dict_list and create the pending nodes to add
+                remaining = [(val,i,key,check_binary) for (key,val) in dict_list]
         elif isinstance(value, (list,tuple)):
             self._tree.item(i, open=True)
-            for (key,val) in enumerate(value):
-                self.add_node(val, i, key, check_binary=check_binary)
+            # Iterate our values and create the pending nodes to add
+            remaining = [(val,i,key,check_binary) for (key,val) in enumerate(value)]
         elif self.is_data(value):
             self._tree.item(i, values=(self.get_type(value),self.get_data(value),"" if parentNode == "" else self.drag_code,))
         elif isinstance(value, datetime.datetime):
@@ -2626,7 +2654,7 @@ class PlistWindow(tk.Toplevel):
             self._tree.item(i, values=(self.get_type(value),value.data,"" if parentNode == "" else self.drag_code,))
         else:
             self._tree.item(i, values=(self.get_type(value),value,"" if parentNode == "" else self.drag_code,))
-        return i
+        return (i,remaining)
 
     def get_value_from_node(self,node="",binary=False):
         values = self.get_padded_values(node, 3)
@@ -2678,36 +2706,44 @@ class PlistWindow(tk.Toplevel):
         return value
 
     def nodes_to_values(self,node="",parent=None,binary=False):
+        node_stack = deque()
         if node in ("",None,self.get_root_node()):
             # Top level - set the parent to the type of our Root
             node = self.get_root_node()
             parent = self.get_root_type()
-            if parent is None: return self.get_value_from_node(node,binary=binary) # Return the raw value - we don't have a collection
-            for child in self._tree.get_children(node):
-                parent = self.nodes_to_values(child,parent=parent,binary=binary)
-            return parent
-        # Not top - process
-        if parent is None:
-            # We need to setup the parent
-            p = self._tree.parent(node)
-            if p in ("",self.get_root_node()):
-                # The parent is the Root node
-                parent = self.get_root_type()
-            else:
-                # Get the type based on our prefs
-                parent = [] if self.get_check_type(p).lower() == "array" else {} if self.controller.settings.get("sort_dict",False) else OrderedDict()
-        name = self._tree.item(node,"text")
-        value = self.get_value_from_node(node,binary=binary)
-        # At this point, we should have the name and value
-        for child in self._tree.get_children(node):
-            value = self.nodes_to_values(child,parent=value,binary=binary)
-        if isinstance(parent,list):
-            parent.append(value)
-        elif isinstance(parent,dict):
-            if isinstance(name,unicode):
-                parent[name] = value
-            else:
-                parent[str(name)] = value
+            if parent is None:
+                # Return the raw value - we don't have a collection
+                return self.get_value_from_node(node,binary=binary)
+            # Add any children to our stack
+            node_stack.extend([(c,parent) for c in self._tree.get_children(node)[::-1]])
+        else:
+            if parent is None:
+                # We need to setup the parent
+                p = self._tree.parent(node)
+                if p in ("",self.get_root_node()):
+                    # The parent is the Root node
+                    parent = self.get_root_type()
+                else:
+                    # Get the type based on our prefs
+                    parent = [] if self.get_check_type(p).lower() == "array" else \
+                            {} if self.controller.settings.get("sort_dict",False) else OrderedDict()
+            node_stack.append((node,parent))
+        # Start walking our stack
+        while node_stack:
+            n,p = node_stack.pop()
+            if parent is None and p is not None:
+                parent = p
+            name = self._tree.item(n,"text")
+            value = self.get_value_from_node(n,binary=binary)
+            if isinstance(p,list):
+                p.append(value)
+            elif isinstance(p,dict):
+                if isinstance(name,unicode):
+                    p[name] = value
+                else:
+                    p[str(name)] = value
+            for c in self._tree.get_children(n)[::-1]:
+                node_stack.append((c,value))
         return parent
 
     def get_type(self, value, override=None):
@@ -2861,9 +2897,15 @@ class PlistWindow(tk.Toplevel):
             children = "1 key/value pair" if len(child_count) == 1 else "{} key/value pairs".format(len(child_count))
         elif self.get_check_type(target).lower() == "array":
             children = "1 child" if len(child_count) == 1 else "{} children".format(len(child_count))
-        # Set the resulting values
-        values[1] = children
-        self._tree.item(target,values=values)
+        else:
+            children = None
+        # Set the resulting values as needed
+        if children:
+            try:
+                values[1] = children
+                self._tree.item(target,values=values)
+            except:
+                pass
 
     def update_array_counts(self, target):
         for x,child in enumerate(self._tree.get_children(target)):
@@ -3416,14 +3458,21 @@ class PlistWindow(tk.Toplevel):
             pass
         self.entry_popup = None
 
-    def iter_nodes(self, visible = True, current_item = None):
-        items = []
+    def iter_nodes(self, visible=True, current_item=None):
+        # Implement an iterative depth-first search to prevent
+        # max recursion in rare cases
         if current_item is None or isinstance(current_item, tk.Event):
             current_item = ""
-        for child in self._tree.get_children(current_item):
-            items.append(child)
-            if not visible or self._tree.item(child,"open"):
-                items.extend(self.iter_nodes(visible, child))
+        node_stack = deque()
+        node_stack.append(current_item)
+        items = []
+        while node_stack:
+            node = node_stack.pop()
+            if node and node != current_item:
+                items.append(node)
+            if not visible or self._tree.item(node,"open") or node == "":
+                for child in self._tree.get_children(node)[::-1]:
+                    node_stack.append(child)
         return items
 
     def get_root_node(self):
