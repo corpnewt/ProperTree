@@ -179,8 +179,9 @@ class EntryPopup(EntryPlus):
         if self.column == "#0":
             check_type = self.master.get_check_type(self.cell).lower()
             # We are currently in the key column
-            if check_type in ("dictionary","array"):
-                # Can't edit the other field with these - bail
+            if check_type in ("dictionary","array","boolean"):
+                # Can't edit the other field with these, or they require
+                # a popup menu which is handled via other keybinds - bail
                 return 'break'
             edit_col = "#2"
         elif self.column == "#2":
@@ -3335,6 +3336,15 @@ class PlistWindow(tk.Toplevel):
         parent = self._tree.parent(rowid)
         # get the actual item name we're editing
         tv_item = self._tree.identify('item', event.x, event.y)
+        # If our event.x/y_root are both 0, try to set them to the
+        # center of the tv_item's bbox
+        if event.x_root == event.y_root == 0:
+            try:
+                x,y,width,height = self._tree.bbox(tv_item,column)
+                event.x_root = self.winfo_rootx()+x+round(width/2)
+                event.y_root = self.winfo_rooty()+y+round(height/2)
+            except:
+                pass
         # Get the actual text
         index = int(column.replace("#",""))
         try:
