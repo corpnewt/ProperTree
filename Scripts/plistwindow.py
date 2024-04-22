@@ -3489,7 +3489,7 @@ class PlistWindow(tk.Toplevel):
             current_item = ""
         node_stack = deque()
         node_stack.append(current_item)
-        items = []
+        items = deque()
         while node_stack:
             node = node_stack.pop()
             if node and node != current_item:
@@ -3497,7 +3497,7 @@ class PlistWindow(tk.Toplevel):
             if not visible or self._tree.item(node,"open") or node == "":
                 for child in self._tree.get_children(node)[::-1]:
                     node_stack.append(child)
-        return items
+        return list(items)
 
     def get_root_node(self):
         children = self._tree.get_children("")
