@@ -297,6 +297,7 @@ class PlistWindow(tk.Toplevel):
         self.saving = False
         self.adding_rows = False
         self.pasting_nodes = False
+        self.alternating_colors = False
         self.reundoing = False
         self.last_data = None
         self.last_int  = None
@@ -3551,6 +3552,8 @@ class PlistWindow(tk.Toplevel):
         self.alternate_colors()
 
     def alternate_colors(self, event = None):
+        if self.alternating_colors: return
+        self.alternating_colors = True
         # Let's walk the children of our treeview
         visible = self.iter_nodes(True,event)
         for x,item in enumerate(visible):
@@ -3563,6 +3566,7 @@ class PlistWindow(tk.Toplevel):
             else:
                 tags.append("odd" if x % 2 else "even")
             self._tree.item(item, tags=tags)
+        self.alternating_colors = False
 
     def show_config_info(self, event = None):
         # find the path of selected cell
