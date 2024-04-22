@@ -1065,8 +1065,13 @@ class ProperTree:
         self.update_font_family()
 
     def update_font(self, var = None, blank = None, trace_mode = None):
-        try: font_size = int(self.font_string.get())
-        except: return
+        try:
+            input_size = int(self.font_string.get())
+            font_size = max(min(128,input_size),1)
+            if font_size != input_size:
+                self.font_string.set(str(font_size))
+        except:
+            return
         self.settings["font_size"] = font_size
         self.update_fonts()
 
@@ -1176,7 +1181,11 @@ class ProperTree:
         self.enable_drag_and_drop.set(self.settings.get("enable_drag_and_drop",True))
         self.drag_scale.set(self.settings.get("drag_dead_zone",20))
         self.drag_drop_command() # Ensure the drag_scale state is updated as needed
-        self.font_string.set(self.settings.get("font_size",self.default_font["size"]))
+        try:
+            font_size = max(min(128,int(self.settings.get("font_size"))),1)
+        except:
+            font_size = self.default_font["size"]
+        self.font_string.set(font_size)
         self.custom_font.set(self.settings.get("use_custom_font_size",False))
         self.font_family.set(self.settings.get("font_family",self.default_font.actual()["family"]))
         self.font_var.set(self.settings.get("use_custom_font",False))
