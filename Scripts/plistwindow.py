@@ -295,6 +295,9 @@ class PlistWindow(tk.Toplevel):
         self.drag_undo = None
         self.clicked_drag = False
         self.saving = False
+        self.adding_rows = False
+        self.pasting_nodes = False
+        self.reundoing = False
         self.last_data = None
         self.last_int  = None
         self.last_bool = None
@@ -1956,6 +1959,10 @@ class PlistWindow(tk.Toplevel):
         self.redo_stack = [] # clear the redo stack
 
     def reundo(self, event=None, undo = True, single_undo = None):
+        # We can't start a new reundo until the last has finished
+        if self.reundoing: return
+        # Lock the reundo task to this instance
+        self.reundoing = True
         # Let's come up with a more centralized way to do this
         # We'll break down the potential actions into a few types:
         #
@@ -1983,6 +1990,7 @@ class PlistWindow(tk.Toplevel):
         if not len(u):
             self.bell()
             # Nothing to undo/redo
+            self.reundoing = False
             return
         # Check if we have any open EntryPopups and cancel them
         if self.entry_popup:
@@ -2043,6 +2051,7 @@ class PlistWindow(tk.Toplevel):
         # Change selection if needed
         self.update_all_children()
         self.reselect((selected,nodes))
+        self.reundoing = False
 
     def preselect(self):
         # Returns a tuple of the selected item and current visible nodes
@@ -2501,6 +2510,10 @@ class PlistWindow(tk.Toplevel):
             pass
 
     def paste_selection(self, event = None):
+        # We can't paste if another paste operation is in progress
+        if self.pasting_nodes: return
+        # Lock the paste operation to this instance
+        self.pasting_nodes = True
         # Try to format the clipboard contents as a plist
         try:
             clip = self.clipboard_get()
@@ -2527,6 +2540,7 @@ class PlistWindow(tk.Toplevel):
                 # Let's throw an error
                 self.bell()
                 mb.showerror("An Error Occurred While Pasting", repr(e),parent=self)
+                self.pasting_nodes = False
                 return 'break'
         if plist_data is None:
             if len(clip):
@@ -2534,6 +2548,7 @@ class PlistWindow(tk.Toplevel):
                 self.bell()
                 mb.showerror("An Error Occurred While Pasting", "The pasted value is not a valid plist string.",parent=self)
             # Nothing to paste
+            self.pasting_nodes = False
             return 'break'
         node = "" if not len(self._tree.selection()) else self._tree.selection()[0]
         # Verify the type - or get the parent
@@ -2583,6 +2598,7 @@ class PlistWindow(tk.Toplevel):
         self._ensure_edited()
         self.update_all_children()
         self.select(first)
+        self.pasting_nodes = False
 
     ###                                             ###
     # Converstion to/from Dict and Treeview Functions #
@@ -2803,9 +2819,14 @@ class PlistWindow(tk.Toplevel):
         return temp_name
 
     def new_row(self,target=None,force_sibling=False):
+        # We can't create new rows if another operation is in progress
+        if self.adding_rows: return
+        # Lock the new row operation to this instance
+        self.adding_rows = True
         if target is None or isinstance(target, tk.Event):
             target = "" if not len(self._tree.selection()) else self._tree.selection()[0]
         if target == self.get_root_node() and not self.get_check_type(self.get_root_node()).lower() in ("array","dictionary"):
+            self.adding_rows = False
             return # Can't add to a non-collection!
         new_cell = None
         index = 0
@@ -2829,6 +2850,7 @@ class PlistWindow(tk.Toplevel):
         if target == "":
             # Top level, nothing to do here but edit the new row
             self.alternate_colors()
+            self.adding_rows = False
             return
         # Update the child counts
         self.update_children(target)
@@ -2836,6 +2858,7 @@ class PlistWindow(tk.Toplevel):
         self._tree.item(target,open=True)
         # Flush our alternating lines
         self.alternate_colors()
+        self.adding_rows = False
 
     def remove_row(self,target=None):
         if target is None or isinstance(target, tk.Event):
