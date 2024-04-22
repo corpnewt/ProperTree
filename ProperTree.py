@@ -2,7 +2,7 @@
 import sys, os, binascii, base64, json, re, subprocess, webbrowser, multiprocessing, signal, ctypes
 from collections import OrderedDict
 try:
-    import Tkinter as tk
+    import tkinter as tk
     import ttk
     import tkFileDialog as fd
     import tkMessageBox as mb
