@@ -3554,18 +3554,15 @@ class PlistWindow(tk.Toplevel):
     def alternate_colors(self, event = None):
         if self.alternating_colors: return
         self.alternating_colors = True
+        focus = self._tree.focus()
         # Let's walk the children of our treeview
         visible = self.iter_nodes(True,event)
+        # Set up our tag tuples
+        sel,odd,even = ("selected",),("odd",),("even",)
         for x,item in enumerate(visible):
-            tags = self._tree.item(item,"tags")
-            if not isinstance(tags,list): tags = []
-            # Strip out odd/even/selected
-            tags = [x for x in tags if not x in ("odd","even","selected")]
-            if item == self._tree.focus():
-                tags.append("selected")
-            else:
-                tags.append("odd" if x % 2 else "even")
-            self._tree.item(item, tags=tags)
+            tag = sel if item==focus else odd if x % 2 else even
+            if self._tree.item(item,"tags") != tag:
+                self._tree.item(item,tags=tag)
         self.alternating_colors = False
 
     def show_config_info(self, event = None):
