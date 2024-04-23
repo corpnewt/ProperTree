@@ -290,8 +290,8 @@ class PlistWindow(tk.Toplevel):
         # Create the window
         self.root = root
         self.controller = controller
-        self.undo_stack = []
-        self.redo_stack = []
+        self.undo_stack = deque()
+        self.redo_stack = deque()
         self.drag_undo = None
         self.clicked_drag = False
         self.saving = False
@@ -1956,7 +1956,7 @@ class PlistWindow(tk.Toplevel):
         if max_undo > 0:
             # Pop the first item until we're at/under max
             while len(self.undo_stack) > max_undo:
-                self.undo_stack.pop(0)
+                self.undo_stack.popleft()
         self.redo_stack = [] # clear the redo stack
 
     def reundo(self, event=None, undo = True, single_undo = None):
@@ -1998,7 +1998,7 @@ class PlistWindow(tk.Toplevel):
             self.entry_popup.cancel()
         # Retain the original selection
         selected,nodes = self.preselect()
-        task_list = u.pop(-1)
+        task_list = u.pop()
         r_task_list = []
         # Iterate in reverse to undo the last thing first
         for task in task_list[::-1]:
@@ -2418,8 +2418,8 @@ class PlistWindow(tk.Toplevel):
             self._ensure_edited(title=path or "Untitled.plist")
         else:
             self._ensure_edited(edited=False,title=path)
-        self.undo_stack = []
-        self.redo_stack = []
+        self.undo_stack.clear()
+        self.redo_stack.clear()
         # Close if need be
         if not auto_expand:
             self.collapse_all()
