@@ -1184,7 +1184,7 @@ class PlistWindow(tk.Toplevel):
             mb.showerror("An Error Occurred While Opening {}".format(os.path.basename(self.current_plist)), repr(e),parent=self)
             return
         # We should have the plist data now
-        self.open_plist(self.current_plist,plist_data,self.plist_type_string.get())
+        self.open_plist(self.current_plist,plist_data,self.plist_type_string.get(),alternate=True)
 
     def get_min_max_from_match(self, match_text):
         # Helper method to take MatchKernel output and break it into the MinKernel and MaxKernel
@@ -2408,7 +2408,7 @@ class PlistWindow(tk.Toplevel):
         self._ensure_edited(edited=False)
         return True
 
-    def open_plist(self, path, plist_data, plist_type = "XML", auto_expand = True):
+    def open_plist(self, path, plist_data, plist_type = "XML", auto_expand = True, alternate = True):
         # Opened it correctly - let's load it, and set our values
         self.plist_type_string.set(plist_type)
         self._tree.delete(*self._tree.get_children())
@@ -2426,7 +2426,7 @@ class PlistWindow(tk.Toplevel):
         # Ensure the root is expanded at least
         root = self.get_root_node()
         self._tree.item(root,open=True)
-        self.select(root)
+        self.select(root,alternate=alternate)
 
     def close_window(self, event = None, check_saving = True, check_close = True):
         # Check if we need to save first, then quit if we didn't cancel
@@ -3349,6 +3349,7 @@ class PlistWindow(tk.Toplevel):
         # Get selected node
         cell = "" if not len(self._tree.selection()) else self._tree.selection()[0]
         self._tree.item(cell,open=False)
+        self.alternate_colors()
 
     def expand_all(self):
         # Get all nodes
@@ -3529,7 +3530,7 @@ class PlistWindow(tk.Toplevel):
         # Call the actual alternate_colors function
         self.alternate_colors(event)
 
-    def set_colors(self, event = None):
+    def set_colors(self, event = None, alternate = False):
         # Setup the colors and styles
         self.r1 = self.controller.r1_canvas["background"]
         self.r2 = self.controller.r2_canvas["background"]
@@ -3549,7 +3550,7 @@ class PlistWindow(tk.Toplevel):
         self._tree.tag_configure('even', foreground=self.r1t, background=self.r1)
         self._tree.tag_configure('odd', foreground=self.r2t, background=self.r2)
         self._tree.tag_configure("selected", foreground="black", background=self.hl)
-        self.alternate_colors()
+        if alternate: self.alternate_colors()
 
     def alternate_colors(self, event = None):
         if self.alternating_colors: return
