@@ -433,7 +433,7 @@ class PlistWindow(tk.Toplevel):
         self._tree.bind("<Double-1>", self.on_double_click)
         self._tree.bind('<<TreeviewSelect>>', self.tree_click_event)
         self._tree.bind('<<TreeviewOpen>>', self.pre_alternate)
-        self._tree.bind('<<TreeviewClose>>', self.alternate_colors)
+        self._tree.bind('<<TreeviewClose>>', self.pre_collapse)
         self._tree.bind("<B1-Motion>", self.move_selection)
         self._tree.bind("<ButtonRelease-1>",self.confirm_drag)
         self._tree.bind("<Button-1>",self.clicked)
@@ -643,7 +643,7 @@ class PlistWindow(tk.Toplevel):
                     return node
             return None # Found nothing
         # Get all the visible nodes
-        nodes  = self.iter_nodes()
+        nodes = self.iter_nodes()
         # Gather our event info
         if event_time - self.last_key >= self.last_key_threhsold:
             # We're beyond our time - reset the search
@@ -2202,7 +2202,6 @@ class PlistWindow(tk.Toplevel):
         # Post the undo, and clear the global
         self.add_undo(undo_tasks)
         self.drag_undo = None
-        self.alternate_colors()
 
     def strip_comments(self, event=None):
         # Strips out any values attached to keys beginning with the prefix
@@ -2851,7 +2850,7 @@ class PlistWindow(tk.Toplevel):
         self.add_undo({"type":"add","cell":new_cell})
         if target == "":
             # Top level, nothing to do here but edit the new row
-            self.alternate_colors()
+            self.alternate_colors(start_with=new_cell)
             self.adding_rows = False
             return
         # Update the child counts
@@ -2859,7 +2858,7 @@ class PlistWindow(tk.Toplevel):
         # Ensure the target is opened
         self._tree.item(target,open=True)
         # Flush our alternating lines
-        self.alternate_colors()
+        self.alternate_colors(start_with=new_cell)
         self.adding_rows = False
 
     def remove_row(self,target=None):
@@ -2895,7 +2894,7 @@ class PlistWindow(tk.Toplevel):
         if self.get_check_type(parent).lower() == "array":
             self.update_array_counts(parent)
         self.update_children(parent)
-        self.alternate_colors()
+        self.alternate_colors(start_with=new_target)
         self.removing_rows = False
 
     ###                          ###
@@ -3215,28 +3214,45 @@ class PlistWindow(tk.Toplevel):
         self.update_all_children()
         self.alternate_colors()
 
+    def sorted_nicely(self, l, reverse = False):
+        convert = lambda text: int(text) if text.isdigit() else text
+        alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key.lower())]
+        return sorted(l,key=lambda x:alphanum_key(self._tree.item(x,"text")),reverse=reverse)
+
     def do_sort(self, cell, recursive = False, reverse = False):
-        undo_tasks = []
-        children = self._tree.get_children(cell)
-        if not len(children): return undo_tasks # bail early, nothing to check
-        sorted_children = [x for x in children]
-        if self.get_check_type(cell).lower() == "dictionary":
-            sorted_children = sorted(sorted_children,key=lambda x:self._tree.item(x,"text").lower(), reverse=reverse)
-        skip_sort = all((children[x]==sorted_children[x] for x in range(len(children))))
-        for index,child in enumerate(sorted_children):
-            if self.get_check_type(child).lower() in ("dictionary","array") and recursive:
-                undo_tasks.extend(self.do_sort(child,recursive=recursive,reverse=reverse))
-            if skip_sort: continue # No change - skip sorting
-            # Add the move command
-            undo_tasks.append({
-                "type":"move",
-                "cell":child,
-                "from":cell,
-                "to":cell,
-                "index":self._tree.index(child)
-            })
-            self._tree.move(child, cell, index)
-        return undo_tasks
+        node_stack = deque()
+        node_stack.append(cell)
+        undo_tasks = deque()
+        while node_stack:
+            node = node_stack.pop()
+            children = self._tree.get_children(node)
+            # Make sure we have something to sort
+            if not children:
+                continue
+            # Make sure we have a dictionary
+            if not self.get_check_type(node).lower() == "dictionary":
+                continue
+            sorted_children = self.sorted_nicely(children,reverse=reverse)
+            # Make sure we're actually making changes
+            skip_sort = all(sorted_children[i] == child for i,child in enumerate(children))
+            if skip_sort and not recursive:
+                continue
+            for index,child in enumerate(sorted_children):
+                # Check if we have a collection - and if we're recursively sorting
+                if recursive and self.get_check_type(child).lower() in ("dictionary","array"):
+                    node_stack.append(child)
+                # Let's ensure at least one item moved, and then add to the undo task
+                if not skip_sort:
+                    undo_tasks.append({
+                        "type":"move",
+                        "cell":child,
+                        "from":node,
+                        "to":node,
+                        "index":self._tree.index(child)
+                    })
+                    # Actually move the node
+                    self._tree.move(child,node,index)
+        return list(undo_tasks)
 
     def sort_keys(self, cell, recursive = False, reverse = False):
         # Let's build a sorted list of keys, then generate move edits for each
@@ -3350,13 +3366,13 @@ class PlistWindow(tk.Toplevel):
         # Get selected node
         cell = "" if not len(self._tree.selection()) else self._tree.selection()[0]
         self._tree.item(cell,open=True)
-        self.alternate_colors()
+        self.alternate_colors(start_with=cell)
 
     def collapse_node(self):
         # Get selected node
         cell = "" if not len(self._tree.selection()) else self._tree.selection()[0]
         self._tree.item(cell,open=False)
-        self.alternate_colors()
+        self.alternate_colors(start_with=cell)
 
     def expand_all(self):
         # Get all nodes
@@ -3379,17 +3395,16 @@ class PlistWindow(tk.Toplevel):
         nodes.append(cell)
         for node in nodes:
             self._tree.item(node,open=True)
-        self.alternate_colors()
+        self.alternate_colors(start_with=cell)
         return "break" # Prevent keybinds from propagating further
 
     def collapse_children(self):
         # Get all children of the selected node
         cell = "" if not len(self._tree.selection()) else self._tree.selection()[0]
         nodes = self.iter_nodes(False, cell)
-        # nodes.append(cell)
         for node in nodes:
             self._tree.item(node,open=False)
-        self.alternate_colors()
+        self.alternate_colors(start_with=cell)
         return "break" # Prevent keybinds from propagating further
 
     def tree_click_event(self, event):
@@ -3505,7 +3520,7 @@ class PlistWindow(tk.Toplevel):
             if not visible or self._tree.item(node,"open") or node == "":
                 for child in self._tree.get_children(node)[::-1]:
                     node_stack.append(child)
-        return list(items)
+        return items
 
     def get_root_node(self):
         children = self._tree.get_children("")
@@ -3535,7 +3550,16 @@ class PlistWindow(tk.Toplevel):
         if not self._tree.item(cell,"open"):
             self._tree.item(cell,open=True)
         # Call the actual alternate_colors function
-        self.alternate_colors(event)
+        self.alternate_colors(start_with=cell)
+
+    def pre_collapse(self, event):
+        # Called before items close - we should ensure we alternate colors starting
+        # at the selected cell and on
+        cell = "" if not len(self._tree.selection()) else self._tree.selection()[0]
+        if self._tree.item(cell,"open"):
+            self._tree.item(cell,open=False)
+        # Call the alternate_colors function
+        self.alternate_colors(start_with=cell)
 
     def set_colors(self, event = None, alternate = False):
         # Setup the colors and styles
@@ -3559,18 +3583,25 @@ class PlistWindow(tk.Toplevel):
         self._tree.tag_configure("selected", foreground="black", background=self.hl)
         if alternate: self.alternate_colors()
 
-    def alternate_colors(self, event = None):
+    def alternate_colors(self, event = None, start_with = None):
         if self.alternating_colors: return
         self.alternating_colors = True
         focus = self._tree.focus()
         # Let's walk the children of our treeview
-        visible = self.iter_nodes(True,event)
+        visible = self.iter_nodes(visible=True)
         # Set up our tag tuples
         sel,odd,even = ("selected",),("odd",),("even",)
+        found_start = False
         for x,item in enumerate(visible):
-            tag = sel if item==focus else odd if x % 2 else even
-            if self._tree.item(item,"tags") != tag:
-                self._tree.item(item,tags=tag)
+            if start_with is not None and start_with == item:
+                # We found the cell we were looking for
+                found_start = True
+            if start_with is None or found_start:
+                # We either aren't looking for a specific cell,
+                # or we already found it
+                tag = sel if item==focus else odd if x % 2 else even
+                if self._tree.item(item,"tags") != tag:
+                    self._tree.item(item,tags=tag)
         self.alternating_colors = False
 
     def show_config_info(self, event = None):
