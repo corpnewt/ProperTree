@@ -296,6 +296,7 @@ class PlistWindow(tk.Toplevel):
         self.clicked_drag = False
         self.saving = False
         self.adding_rows = False
+        self.removing_rows = False
         self.pasting_nodes = False
         self.alternating_colors = False
         self.reundoing = False
@@ -2862,6 +2863,10 @@ class PlistWindow(tk.Toplevel):
         self.adding_rows = False
 
     def remove_row(self,target=None):
+        # We can't remove rows if another operation is in progress
+        if self.removing_rows: return
+        # Lock the new row operation to this instance
+        self.removing_rows = True
         if target is None or isinstance(target, tk.Event):
             target = "" if not len(self._tree.selection()) else self._tree.selection()[0]
         if target in ("",self.get_root_node()):
@@ -2885,11 +2890,13 @@ class PlistWindow(tk.Toplevel):
         self._ensure_edited()
         # Check if the parent was an array/dict, and update counts
         if parent == "":
+            self.removing_rows = False
             return
         if self.get_check_type(parent).lower() == "array":
             self.update_array_counts(parent)
         self.update_children(parent)
         self.alternate_colors()
+        self.removing_rows = False
 
     ###                          ###
     # Treeview Data Helper Methods #
