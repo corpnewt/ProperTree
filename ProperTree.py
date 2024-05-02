@@ -78,6 +78,7 @@ class ProperTree:
         # Create new queues for multiprocessing
         self.queue = multiprocessing.Queue()
         self.tex_queue = multiprocessing.Queue()
+        self.creating_window = False
         # Create the new tk object
         self.tk = tk.Tk()
         self.tk.withdraw() # Try to remove before it's drawn
@@ -1598,12 +1599,17 @@ class ProperTree:
     ###                       ###
 
     def duplicate_plist(self, event = None):
+        if self.creating_window:
+            return
+        self.creating_window = True
         windows = self.stackorder(self.tk)
         if not len(windows):
             # Nothing to do
+            self.creating_window = False
             return
         window = windows[-1] # Get the last item (most recent)
         if window in self.default_windows:
+            self.creating_window = False
             return
         plist_data = window.nodes_to_values()
         new_window = plistwindow.PlistWindow(self, self.tk)
@@ -1620,6 +1626,7 @@ class ProperTree:
         # Update the Open Recent menu
         if str(sys.platform) != "darwin": self.update_recents_for_target(new_window)
         self.lift_window(new_window)
+        self.creating_window = False
 
     def save_plist(self, event = None):
         windows = self.stackorder(self.tk)
@@ -1668,6 +1675,9 @@ class ProperTree:
         window.reundo(event,False)
     
     def new_plist(self, event = None):
+        if self.creating_window:
+            return
+        self.creating_window = True
         # Creates a new plistwindow object
         # Let's try to create a unique name (if Untitled.plist is used, add a number)
         titles = [x.title().lower() for x in self.stackorder(self.tk)]
@@ -1693,6 +1703,7 @@ class ProperTree:
         window.open_plist(final_title.capitalize(),{}) # Created an empty root
         window.current_plist = None # Ensure it's initialized as new
         self.lift_window(window)
+        self.creating_window = False
         return window
 
     def open_plist(self, event=None):
@@ -1789,9 +1800,9 @@ class ProperTree:
 
     def quit(self, event_or_signum=None, frame=None):
         if self.is_quitting: return # Already quitting - don't try to do this twice at once
+        self.is_quitting = True # Lock this to one quit attempt at a time
         if isinstance(event_or_signum,int) and frame is not None:
             print("KeyboardInterrupt caught - cleaning up...")
-        self.is_quitting = True # Lock this to one quit attempt at a time
         # Get a list of all windows with unsaved changes
         unsaved = [x for x in self.stackorder(self.tk) if x.edited]
         ask_to_save = True
@@ -1808,13 +1819,15 @@ class ProperTree:
                 self.lift_window()
                 return
             ask_to_save = answer # Iterate the windows and ask to save as needed
-        # Walk through the windows and close them - either reviewing changes or ignoring them.
-        for window in self.stackorder(self.tk)[::-1]:
-            if window in self.default_windows: continue
-            self.lift_window(window)
-            if not window.close_window(check_saving=ask_to_save,check_close=False):
-                self.is_quitting = False # Unlock the quit
-                return # User cancelled or we failed to save, bail
+        # Walk through the windows and close them - reviewing changes as needed
+        if ask_to_save:
+            for window in self.stackorder(self.tk)[::-1]:
+                if window in self.default_windows or not window.edited:
+                    continue
+                self.lift_window(window)
+                if not window.close_window(check_saving=ask_to_save,check_close=False):
+                    self.is_quitting = False # Unlock the quit
+                    return # User cancelled or we failed to save, bail
         # Make sure we retain any non-event updated settings
         prefix = self.comment_prefix_text.get()
         prefix = "#" if not prefix else prefix
