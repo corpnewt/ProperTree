@@ -1185,7 +1185,7 @@ class PlistWindow(tk.Toplevel):
             mb.showerror("An Error Occurred While Opening {}".format(os.path.basename(self.current_plist)), repr(e),parent=self)
             return
         # We should have the plist data now
-        self.open_plist(self.current_plist,plist_data,self.plist_type_string.get(),alternate=True)
+        self.open_plist(self.current_plist,plist_data,plist_type=self.plist_type_string.get(),alternate=True)
 
     def get_min_max_from_match(self, match_text):
         # Helper method to take MatchKernel output and break it into the MinKernel and MaxKernel
@@ -2408,14 +2408,14 @@ class PlistWindow(tk.Toplevel):
         self._ensure_edited(edited=False)
         return True
 
-    def open_plist(self, path, plist_data, plist_type = "XML", auto_expand = True, alternate = True):
+    def open_plist(self, path, plist_data, plist_type = "XML", auto_expand = True, alternate = True, title = None):
         # Opened it correctly - let's load it, and set our values
         self.plist_type_string.set(plist_type)
         self._tree.delete(*self._tree.get_children())
         self.add_node(plist_data,check_binary=plist_type.lower() == "binary")
         self.current_plist = os.path.normpath(path) if path else path
         if path is None:
-            self._ensure_edited(title=path or "Untitled.plist")
+            self._ensure_edited(title=title or "Untitled.plist")
         else:
             self._ensure_edited(edited=False,title=path)
         self.undo_stack.clear()
