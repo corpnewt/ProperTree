@@ -1,4 +1,4 @@
 {
-    "version": "0.2.8",
-    "changes": "- Add OC 0.9.9 hashes.\n- Windows dark mode UI updates.\n- Fix some .tex related bugs.\n- Update .bat and .command starters."
+    "version": "0.2.9",
+    "changes": "- Add OC 1.0.0 hashes.\n- Migrate most widgets to ttk variants.\n- Add option to disable drag and drop.\n- Fix a number of edge case recursion and race condition issues.\n- Update .bat and .command starters."
 }
