@@ -902,20 +902,39 @@ class PlistWindow(tk.Toplevel):
         self.show_type ^= True
         self.draw_frames(event,"showtype")
 
+    def get_index(self, iterable, item):
+        # Returns the index of the passed item in the iterable
+        # if found
+        for i,x in enumerate(iterable):
+            if x == item:
+                return i
+        raise ValueError("{} is not in iterable".format(item))
+
     def do_replace(self, node, find, new_text):
         # We can assume that we have a legit match for whatever is passed
         # Let's get some info first
         case_sensitive = self.f_case_var.get()
         node_type      = self.get_check_type(node)
-        parent_type    = self.get_check_type(self._tree.parent(node))
+        parent         = self._tree.parent(node)
+        parent_type    = self.get_check_type(parent)
         find_type      = self.find_type.lower()
 
         if find_type == "key":
             # We're only replacing the text
             name = self._tree.item(node,"text")
             new_name = re.sub(("" if case_sensitive else "(?i)")+re.escape(find), lambda m: new_text, name)
+            # Make sure we don't replace it if it already exists
+            for child in self._tree.get_children(parent):
+                if child == node:
+                    # Skip ourselves
+                    continue
+                # Check if our text is equal to any other keys
+                if new_name == self._tree.item(child,"text"):
+                    # Have a match, beep and bail
+                    self.bell()
+                    return False
             self._tree.item(node,text=new_name)
-            return
+            return True
         # Check the values
         values = self.get_padded_values(node,3)
         if find_type == "string":
@@ -941,6 +960,7 @@ class PlistWindow(tk.Toplevel):
             # Do a straight up replace
             values[1] = new_text
             self._tree.item(node,values=values)
+        return True
 
     def replace(self, event=None):
         find = self.f_text.get()
@@ -994,23 +1014,27 @@ class PlistWindow(tk.Toplevel):
             return
         # At this point, we should have something to replace
         replacements = []
-        for x in matches:
+        for i,x in enumerate(matches):
             name = self._tree.item(x[1],"text")
             values = self._tree.item(x[1],"values")
-            self.do_replace(x[1],find,repl)
-            replacements.append({
-                "type":"edit",
-                "cell":x[1],
-                "text":name,
-                "values":values
-                })
+            if self.do_replace(x[1],find,repl):
+                replacements.append({
+                    "type":"edit",
+                    "cell":x[1],
+                    "text":name,
+                    "values":values
+                    })
+            elif not replace_all:
+                break
         # Select the last matched cell
-        self.select(matches[-1][1])
-        self.add_undo(replacements)
-        # Ensure we're edited
-        self._ensure_edited()
-        # Let's try to find the next
-        if not replace_all: self.find_next(replacing=True)
+        self.select(matches[i][1])
+        if replacements:
+            self.add_undo(replacements)
+            # Ensure we're edited
+            self._ensure_edited()
+            # Let's try to find the next
+            if not replace_all:
+                self.find_next(replacing=True)
 
     def is_match(self, node, text):
         case_sensitive = self.f_case_var.get()
@@ -1056,12 +1080,16 @@ class PlistWindow(tk.Toplevel):
         # where it found it name/value (name == 0, value == 1 respectively)
         if text is None or not len(text):
             return []
-        nodes = list(self.iter_nodes(False))
+        nodes = self.iter_nodes(False)
         found = []
         for node in nodes:
             match = self.is_match(node, text)
             if not match == False:
-                found.append((nodes.index(node),node))
+                if hasattr(nodes,"index"):
+                    index = nodes.index(node)
+                else:
+                    index = self.get_index(nodes,node)
+                found.append((index,node))
         return found
 
     def find_prev(self, event=None):
@@ -1083,8 +1111,13 @@ class PlistWindow(tk.Toplevel):
             return None
         # Let's get the index of our selected item
         node  = "" if not len(self._tree.selection()) else self._tree.selection()[0]
-        nodes = list(self.iter_nodes(False))
-        index = len(nodes) if node == "" else nodes.index(node)
+        nodes = self.iter_nodes(False)
+        if node == "":
+            index = len(nodes)
+        elif hasattr(nodes,"index"):
+            index = nodes.index(node)
+        else:
+            index = self.get_index(nodes,node)
         # Find the item at a lower index than our current selection
         for match in matches[::-1]:
             if match[0] < index:
@@ -1115,8 +1148,13 @@ class PlistWindow(tk.Toplevel):
             return None
         # Let's get the index of our selected item
         node  = "" if not len(self._tree.selection()) else self._tree.selection()[0]
-        nodes = list(self.iter_nodes(False))
-        index = len(nodes) if node == "" else nodes.index(node)
+        nodes = self.iter_nodes(False)
+        if node == "":
+            index = len(nodes)
+        elif hasattr(nodes,"index"):
+            index = nodes.index(node)
+        else:
+            index = self.get_index(nodes,node)
         # Find the item at a higher index than our current selection
         for match in matches:
             if match[0] > index:
