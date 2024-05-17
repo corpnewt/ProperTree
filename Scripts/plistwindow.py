@@ -1056,7 +1056,7 @@ class PlistWindow(tk.Toplevel):
         # where it found it name/value (name == 0, value == 1 respectively)
         if text is None or not len(text):
             return []
-        nodes = self.iter_nodes(False)
+        nodes = list(self.iter_nodes(False))
         found = []
         for node in nodes:
             match = self.is_match(node, text)
@@ -1083,7 +1083,7 @@ class PlistWindow(tk.Toplevel):
             return None
         # Let's get the index of our selected item
         node  = "" if not len(self._tree.selection()) else self._tree.selection()[0]
-        nodes = self.iter_nodes(False)
+        nodes = list(self.iter_nodes(False))
         index = len(nodes) if node == "" else nodes.index(node)
         # Find the item at a lower index than our current selection
         for match in matches[::-1]:
@@ -1115,7 +1115,7 @@ class PlistWindow(tk.Toplevel):
             return None
         # Let's get the index of our selected item
         node  = "" if not len(self._tree.selection()) else self._tree.selection()[0]
-        nodes = self.iter_nodes(False)
+        nodes = list(self.iter_nodes(False))
         index = len(nodes) if node == "" else nodes.index(node)
         # Find the item at a higher index than our current selection
         for match in matches:
