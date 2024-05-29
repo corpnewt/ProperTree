@@ -1,6 +1,7 @@
 @echo off
-REM Get our local path before delayed expansion - allows ! in path
+REM Get our local path and args before delayed expansion - allows % and !
 set "thisDir=%~dp0"
+set "args=%*"
 
 setlocal enableDelayedExpansion
 REM Setup initial vars
@@ -301,12 +302,13 @@ exit /b
 :runscript
 REM Python found
 cls
-set "args=%*"
-set "args=!args:"=!"
-if "!args!"=="" (
+REM Checks the args gathered at the beginning of the script.
+REM Make sure we're not just forwarding empty quotes.
+set "arg_test=!args:"=!"
+if "!arg_test!"=="" (
     "!pypath!" "!thisDir!!script_name!"
 ) else (
-    "!pypath!" "!thisDir!!script_name!" %*
+    "!pypath!" "!thisDir!!script_name!" !args!
 )
 if /i "!pause_on_error!" == "yes" (
     if not "%ERRORLEVEL%" == "0" (
