@@ -1289,6 +1289,23 @@ class PlistWindow(tk.Toplevel):
         return "" # Couldn't determine hash :(
 
     def oc_snapshot(self, event = None, clean = False):
+        # Make sure we have snapshot data from the controller
+        if not self.controller.snapshot_data:
+            self.bell()
+            mb.showerror(
+                "OC{} Snapshot Aborted".format(
+                    " Clean" if clean else ""
+                ),
+                (
+                    "{} is missing or malformed.\n\n"
+                    "Please correct or replace the file.\n\n"
+                    "If running from a network drive or cloud backup, try running locally."
+                ).format(
+                    os.path.join(os.path.abspath(os.path.dirname(os.path.realpath(__file__))),"snapshot.plist")
+                ),
+                parent=self
+            )
+            return
         # Get the target directory from our current file's directory - if any, and if it exists
         target_dir = os.path.dirname(self.current_plist) if self.current_plist and os.path.isdir(os.path.dirname(self.current_plist)) else None
         # If it doesn't exist, get the last_snapshot_path, if any
