@@ -1926,7 +1926,7 @@ class PlistWindow(tk.Toplevel):
         self._change_display(new_display,self._change_int_display)
 
     def _change_int_display(self,node_list,new_display="Decimal"):
-        if not isinstance(node_list,(list,tuple)): node_list = [node_list]
+        if not isinstance(node_list,(list,tuple,deque)): node_list = [node_list]
         for node in node_list:
             node,task,values = self._qualify_node(node,"number")
             if task == False or values is None: continue # Didn't qualify
@@ -1953,7 +1953,7 @@ class PlistWindow(tk.Toplevel):
         self._change_display(new_display,self._change_bool_display)
 
     def _change_bool_display(self,node_list,new_display="True/False"):
-        if not isinstance(node_list,(list,tuple)): node_list = [node_list]
+        if not isinstance(node_list,(list,tuple,deque)): node_list = [node_list]
         on,off = new_display.split("/")
         on_list = [x.split("/")[0] for x in self.controller.allowed_bool]
         for node in node_list:
@@ -1973,7 +1973,7 @@ class PlistWindow(tk.Toplevel):
         self._change_display(new_display,self._change_data_display)
 
     def _change_data_display(self,node_list,new_display="Hex"):
-        if not isinstance(node_list,(list,tuple)): node_list = [node_list]
+        if not isinstance(node_list,(list,tuple,deque)): node_list = [node_list]
         for node in node_list:
             node,task,values = self._qualify_node(node,"data")
             if values is None: continue # Didn't qualify
