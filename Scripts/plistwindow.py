@@ -3372,7 +3372,7 @@ class PlistWindow(tk.Toplevel):
         popup_menu.add_command(label="Paste{}".format(" (Cmd+V)" if is_mac else ""),command=self.paste_selection,state=p_state,accelerator=None if is_mac else "(Ctrl+V)")
         cell_path = self.get_cell_path(cell)
         # Add rbits option
-        cell_search = [x for x in self.split(cell_path) if not x=="*"]
+        cell_search = [x for x in self.split(cell_path) if x and x!="*"]
         if cell_search and cell_search[0] == "Root": cell_search = cell_search[1:]
         if cell_search and os.path.isfile(self.controller.get_best_tex_path()):
             popup_menu.add_separator()
