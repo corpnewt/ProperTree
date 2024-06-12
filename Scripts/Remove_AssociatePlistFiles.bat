@@ -75,7 +75,7 @@ if not "!_args!" == "" (
 REM And our target
 call :cleanArg "_target"
 REM Let's build our command
-powershell -c "& {$a=@();foreach($x in $args){foreach($y in (Invoke-Expression('Write-Output -- '+$x-replace'\$',\"`0\"))-replace\"`0\",'$$'){$a+='\"{0}\"'-f$y}};$c=$a-join' ';$d='/c \"{0}\"'-f$c;Start-Process '%COMSPEC:'=''%' -Verb RunAs -ArgumentList $d}" '!_target!!_args!'
+powershell -c "& {$a=@();foreach($x in $args){foreach($y in (Invoke-Expression('Write-Output -- '+$x-replace'\$',\"`0\"))-replace\"`0\",'$$'){$a+='\"{0}\"'-f$y}};$c=$a-join' ';$d='/c \"{0}\"'-f$c;Start-Process '%COMSPEC:'=''%' -Verb RunAs -ArgumentList $d}" '\"!_target!\"!_args!'
 endlocal
 exit /b 1
 
