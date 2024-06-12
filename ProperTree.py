@@ -1366,6 +1366,7 @@ class ProperTree:
                 existing_window = next((window for window in windows if not window in self.default_windows and window.current_plist==arg),None)
                 if existing_window:
                     self.lift_window(existing_window)
+                    existing_window.reload_from_disk(None)
                     continue
                 if len(windows) == 1 and windows[0] == self.start_window and windows[0].edited == False and windows[0].current_plist == None:
                     # Fresh window - replace the contents
@@ -1751,8 +1752,9 @@ class ProperTree:
         for window in windows[::-1]:
             if window in self.default_windows: continue
             if window.current_plist == path:
-                # found one - just make this focus instead
+                # found one - just lift it and reload from disk instead
                 self.lift_window(window)
+                window.reload_from_disk(None)
                 return
         return self.open_plist_with_path(None,path,current_window)
 
