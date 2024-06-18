@@ -1333,21 +1333,44 @@ class PlistWindow(tk.Toplevel):
         #  | +- SomeFolder
         #  | | +- SomeOtherTool.efi
         
-        oc_acpi    = os.path.normpath(os.path.join(oc_folder,"ACPI"))
-        oc_drivers = os.path.normpath(os.path.join(oc_folder,"Drivers"))
-        oc_kexts   = os.path.normpath(os.path.join(oc_folder,"Kexts"))
-        oc_tools   = os.path.normpath(os.path.join(oc_folder,"Tools"))
-        oc_efi     = os.path.normpath(os.path.join(oc_folder,"OpenCore.efi"))
+        def check_folders(path):
+            return_dict = {
+                "oc_acpi":   os.path.normpath(os.path.join(path,"ACPI")),
+                "oc_drivers":os.path.normpath(os.path.join(path,"Drivers")),
+                "oc_kexts":  os.path.normpath(os.path.join(path,"Kexts")),
+                "oc_tools":  os.path.normpath(os.path.join(path,"Tools")),
+                "oc_efi":    os.path.normpath(os.path.join(path,"OpenCore.efi"))
+            }
+            return_dict["missing"] = [return_dict[x] for x in ("oc_acpi","oc_drivers","oc_kexts") if not os.path.isdir(return_dict[x])]
+            return return_dict
 
-        for x in (oc_acpi,oc_drivers,oc_kexts):
-            if not os.path.exists(x):
+        oc_path_check = check_folders(oc_folder)
+        if oc_path_check["missing"]:
+            # User might have selected their EFI folder - try to resolve
+            # an OC folder within
+            efi_oc_folder = os.path.join(oc_folder,"OC")
+            efi_path_check = check_folders(efi_oc_folder)
+            if efi_path_check["missing"]:
+                # No dice - show the missing dialog box
                 self.bell()
-                mb.showerror("Incorrect OC Folder Structure", "{} does not exist.\nPlease make sure you're selecting a valid OC folder.".format(x), parent=self)
+                mb.showerror(
+                    "Incorrect OC Folder Structure",
+                    "The following required folders do not exist:\n\n{}\n\nPlease make sure you're selecting a valid OC folder.".format(
+                        ", ".join([os.path.basename(x) for x in oc_path_check["missing"]])
+                    ),
+                    parent=self
+                )
                 return
-            if x != oc_efi and not os.path.isdir(x):
-                self.bell()
-                mb.showerror("Incorrect OC Folder Structure", "{} exists, but is not a directory.\nPlease make sure you're selecting a valid OC folder.".format(x), parent=self)
-                return
+            # We got it - update path related vars
+            oc_folder = efi_oc_folder
+            oc_path_check = efi_path_check
+        
+        # Extract our vars
+        oc_acpi    = oc_path_check["oc_acpi"]
+        oc_drivers = oc_path_check["oc_drivers"]
+        oc_kexts   = oc_path_check["oc_kexts"]
+        oc_tools   = oc_path_check["oc_tools"]
+        oc_efi     = oc_path_check["oc_efi"]
 
         # Folders are valid - let's save a reference for next time and work through each section
         self.controller.settings["last_snapshot_path"] = oc_folder
