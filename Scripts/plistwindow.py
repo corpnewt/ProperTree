@@ -1419,19 +1419,85 @@ class PlistWindow(tk.Toplevel):
 
         long_paths = [] # We'll add any paths that exceed the OC_STORAGE_SAFE_PATH_MAX of 128 chars
 
+        tree_dict = self.nodes_to_values(binary=False)
+        # We have our plist contents - let's check all our paths and types - and ensure
+        # that things line up as needed.  If not - we'll warn the user, and ask if they
+        # want to continue.
+        path_walk = (
+            (("ACPI","Add"),list),
+            (("Kernel","Add"),list),
+            (("Misc","Tools"),list),
+            (("UEFI","Drivers"),list)
+        )
+        missing_paths = []
+        incorrect_types = []
+        dict_type = dict if self.controller.settings.get("sort_dict",False) else OrderedDict
+        for path_list,path_type in path_walk:
+            # Start with a top-level perspective, and walk paths as needed
+            target_path = tree_dict
+            path_missing = False
+            for i,path in enumerate(path_list,start=1):
+                use_type = path_type if i >= len(path_list) else dict_type
+                if not path in target_path:
+                    # The path is missing - let's create it in the tree_dict
+                    # in case the user wants to continue
+                    target_path[path] = use_type()
+                    if not path_missing:
+                        # Let's also toggle our boolean to prevent referencing
+                        # multiple steps in the same path, and save the highest
+                        # level missing path to report
+                        path_missing = True
+                        missing_paths.append(" -> ".join(path_list[:i]))
+                else:
+                    # Check types
+                    if not isinstance(target_path[path],path_type if i >= len(path_list) else dict):
+                        # Incorrect type.  Save that for later, and update
+                        # the tree_dict
+                        exp_type = self.get_type(use_type(),menu_code=False)
+                        got_type = self.get_type(target_path[path],menu_code=False)
+                        incorrect_types.append("{}: Expected {}, got {}".format(
+                            " -> ".join(path_list[:i]),
+                            exp_type,
+                            got_type
+                        ))
+                        target_path[path] = use_type()
+                # Update our scope for the next loop
+                target_path = target_path[path]
+        # Check if we have any missing paths or incorrect types - and show a dialog as
+        # needed
+        if missing_paths or incorrect_types:
+            # Let's build our error
+            error_list = []
+            verb = []
+            title = []
+            if missing_paths:
+                title.append("Incomplete")
+                verb.append("add missing paths")
+                error_list.extend(
+                    ["The following entries are missing:\n"] + missing_paths + [""]
+                )
+            if incorrect_types:
+                title.append("Incorrect")
+                verb.append("fix incorrect types")
+                error_list.extend(
+                    ["The following types are incorrect:\n"] + incorrect_types + [""]
+                )
+            # Flesh out the rest of the error - offering to correct the above
+            error_list.extend([
+                "This may mean that your plist is incomplete, or you are performing an OC{} Snapshot on the wrong file.\n".format(
+                    " Clean" if clean else ""
+                ),
+                "Would you like to {} and continue?".format(", ".join(verb))
+            ])
+            if not mb.askyesno("{} Plist Structure".format("/".join(title)),"\n".join(error_list),parent=self):
+                # User said "no", let's bail
+                return
+
         # ACPI is first, we'll iterate the .aml files we have and add what is missing
         # while also removing what exists in the plist and not in the folder.
         # If something exists in the table already, we won't touch it.  This leaves the
         # enabled and comment properties untouched.
         #
-        # Let's make sure we have the ACPI -> Add sections in our config
-
-        tree_dict = self.nodes_to_values(binary=False)
-        # We're going to replace the whole list
-        if not "ACPI" in tree_dict or not isinstance(tree_dict["ACPI"],dict):
-            tree_dict["ACPI"] = {"Add":[]}
-        if not "Add" in tree_dict["ACPI"] or not isinstance(tree_dict["ACPI"]["Add"],list):
-            tree_dict["ACPI"]["Add"] = []
         # Now we walk the existing add values
         new_acpi = []
         for path, subdirs, files in os.walk(oc_acpi):
@@ -1471,7 +1537,7 @@ class PlistWindow(tk.Toplevel):
             if a.get("Enabled"):
                 if a.get("Path","") in acpi_enabled:
                     # Got a dupe - shallow copy and disable
-                    new_a = {}
+                    new_a = OrderedDict() if isinstance(a,OrderedDict) else {}
                     for key in a: new_a[key] = a[key]
                     new_a["Enabled"] = False
                     acpi_duplicates_disabled.append(new_a)
@@ -1488,11 +1554,6 @@ class PlistWindow(tk.Toplevel):
         tree_dict["ACPI"]["Add"] = new_add
 
         # Now we need to walk the kexts
-        if not "Kernel" in tree_dict or not isinstance(tree_dict["Kernel"],dict):
-            tree_dict["Kernel"] = {"Add":[]}
-        if not "Add" in tree_dict["Kernel"] or not isinstance(tree_dict["Kernel"]["Add"],list):
-            tree_dict["Kernel"]["Add"] = []
-
         kext_list = []
         # We need to gather a list of all the files inside that and with .efi
         for path, subdirs, files in os.walk(oc_kexts):
@@ -1671,10 +1732,6 @@ class PlistWindow(tk.Toplevel):
         tree_dict["Kernel"]["Add"] = ordered_kexts
 
         # Let's walk the Tools folder if it exists
-        if not "Misc" in tree_dict or not isinstance(tree_dict["Misc"],dict):
-            tree_dict["Misc"] = {"Tools":[]}
-        if not "Tools" in tree_dict["Misc"] or not isinstance(tree_dict["Misc"]["Tools"],list):
-            tree_dict["Misc"]["Tools"] = []
         if os.path.exists(oc_tools) and os.path.isdir(oc_tools):
             tools_list = []
             # We need to gather a list of all the files inside that and with .efi
@@ -1725,7 +1782,7 @@ class PlistWindow(tk.Toplevel):
                 if t.get("Enabled"):
                     if t.get("Path","") in tools_enabled:
                         # Got a dupe - shallow copy and disable
-                        new_t = {}
+                        new_t = OrderedDict() if isinstance(t,OrderedDict) else {}
                         for key in t: new_t[key] = t[key]
                         new_t["Enabled"] = False
                         tools_duplicates_disabled.append(new_t)
@@ -1745,91 +1802,83 @@ class PlistWindow(tk.Toplevel):
             tree_dict["Misc"]["Tools"] = []
 
         # Last we need to walk the .efi drivers
-        if not "UEFI" in tree_dict or not isinstance(tree_dict["UEFI"],dict):
-            tree_dict["UEFI"] = {"Drivers":[]}
-        if not "Drivers" in tree_dict["UEFI"] or not isinstance(tree_dict["UEFI"]["Drivers"],list):
-            tree_dict["UEFI"]["Drivers"] = []
-        if os.path.exists(oc_drivers) and os.path.isdir(oc_drivers):
-            drivers_list = []
-            # We need to gather a list of all the files inside that and with .efi
-            for path, subdirs, files in os.walk(oc_drivers):
-                for name in files:
-                    if not name.startswith(".") and name.lower().endswith(".efi"):
-                        # Check if we're using the new approach - or just listing the paths
-                        if not driver_add:
-                            drivers_list.append(os.path.join(path,name)[len(oc_drivers):].replace("\\", "/").lstrip("/")) # Strip the /Volumes/EFI/
-                        else:
-                            new_driver_entry = {
-                                # "Arguments": "",
-                                "Enabled":True,
-                                "Path":os.path.join(path,name)[len(oc_drivers):].replace("\\", "/").lstrip("/") # Strip the /Volumes/EFI/
-                            }
-                            # Add our snapshot custom entries, if any - include the name of the .efi driver if the Comment
-                            for x in driver_add: new_driver_entry[x] = name if x.lower() == "comment" else driver_add[x]
-                            drivers_list.append(OrderedDict(sorted(new_driver_entry.items(),key=lambda x:str(x[0]).lower())))
-            drivers = [] if clean else tree_dict["UEFI"]["Drivers"]
-            for driver in sorted(drivers_list, key=lambda x: x.get("Path","").lower() if driver_add else x):
-                if not driver_add: # Old way
-                    if not isinstance(driver,(str,unicode)) or driver.lower() in [x.lower() for x in drivers if isinstance(x,(str,unicode))]:
-                        continue
-                else:
-                    if driver["Path"].lower() in [x.get("Path","").lower() for x in drivers if isinstance(x,dict)]:
-                        # Already have it, skip
-                        continue
-                # We need it, it seems
-                drivers.append(driver)
-            new_drivers = []
-            for driver in drivers:
-                if not driver_add: # Old way
-                    if not isinstance(driver,(str,unicode)) or not driver.lower() in [x.lower() for x in drivers_list if isinstance(x,(str,unicode))]:
-                        continue
-                else:
-                    if not isinstance(driver,dict):
-                        # Not a dict - skip it
-                        continue
-                    if not driver.get("Path","").lower() in [x["Path"].lower() for x in drivers_list]:
-                        # Not there, skip it
-                        continue
-                new_drivers.append(driver)
-                # Check path length
-                long_paths.extend(self.check_path_length(driver))
-            # Make sure we don't have duplicates
-            drivers_enabled = []
-            drivers_duplicates = []
-            drivers_duplicates_disabled = []
-            for d in new_drivers:
-                if isinstance(d,dict):
-                    # The new way
-                    if d.get("Enabled"):
-                        if d.get("Path","") in drivers_enabled:
-                            # Got a dupe - shallow copy and disable
-                            new_d = {}
-                            for key in d: new_d[key] = d[key]
-                            new_d["Enabled"] = False
-                            drivers_duplicates_disabled.append(new_d)
-                            if not d.get("Path","") in drivers_duplicates:
-                                drivers_duplicates.append(d.get("Path",""))
-                        else:
-                            # First hit - add the Path to drivers_enabled
-                            drivers_enabled.append(d.get("Path",""))
-                            drivers_duplicates_disabled.append(d)
-                else:
-                    # The old way
-                    if d in drivers_enabled:
-                        # Got a dupe
-                        if not d in drivers_duplicates:
-                            drivers_duplicates.append(d)
+        drivers_list = []
+        # We need to gather a list of all the files inside that and with .efi
+        for path, subdirs, files in os.walk(oc_drivers):
+            for name in files:
+                if not name.startswith(".") and name.lower().endswith(".efi"):
+                    # Check if we're using the new approach - or just listing the paths
+                    if not driver_add:
+                        drivers_list.append(os.path.join(path,name)[len(oc_drivers):].replace("\\", "/").lstrip("/")) # Strip the /Volumes/EFI/
                     else:
-                        drivers_enabled.append(d)
+                        new_driver_entry = {
+                            # "Arguments": "",
+                            "Enabled":True,
+                            "Path":os.path.join(path,name)[len(oc_drivers):].replace("\\", "/").lstrip("/") # Strip the /Volumes/EFI/
+                        }
+                        # Add our snapshot custom entries, if any - include the name of the .efi driver if the Comment
+                        for x in driver_add: new_driver_entry[x] = name if x.lower() == "comment" else driver_add[x]
+                        drivers_list.append(OrderedDict(sorted(new_driver_entry.items(),key=lambda x:str(x[0]).lower())))
+        drivers = [] if clean else tree_dict["UEFI"]["Drivers"]
+        for driver in sorted(drivers_list, key=lambda x: x.get("Path","").lower() if driver_add else x):
+            if not driver_add: # Old way
+                if not isinstance(driver,(str,unicode)) or driver.lower() in [x.lower() for x in drivers if isinstance(x,(str,unicode))]:
+                    continue
+            else:
+                if driver["Path"].lower() in [x.get("Path","").lower() for x in drivers if isinstance(x,dict)]:
+                    # Already have it, skip
+                    continue
+            # We need it, it seems
+            drivers.append(driver)
+        new_drivers = []
+        for driver in drivers:
+            if not driver_add: # Old way
+                if not isinstance(driver,(str,unicode)) or not driver.lower() in [x.lower() for x in drivers_list if isinstance(x,(str,unicode))]:
+                    continue
+            else:
+                if not isinstance(driver,dict):
+                    # Not a dict - skip it
+                    continue
+                if not driver.get("Path","").lower() in [x["Path"].lower() for x in drivers_list]:
+                    # Not there, skip it
+                    continue
+            new_drivers.append(driver)
+            # Check path length
+            long_paths.extend(self.check_path_length(driver))
+        # Make sure we don't have duplicates
+        drivers_enabled = []
+        drivers_duplicates = []
+        drivers_duplicates_disabled = []
+        for d in new_drivers:
+            if isinstance(d,dict):
+                # The new way
+                if d.get("Enabled"):
+                    if d.get("Path","") in drivers_enabled:
+                        # Got a dupe - shallow copy and disable
+                        new_d = OrderedDict() if isinstance(d,OrderedDict) else {}
+                        for key in d: new_d[key] = d[key]
+                        new_d["Enabled"] = False
+                        drivers_duplicates_disabled.append(new_d)
+                        if not d.get("Path","") in drivers_duplicates:
+                            drivers_duplicates.append(d.get("Path",""))
+                    else:
+                        # First hit - add the Path to drivers_enabled
+                        drivers_enabled.append(d.get("Path",""))
                         drivers_duplicates_disabled.append(d)
-            if len(drivers_duplicates):
-                if mb.askyesno("Duplicate Drivers","Disable the following Drivers with duplicate Paths?\n\n{}".format("\n".join(drivers_duplicates)),parent=self):
-                    new_drivers = drivers_duplicates_disabled
-            # Save the results
-            tree_dict["UEFI"]["Drivers"] = new_drivers
-        else:
-            # Make sure our Drivers list is empty
-            tree_dict["UEFI"]["Drivers"] = []
+            else:
+                # The old way
+                if d in drivers_enabled:
+                    # Got a dupe
+                    if not d in drivers_duplicates:
+                        drivers_duplicates.append(d)
+                else:
+                    drivers_enabled.append(d)
+                    drivers_duplicates_disabled.append(d)
+        if len(drivers_duplicates):
+            if mb.askyesno("Duplicate Drivers","Disable the following Drivers with duplicate Paths?\n\n{}".format("\n".join(drivers_duplicates)),parent=self):
+                new_drivers = drivers_duplicates_disabled
+        # Save the results
+        tree_dict["UEFI"]["Drivers"] = new_drivers
 
         # Check if we're forcing schema - and ensure values line up
         if self.controller.settings.get("force_snapshot_schema",False):
@@ -2841,27 +2890,28 @@ class PlistWindow(tk.Toplevel):
                 node_stack.append((c,value))
         return parent
 
-    def get_type(self, value, override=None):
+    def get_type(self, value, override=None, menu_code=True):
+        prefix = self.menu_code + " " if menu_code else ""
         if override and isinstance(override,str):
-            return self.menu_code + " " + override
+            return prefix + override
         elif isinstance(value, dict):
-            return self.menu_code + " Dictionary"
+            return prefix + "Dictionary"
         elif isinstance(value, list):
-            return self.menu_code + " Array"
+            return prefix + "Array"
         elif isinstance(value, datetime.datetime):
-            return self.menu_code + " Date"
+            return prefix + "Date"
         elif self.is_data(value):
-            return self.menu_code + " Data"
+            return prefix + "Data"
         elif isinstance(value, bool):
-            return self.menu_code + " Boolean"
+            return prefix + "Boolean"
         elif isinstance(value, (int,float,long)):
-            return self.menu_code + " Number"
+            return prefix + "Number"
         elif isinstance(value, (str,unicode)):
-            return self.menu_code + " String"
+            return prefix + "String"
         elif isinstance(value,plist.UID) or (hasattr(plistlib,"UID") and isinstance(value,plistlib.UID)):
-            return self.menu_code + " UID"
+            return prefix + "UID"
         else:
-            return self.menu_code + str(type(value))
+            return prefix + str(type(value))
 
     def is_data(self, value):
         return (sys.version_info >= (3, 0) and isinstance(value, bytes)) or (sys.version_info < (3,0) and isinstance(value, plistlib.Data))
