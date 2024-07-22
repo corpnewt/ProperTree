@@ -251,7 +251,10 @@ class ProperTree:
         self.font_check = tk_or_ttk.Checkbutton(self.settings_window,text="Use Custom Font Size",variable=self.custom_font,command=self.font_command)
         self.font_string = tk.StringVar()
         self.font_spinbox = tk.Spinbox(self.settings_window,from_=1,to=128,textvariable=self.font_string)
-        self.font_string.trace("w",self.update_font)
+        try:
+            self.font_string.trace_add("write",self.update_font)
+        except AttributeError:
+            self.font_string.trace("w",self.update_font)
         self.font_check.grid(row=10,column=4,sticky="w",padx=10)
         self.font_spinbox.grid(row=10,column=5,columnspan=2,sticky="we",padx=10)
 
@@ -261,7 +264,10 @@ class ProperTree:
         self.font_custom_check = tk_or_ttk.Checkbutton(self.settings_window,text="Use Custom Font",variable=self.font_var,command=self.font_select)
         self.font_custom = ttk.Combobox(self.settings_window,state="readonly",textvariable=self.font_family,values=sorted(families()))
         self.font_custom.bind('<<ComboboxSelected>>',self.font_pick)
-        self.font_family.trace("w",self.update_font_family)
+        try:
+            self.font_family.trace_add("write",self.update_font_family)
+        except AttributeError:
+            self.font_family.trace("w",self.update_font_family)
         self.font_custom_check.grid(row=11,column=4,stick="w",padx=10)
         self.font_custom.grid(row=11,column=5,columnspan=2,sticky="we",padx=10)
 
