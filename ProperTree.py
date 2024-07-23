@@ -774,6 +774,8 @@ class ProperTree:
         if p.is_alive():
             self.tk.after(100,self.check_update_process,p)
             return
+        # Join the process to ensure resources are returned
+        p.join()
         # We've returned - reset our bool lock
         self.is_checking_for_updates = False
         # Check if we got anything from the queue
@@ -902,6 +904,8 @@ class ProperTree:
         if p.is_alive():
             self.tk.after(100,self.check_tex_process,p)
             return
+        # Join the process to ensure resources are returned
+        p.join()
         # Check if we got anything from the queue
         if self.tex_queue.empty(): # Nothing in the queue, bail
             return self.reset_tex_button()
