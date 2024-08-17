@@ -528,6 +528,25 @@ class ProperTree:
         self.tex_url = "https://raw.githubusercontent.com/acidanthera/OpenCorePkg/master/Docs/Configuration.tex"
         self.repo_url = "https://github.com/corpnewt/ProperTree"
 
+        # Windows running python 2 seems to have issues with multiprocessing
+        # if the case of the main script's name is incorrect:
+        # e.g. Downloader.py vs downloader.py
+        #
+        # To work around this, we try to scrape for the correct case if
+        # possible.
+        try:
+            path = os.path.abspath(sys.modules["__main__"].__file__)
+            if os.path.isfile(path):
+                name = os.path.basename(path).lower()
+                fldr = os.path.dirname(path)
+                for f in os.listdir(fldr):
+                    if f.lower() == name:
+                        sys.modules["__main__"].__file__ = os.path.join(fldr,f)
+                        break
+        except AttributeError as e:
+            # This likely means we're running from the interpreter directly
+            pass
+
         # Implement a simple boolean lock, and check for updates if needed
         self.is_checking_for_updates = False
         if self.settings.get("check_for_updates_at_startup",True):
