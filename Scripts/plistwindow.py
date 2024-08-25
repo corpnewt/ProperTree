@@ -2,6 +2,7 @@
 import sys, os, plistlib, base64, binascii, datetime, tempfile, shutil, re, subprocess, math, hashlib, time
 
 from collections import OrderedDict, deque
+from io import BytesIO
 from Scripts import config_tex_info
 
 try:
@@ -12,6 +13,7 @@ try:
     import tkMessageBox as mb
     from tkFont import Font
     from itertools import izip_longest as izip
+    from StringIO import StringIO
 except ImportError:
     # Python 3
     import tkinter as tk
@@ -20,14 +22,11 @@ except ImportError:
     from tkinter import messagebox as mb
     from tkinter.font import Font
     from itertools import zip_longest as izip
-from . import plist
-
-try:
-    long
-    unicode
-except NameError:  # Python 3
     long = int
     unicode = str
+    basestring = str
+    from io import StringIO
+from . import plist
 
 class EntryPlus(tk.Entry):
     def __init__(self,parent,master,**kw):
@@ -1262,9 +1261,9 @@ class PlistWindow(tk.Toplevel):
             name = os.path.basename(item.get("Path",item.get("BundlePath","Unknown Name")))
             # Check the keys containing "path"
             for key in item:
-                if "path" in key.lower() and isinstance(item[key],(str,unicode)) and len(item[key])>self.safe_path_length:
+                if "path" in key.lower() and isinstance(item[key],basestring) and len(item[key])>self.safe_path_length:
                     paths_too_long.append(key) # Too long - keep a reference of the key
-        elif isinstance(item,(str,unicode)):
+        elif isinstance(item,basestring):
             name = os.path.basename(item) # Retain the last path component as the name
             # Checking the item itself
             if len(item)>self.safe_path_length:
@@ -1274,18 +1273,36 @@ class PlistWindow(tk.Toplevel):
         return [(item,name,paths_too_long)] # Return a list containing a tuple of the original item, and which paths are too long
 
     def get_hash(self,path,block_size=65536):
-        if not os.path.exists(path):
-            return ""
+        # If it's a string, we try to open it, assuming it's a file path
+        if isinstance(path,basestring):
+            if not os.path.exists(path):
+                return ""
+            f = open(path,"rb")
+        else:
+            # If it's not, assume it's a buffer or file handle
+            f = path
+            f.seek(0)
+        # Helper method to close file handles, or seek to 0
+        # as needed
+        def finish(f,path):
+            if isinstance(path,basestring):
+                f.close()
+            else:
+                f.seek(0)
+        # Set up our hasher and hash in chunks
         hasher = hashlib.md5()
         try:
-            with open(path,"rb") as f:
-                while True:
-                    buffer = f.read(block_size)
-                    if not buffer: break
-                    hasher.update(buffer)
+            while True:
+                buffer = f.read(block_size)
+                if not buffer:
+                    break
+                hasher.update(buffer)
+            finish(f,path)
             return hasher.hexdigest()
         except:
             pass
+        # Make sure we close our file handle, or seek to 0
+        finish(f,path)
         return "" # Couldn't determine hash :(
 
     def oc_snapshot(self, event = None, clean = False):
@@ -1587,13 +1604,13 @@ class PlistWindow(tk.Toplevel):
                 try:
                     with open(plist_full_path,"rb") as f:
                         info_plist = plist.load(f)
-                    if not "CFBundleIdentifier" in info_plist or not isinstance(info_plist["CFBundleIdentifier"],(str,unicode)):
+                    if not "CFBundleIdentifier" in info_plist or not isinstance(info_plist["CFBundleIdentifier"],basestring):
                         continue # Requires a valid CFBundleIdentifier string
                     kinfo = {
                         "CFBundleIdentifier": info_plist["CFBundleIdentifier"],
                         "OSBundleLibraries": info_plist.get("OSBundleLibraries",[]),
                         "cfbi": info_plist["CFBundleIdentifier"].lower(), # Case insensitive
-                        "osbl": [x.lower() for x in info_plist.get("OSBundleLibraries",[]) if isinstance(x,(str,unicode))] # Case insensitive
+                        "osbl": [x.lower() for x in info_plist.get("OSBundleLibraries",[]) if isinstance(x,basestring)] # Case insensitive
                     }
                     if info_plist.get("CFBundleExecutable",None):
                         if not os.path.exists(os.path.join(path,name,"Contents","MacOS",info_plist["CFBundleExecutable"])):
@@ -1822,7 +1839,7 @@ class PlistWindow(tk.Toplevel):
         drivers = [] if clean else tree_dict["UEFI"]["Drivers"]
         for driver in sorted(drivers_list, key=lambda x: x.get("Path","").lower() if driver_add else x):
             if not driver_add: # Old way
-                if not isinstance(driver,(str,unicode)) or driver.lower() in [x.lower() for x in drivers if isinstance(x,(str,unicode))]:
+                if not isinstance(driver,basestring) or driver.lower() in [x.lower() for x in drivers if isinstance(x,basestring)]:
                     continue
             else:
                 if driver["Path"].lower() in [x.get("Path","").lower() for x in drivers if isinstance(x,dict)]:
@@ -1833,7 +1850,7 @@ class PlistWindow(tk.Toplevel):
         new_drivers = []
         for driver in drivers:
             if not driver_add: # Old way
-                if not isinstance(driver,(str,unicode)) or not driver.lower() in [x.lower() for x in drivers_list if isinstance(x,(str,unicode))]:
+                if not isinstance(driver,basestring) or not driver.lower() in [x.lower() for x in drivers_list if isinstance(x,basestring)]:
                     continue
             else:
                 if not isinstance(driver,dict):
@@ -1929,7 +1946,7 @@ class PlistWindow(tk.Toplevel):
             formatted = []
             for entry in long_paths:
                 item,name,keys = entry
-                if isinstance(item,(str,unicode)): # It's an older string path
+                if isinstance(item,basestring): # It's an older string path
                     formatted.append(name)
                 elif isinstance(item,dict):
                     formatted.append("{} -> {}".format(name,", ".join(keys)))
@@ -2482,22 +2499,30 @@ class PlistWindow(tk.Toplevel):
         # Create a temp folder and save there first
         temp = tempfile.mkdtemp()
         temp_file = os.path.join(temp, os.path.basename(path))
+        # Set up an in-memory target for the plist - use StringIO on python 2, and
+        # BytesIO after
+        m = StringIO() if sys.version_info < (3,0) else BytesIO()
         try:
             if binary:
-                with open(temp_file,"wb") as f:
-                    plist.dump(plist_data,f,sort_keys=self.controller.settings.get("sort_dict",False),fmt=plist.FMT_BINARY)
+                plist.dump(plist_data,m,sort_keys=self.controller.settings.get("sort_dict",False),fmt=plist.FMT_BINARY)
             elif not self.controller.settings.get("xcode_data",True):
-                with open(temp_file,"wb") as f:
-                    plist.dump(plist_data,f,sort_keys=self.controller.settings.get("sort_dict",False))
+                plist.dump(plist_data,m,sort_keys=self.controller.settings.get("sort_dict",False))
             else:
                 # Dump to a string first
                 plist_text = self._format_data_string(plist.dumps(plist_data,sort_keys=self.controller.settings.get("sort_dict",False)))
                 # At this point, we have a list of lines - with all <data> tags on the same line
-                # let's write to file
-                with open(temp_file,"wb") as f:
-                    if sys.version_info >= (3,0):
-                        plist_text = plist_text.encode("utf-8")
-                    f.write(plist_text)
+                # let's write to buffer
+                if sys.version_info >= (3,0):
+                    plist_text = plist_text.encode("utf-8")
+                m.write(plist_text)
+            # Get the hash value of m, and then save it to a file
+            mem_hash = self.get_hash(m)
+            with open(temp_file,"wb") as f:
+                shutil.copyfileobj(m,f)
+            temp_hash = self.get_hash(temp_file)
+            # Make sure the temp file was serialized properly
+            if mem_hash != temp_hash:
+                raise Exception("The in-memory and temp file hashes do not match.  Serializing to the temp directory failed.")
             if os.path.isfile(path):
                 # We are overwriting an existing file - try to clone the perms and ownership
                 try: shutil.copystat(path,temp_file)
@@ -2510,18 +2535,22 @@ class PlistWindow(tk.Toplevel):
             shutil.copy(temp_file,path)
             # Let's ensure the md5 of the temp file and saved file are the same
             # There have been some reports of file issues when saving directly to an ESP
-            temp_hash = self.get_hash(temp_file)
             save_hash = self.get_hash(path)
-            if not temp_hash == save_hash: # Some issue occurred - let's throw an exception
-                self.bell()
-                mb.showerror("Saved MD5 Hash Mismatch","The saved and temp file hashes do not match - which suggests that copying from the temp directory to the destination was unsuccessful.\n\nIf the destination volume is an ESP, try first saving to your Desktop, then copying the file over manually.",parent=self)
+            if temp_hash != save_hash: # Some issue occurred - let's throw an exception
+                raise Exception((
+                    "The saved and temp file hashes do not match - copying from the temp directory to the destination was unsuccessful.\n\n"
+                    "If the destination volume is an ESP, try first saving to your Desktop, then copying the file over manually."
+                ))
         except Exception as e:
             # Had an issue, throw up a display box
             self.bell()
-            mb.showerror("An Error Occurred While Saving", repr(e), parent=self)
+            mb.showerror("An Error Occurred While Saving", str(e), parent=self)
             return None
         finally:
+            # Close our StringIO/BytesIO buffer
+            m.close()
             try:
+                # Remove the temp dir if possible
                 shutil.rmtree(temp,ignore_errors=True)
             except:
                 pass
@@ -2882,7 +2911,7 @@ class PlistWindow(tk.Toplevel):
             if isinstance(p,list):
                 p.append(value)
             elif isinstance(p,dict):
-                if isinstance(name,unicode):
+                if isinstance(name,basestring):
                     p[name] = value
                 else:
                     p[str(name)] = value
@@ -2892,7 +2921,7 @@ class PlistWindow(tk.Toplevel):
 
     def get_type(self, value, override=None, menu_code=True):
         prefix = self.menu_code + " " if menu_code else ""
-        if override and isinstance(override,str):
+        if override and isinstance(override,basestring):
             return prefix + override
         elif isinstance(value, dict):
             return prefix + "Dictionary"
@@ -2906,7 +2935,7 @@ class PlistWindow(tk.Toplevel):
             return prefix + "Boolean"
         elif isinstance(value, (int,float,long)):
             return prefix + "Number"
-        elif isinstance(value, (str,unicode)):
+        elif isinstance(value, basestring):
             return prefix + "String"
         elif isinstance(value,plist.UID) or (hasattr(plistlib,"UID") and isinstance(value,plistlib.UID)):
             return prefix + "UID"
