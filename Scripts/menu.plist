@@ -736,7 +736,7 @@
 					<key>MinKernel</key>
 					<string></string>
 					<key>Strategy</key>
-					<string>Disable</string>
+					<string>Exclude</string>
 				</dict>
 			</dict>
 			<dict>
@@ -747,21 +747,19 @@
 				<key>value</key>
 				<dict>
 					<key>Arch</key>
-					<string>x86_64</string>
-					<key>BundlePath</key>
-					<string>IOSkywalkFamily.kext</string>
+					<string>Any</string>
 					<key>Comment</key>
 					<string>Allow IOSkywalk Downgrade</string>
 					<key>Enabled</key>
 					<true/>
-					<key>ExecutablePath</key>
-					<string>Contents/MacOS/IOSkywalkFamily</string>
+					<key>Identifier</key>
+					<string>com.apple.iokit.IOSkywalkFamily</string>
 					<key>MaxKernel</key>
 					<string></string>
 					<key>MinKernel</key>
 					<string>23.0.0</string>
-					<key>PlistPath</key>
-					<string>Contents/Info.plist</string>
+					<key>Strategy</key>
+					<string>Exclude</string>
 				</dict>
 			</dict>
 		</array>
