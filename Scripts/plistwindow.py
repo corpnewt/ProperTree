@@ -41,8 +41,8 @@ class EntryPlus(tk.Entry):
         self.bind("<{}-v>".format(key), self.paste)
         self.bind("<Left>", self.goto_left)
         self.bind("<Right>", self.goto_right)
-        self.bind("<Shift-Left>", self.select_left)
-        self.bind("<Shift-Right>", self.select_right)
+        self.bind("<Shift-Left>", self.select_dummy)
+        self.bind("<Shift-Right>", self.select_dummy)
         self.bind("<Shift-Up>", self.select_prior)
         self.bind("<Shift-Down>", self.select_after)
         self.bind("<Up>", self.goto_start)
@@ -63,14 +63,9 @@ class EntryPlus(tk.Entry):
         self.icursor("end")
         return 'break'
 
-    def select_left(self, *ignore):
+    def select_dummy(self, *ignore):
         # Placeholder due to some oddities
-        # without the Shift-Left binding
-        pass
-
-    def select_right(self, *ignore):
-        # Placeholder due to some oddities
-        # without the Shift-Right binding
+        # without the Shift-Left/Right binding
         pass
 
     def select_all(self, *ignore):
