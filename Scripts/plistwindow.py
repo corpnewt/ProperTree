@@ -39,6 +39,10 @@ class EntryPlus(tk.Entry):
         self.bind("<{}-a>".format(key), self.select_all)
         self.bind("<{}-c>".format(key), self.copy)
         self.bind("<{}-v>".format(key), self.paste)
+        self.bind("<Left>", self.goto_left)
+        self.bind("<Right>", self.goto_right)
+        self.bind("<Shift-Left>", self.select_left)
+        self.bind("<Shift-Right>", self.select_right)
         self.bind("<Shift-Up>", self.select_prior)
         self.bind("<Shift-Down>", self.select_after)
         self.bind("<Up>", self.goto_start)
@@ -59,6 +63,16 @@ class EntryPlus(tk.Entry):
         self.icursor("end")
         return 'break'
 
+    def select_left(self, *ignore):
+        # Placeholder due to some oddities
+        # without the Shift-Left binding
+        pass
+
+    def select_right(self, *ignore):
+        # Placeholder due to some oddities
+        # without the Shift-Right binding
+        pass
+
     def select_all(self, *ignore):
         self.selection_range(0,"end")
         self.icursor("end")
@@ -74,6 +88,32 @@ class EntryPlus(tk.Entry):
         self.selection_range(0, 0)
         self.icursor("end")
         return 'break'
+
+    def goto_left_right(self, left=True):
+        try:
+            target = self.index(
+                tk.SEL_FIRST if left else tk.SEL_LAST
+            )
+            # We have some text selected, clear it
+            # and set the cursor at the left or right
+            # as needed
+            self.selection_range(0, 0)
+            self.icursor(target)
+        except:
+            # No selection - just move the cursor
+            # to the left or right if possible
+            if left:
+                cursor = max(0,self.index(tk.INSERT)-1)
+            else:
+                cursor = min(len(self.get()),self.index(tk.INSERT)+1)
+            self.icursor(cursor)
+        return 'break'
+
+    def goto_left(self, event=None):
+        return self.goto_left_right()
+
+    def goto_right(self, event=None):
+        return self.goto_left_right(left=False)
     
     def copy(self, event=None):
         try:
