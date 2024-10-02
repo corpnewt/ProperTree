@@ -54,12 +54,26 @@ class EntryPlus(tk.Entry):
         return 'break'
 
     def select_prior(self, *ignore):
-        self.selection_range(0,self.index(tk.INSERT))
+        try:
+            if self.index(tk.INSERT) == self.index(tk.SEL_LAST):
+                # Just set the cursor position
+                return self.goto_left_right()
+            else:
+                self.selection_range(0,tk.SEL_LAST)
+        except:
+            self.selection_range(0,self.index(tk.INSERT))
         self.icursor(0)
         return 'break'
 
     def select_after(self, *ignore):
-        self.selection_range(self.index(tk.INSERT),"end")
+        try:
+            if self.index(tk.INSERT) == self.index(tk.SEL_FIRST):
+                # Just set the cursor position
+                return self.goto_left_right(left=False)
+            else:
+                self.selection_range(tk.SEL_FIRST,"end")
+        except:
+            self.selection_range(self.index(tk.INSERT),"end")
         self.icursor("end")
         return 'break'
 
