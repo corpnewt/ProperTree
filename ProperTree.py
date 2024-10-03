@@ -146,7 +146,7 @@ class ProperTree:
         self.check_string_check.grid(row=5,column=0,columnspan=3,sticky="w",padx=10)
         comment_prefix_label = tk.Label(self.settings_window,text="Comment Prefix (default is #):")
         comment_prefix_label.grid(row=6,column=0,sticky="w",padx=10)
-        self.comment_prefix_text = tk.Entry(self.settings_window)
+        self.comment_prefix_text = plistwindow.EntryPlus(self.settings_window,self.tk,self)
         self.comment_prefix_text.grid(row=6,column=1,columnspan=2,sticky="we",padx=10)
         self.plist_type_string = tk.StringVar(self.settings_window)
         self.plist_type_menu = tk_or_ttk.OptionMenu(self.settings_window, self.plist_type_string, *self.get_option_menu_list(self.allowed_types), command=self.change_plist_type)
@@ -192,7 +192,7 @@ class ProperTree:
         self.drag_disabled.grid(row=14,column=1,columnspan=2,sticky="we",padx=10)
         undo_max_label = tk.Label(self.settings_window,text="Max Undo (0=unlim, {}=default):".format(self.max_undo))
         undo_max_label.grid(row=15,column=0,sticky="w",padx=10)
-        self.undo_max_text = tk.Entry(self.settings_window)
+        self.undo_max_text = plistwindow.EntryPlus(self.settings_window,self.tk,self)
         self.undo_max_text.grid(row=15,column=1,columnspan=2,sticky="we",padx=10)
         
         # Left/right separator:
@@ -343,12 +343,12 @@ class ProperTree:
         f_option.grid(row=0,column=1,sticky="we")
         t_option.grid(row=1,column=1,sticky="we")
 
-        self.f_text = tk.Entry(self.tk)
+        self.f_text = plistwindow.EntryPlus(self.tk,self.tk,self)
         self.f_text.delete(0,tk.END)
         self.f_text.insert(0,"")
         self.f_text.grid(row=0,column=2,columnspan=3,sticky="we",padx=10,pady=10)
 
-        self.t_text = tk.Entry(self.tk)
+        self.t_text = plistwindow.EntryPlus(self.tk,self.tk,self)
         self.t_text.configure(state='normal')
         self.t_text.delete(0,tk.END)
         self.t_text.insert(0,"")
@@ -576,6 +576,36 @@ class ProperTree:
 
         # Start our run loop
         tk.mainloop()
+
+    def _clipboard_append(self, clipboard_string = None):
+        # Tkinter has issues copying to the system clipboard as evident in this bug report:
+        # https://bugs.python.org/issue40452
+        #
+        # There are some workarounds that require compiling a new tk binary - but we can
+        # ensure the system clipboard is updated by calling either clip or pbcopy depending
+        # on the current OS.
+        #
+        # First we clear the tkinter clipboard
+        self.tk.clipboard_clear()
+        # Only write to the tkinter clipboard if we have a value
+        if clipboard_string: self.tk.clipboard_append(clipboard_string)
+        else: clipboard_string = "" # Ensure we have at least an empty string
+        # Gather our args for the potential clipboard commands Windows -> macOS -> Linux
+        for args in (["clip"],) if os.name=="nt" else (["pbcopy"],) if sys.platform=="darwin" else (["xclip","-sel","c"],["xsel","-ib"],):
+            # Try to start a subprocess to mirror the tkinter clipboard contents
+            try:
+                clipboard = subprocess.Popen(
+                    args,
+                    stdin=subprocess.PIPE,
+                    stderr=getattr(subprocess,"DEVNULL",open(os.devnull,"w")),
+                    stdout=getattr(subprocess,"DEVNULL",open(os.devnull,"w"))
+                )
+            except:
+                continue
+            # Dirty py2 check to see if we need to encode the data or not
+            clipboard.stdin.write(clipboard_string if 2/3==0 else clipboard_string.encode())
+            clipboard.stdin.close() # Close the pipe
+            break # Break out of the loop as needed
 
     def sigint_check(self):
         # Helper to keep the event loop moving in order to ensure we can catch
