@@ -3,7 +3,7 @@ import sys, os, plistlib, base64, binascii, datetime, tempfile, shutil, re, subp
 
 from collections import OrderedDict, deque
 from io import BytesIO
-from Scripts import config_tex_info
+from Scripts import config_tex_info, plist
 
 try:
     # Python 2
@@ -26,14 +26,14 @@ except ImportError:
     unicode = str
     basestring = str
     from io import StringIO
-from . import plist
 
 class EntryPlus(tk.Entry):
-    def __init__(self,parent,master,**kw):
+    def __init__(self,parent,master,controller,**kw):
         tk.Entry.__init__(self, parent, **kw)
 
         self.parent = parent
         self.master = master
+        self.controller = controller
 
         key = "Command" if str(sys.platform) == "darwin" else "Control"
         self.bind("<{}-a>".format(key), self.select_all)
@@ -131,7 +131,14 @@ class EntryPlus(tk.Entry):
             get = ""
         if not len(get):
             return 'break'
-        self.master._clipboard_append(get)
+        # Use the _clipboard_append method of the controller
+        # if passed, otherwise fall back to the master's
+        # clipboard_append which may not roll over to the
+        # system clipboard
+        if hasattr(self.controller,"_clipboard_append"):
+            self.controller._clipboard_append(get)
+        else:
+            self.master.clipboard_append(get)
         self.update()
         return 'break'
 
@@ -156,9 +163,8 @@ class EntryPlus(tk.Entry):
         return 'break'
 
 class EntryPopup(EntryPlus):
-    def __init__(self, parent, master, text, cell, column, **kw):
-        # tk.Entry.__init__(self, parent, **kw)
-        EntryPlus.__init__(self, parent, master, **kw)
+    def __init__(self, parent, master, controller, text, cell, column, **kw):
+        EntryPlus.__init__(self, parent, master, controller, **kw)
 
         self.original_text = text
         self.insert(0, text)
@@ -594,13 +600,13 @@ class PlistWindow(tk.Toplevel):
         r_label.grid(row=1,column=0,sticky="e")
         self.f_options = ["Key", "Boolean", "Data", "Date", "Number", "UID", "String"]
         self.find_type = self.f_options[0]
-        self.f_text = EntryPlus(self.find_frame,self)
+        self.f_text = EntryPlus(self.find_frame,self,self.controller)
         self.f_text.bind("<Return>", self.find_next)
         self.f_text.bind("<KP_Enter>", self.find_next)
         self.f_text.delete(0,tk.END)
         self.f_text.insert(0,"")
         self.f_text.grid(row=0,column=2,sticky="we",padx=10,pady=10)
-        self.r_text = EntryPlus(self.find_frame,self)
+        self.r_text = EntryPlus(self.find_frame,self,self.controller)
         self.r_text.bind("<Return>", self.replace)
         self.r_text.bind("<KP_Enter>", self.replace)
         self.r_text.delete(0,tk.END)
@@ -2645,33 +2651,7 @@ class PlistWindow(tk.Toplevel):
         return True
 
     def _clipboard_append(self, clipboard_string = None):
-        # Tkinter has issues copying to the system clipboard as evident in this bug report:
-        # https://bugs.python.org/issue40452
-        #
-        # There are some workarounds that require compiling a new tk binary - but we can
-        # ensure the system clipboard is updated by calling either clip or pbcopy depending
-        # on the current OS.
-        #
-        # First we clear the tkinter clipboard
-        self.clipboard_clear()
-        # Only write to the tkinter clipboard if we have a value
-        if clipboard_string: self.clipboard_append(clipboard_string)
-        else: clipboard_string = "" # Ensure we have at least an empty string
-        # Gather our args for the potential clipboard commands Windows -> macOS -> Linux
-        for args in (["clip"],) if os.name=="nt" else (["pbcopy"],) if sys.platform=="darwin" else (["xclip","-sel","c"],["xsel","-ib"],):
-            # Try to start a subprocess to mirror the tkinter clipboard contents
-            try:
-                clipboard = subprocess.Popen(
-                    args,
-                    stdin=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    stdout=subprocess.PIPE
-                )
-            except:
-                continue
-            # Dirty py2 check to see if we need to encode the data or not
-            clipboard.stdin.write(clipboard_string if 2/3==0 else clipboard_string.encode())
-            break # Break out of the loop as needed
+        self.controller._clipboard_append(clipboard_string=clipboard_string)
 
     def copy_selection(self, event = None):
         node = self._tree.focus()
@@ -3689,7 +3669,7 @@ class PlistWindow(tk.Toplevel):
             # Special formatting of hex values
             text = text.replace("<","").replace(">","")
         # place Entry popup properly
-        self.entry_popup = EntryPopup(self._tree, self, text, tv_item, column)
+        self.entry_popup = EntryPopup(self._tree, self, self.controller, text, tv_item, column)
         self.entry_popup.relocate()
         return 'break'
 
