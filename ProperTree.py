@@ -604,6 +604,7 @@ class ProperTree:
                 continue
             # Dirty py2 check to see if we need to encode the data or not
             clipboard.stdin.write(clipboard_string if 2/3==0 else clipboard_string.encode())
+            clipboard.stdin.flush() # Flush the buffer
             clipboard.stdin.close() # Close the pipe
             break # Break out of the loop as needed
 
