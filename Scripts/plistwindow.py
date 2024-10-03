@@ -41,8 +41,8 @@ class EntryPlus(tk.Entry):
         self.bind("<{}-v>".format(key), self.paste)
         self.bind("<Left>", self.goto_left)
         self.bind("<Right>", self.goto_right)
-        self.bind("<Shift-Left>", self.select_dummy)
-        self.bind("<Shift-Right>", self.select_dummy)
+        self.bind("<Shift-Left>", self.select_left)
+        self.bind("<Shift-Right>", self.select_right)
         self.bind("<Shift-Up>", self.select_prior)
         self.bind("<Shift-Down>", self.select_after)
         self.bind("<Up>", self.goto_start)
@@ -71,20 +71,50 @@ class EntryPlus(tk.Entry):
                 # Just set the cursor position
                 return self.goto_left_right(left=False)
             else:
-                self.selection_range(tk.SEL_FIRST,"end")
+                self.selection_range(tk.SEL_FIRST,tk.END)
         except:
-            self.selection_range(self.index(tk.INSERT),"end")
-        self.icursor("end")
+            self.selection_range(self.index(tk.INSERT),tk.END)
+        self.icursor(tk.END)
         return 'break'
 
-    def select_dummy(self, *ignore):
-        # Placeholder due to some oddities
-        # without the Shift-Left/Right binding
-        pass
+    def select_left_right(self, left=True):
+        # Check if we're at the left already, and if so
+        # just return
+        if (left and self.index(tk.INSERT) == 0) or \
+        (not left and self.index(tk.INSERT) == self.index(tk.END)):
+            return 'break'
+        # Get the baseline values
+        index = self.index(tk.INSERT)
+        try:
+            start = self.index(tk.SEL_FIRST)
+            end   = self.index(tk.SEL_LAST)
+        except:
+            # Default to the index
+            start = end = index
+        # Clamp the index
+        new_index = min(max(0,index - 1 if left else index + 1),self.index(tk.END))
+        # Figure out which we're updating
+        if index == start:
+            start = new_index
+        else:
+            end = new_index
+        # Set our selection
+        self.icursor(new_index)
+        self.selection_range(
+            min(start,end),
+            max(start,end)
+        )
+        return 'break'
+
+    def select_left(self, *ignore):
+        return self.select_left_right()
+
+    def select_right(self, *ignore):
+        return self.select_left_right(left=False)
 
     def select_all(self, *ignore):
-        self.selection_range(0,"end")
-        self.icursor("end")
+        self.selection_range(0,tk.END)
+        self.icursor(tk.END)
         # returns 'break' to interrupt default key-bindings
         return 'break'
 
@@ -95,7 +125,7 @@ class EntryPlus(tk.Entry):
 
     def goto_end(self, event=None):
         self.selection_range(0, 0)
-        self.icursor("end")
+        self.icursor(tk.END)
         return 'break'
 
     def goto_left_right(self, left=True):
@@ -2231,7 +2261,7 @@ class PlistWindow(tk.Toplevel):
                     "cell":cell,
                 })
                 # Now we actually add it
-                self._tree.move(cell,task["from"],task.get("index","end"))
+                self._tree.move(cell,task["from"],task.get("index",tk.END))
                 selected = cell
             elif ttype == "move":
                 # We moved a cell - let's save the old info
@@ -2243,7 +2273,7 @@ class PlistWindow(tk.Toplevel):
                     "index":self._tree.index(cell)
                 })
                 # Let's actually move it now
-                self._tree.move(cell,task["from"],task.get("index","end"))
+                self._tree.move(cell,task["from"],task.get("index",tk.END))
         # Let's check if we have an r_task_list - and add it if it wasn't a one-off
         if len(r_task_list) and single_undo is None:
             r.append(r_task_list)
@@ -2822,7 +2852,7 @@ class PlistWindow(tk.Toplevel):
             values = (self.get_type(value),children,"" if parentNode == "" else self.drag_code)
         else:
             values = (self.get_type(value),value,"" if parentNode == "" else self.drag_code)
-        i = self._tree.insert(parentNode, "end", text=key, values=values)
+        i = self._tree.insert(parentNode, tk.END, text=key, values=values)
         remaining = None
         if isinstance(value, dict):
             if (not check_binary or (check_binary and self.plist_type_string.get().lower() != "binary")) \
@@ -3347,7 +3377,7 @@ class PlistWindow(tk.Toplevel):
                     break
             if not found:
                 # Need to add it
-                current_cell = self._tree.insert(current_cell,"end",text=p,values=(self.menu_code+" "+needed_type,"",self.drag_code,),open=True)
+                current_cell = self._tree.insert(current_cell,tk.END,text=p,values=(self.menu_code+" "+needed_type,"",self.drag_code,),open=True)
                 undo_list.append({
                     "type":"add",
                     "cell":current_cell
