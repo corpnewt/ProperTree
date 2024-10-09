@@ -1,4 +1,4 @@
 {
-    "version": "0.3.0",
-    "changes": "- Add OC 1.0.1 hashes.\n- OC Snapshot QoL improvements.\n- Migrate from VBScript to PowerShell in .bat scripts."
+    "version": "0.3.1",
+    "changes": "- Add OC 1.0.2 hashes.\n- Add Kernel -> Block/Force/Patch right-click templates.\n- Text selection QoL improvements."
 }
