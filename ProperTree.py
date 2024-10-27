@@ -1010,8 +1010,17 @@ class ProperTree:
         if opacity is None:
             try: opacity = min(100,max(int(self.settings.get("opacity",100)),25))
             except: opacity = 100 # failsafe
-        windows = (window,) if window else self.stackorder(self.tk,include_defaults=True)
-        for window in self.stackorder(self.tk,include_defaults=True):
+        if window:
+            # Only use the passed window(s)
+            if isinstance(window,(list,tuple)):
+                windows = window
+            else: # Wrap it up in a tuple
+                windows = (window,)
+        else:
+            # Make sure we set opacity on the default windows whether they're
+            # visible or not
+            windows = self.stackorder(self.tk,include_defaults=False) + [self.tk, self.settings_window]
+        for window in windows:
             window.attributes("-alpha",float(opacity)/float(100))
 
     def update_opacity(self, event = None):
