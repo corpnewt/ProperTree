@@ -2676,7 +2676,7 @@ class PlistWindow(tk.Toplevel):
         self.current_plist = path
         try:
             self.last_saved = os.path.getmtime(path)
-            self.last_hash  = self.get_hash(path)
+            self.last_hash  = save_hash
         except Exception:
             self.last_saved = self.last_hash = None # Reset them
         # Set the window title to the path
