@@ -2313,7 +2313,8 @@ class PlistWindow(tk.Toplevel):
         # only when the window specifically gained focus
         if event and event.widget == self:
             self.lift()
-            if self.current_plist and os.path.isfile(self.current_plist) \
+            if self.controller.settings.get("warn_if_modified",True) \
+            and self.current_plist and os.path.isfile(self.current_plist) \
             and self.last_saved and self.last_hash:
                 # We have a valid file and a save time - see if the file
                 # has been modified since then
