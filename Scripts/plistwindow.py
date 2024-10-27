@@ -419,6 +419,7 @@ class PlistWindow(tk.Toplevel):
         # Set up the options
         self.current_plist = None # None = new
         self.last_saved = None
+        self.last_hash = None
         self.edited = False
         self.dragging = False
         self.drag_start = None
@@ -2312,17 +2313,20 @@ class PlistWindow(tk.Toplevel):
         # only when the window specifically gained focus
         if event and event.widget == self:
             self.lift()
-            if self.current_plist and os.path.isfile(self.current_plist) and self.last_saved:
+            if self.current_plist and os.path.isfile(self.current_plist) \
+            and self.last_saved and self.last_hash:
                 # We have a valid file and a save time - see if the file
                 # has been modified since then
                 try:
                     last_modified = os.path.getmtime(self.current_plist)
+                    modified_hash = self.get_hash(self.current_plist)
                 except Exception:
-                    self.last_saved = None
+                    self.last_saved = self.last_hash = None
                     return
-                if self.last_saved != last_modified:
+                if self.last_saved != last_modified and self.last_hash != modified_hash:
                     # Update to avoid continually warning
                     self.last_saved = last_modified
+                    self.last_hash  = modified_hash
                     self.bell()
                     if mb.askyesno(
                         "File Was Modified",
@@ -2671,8 +2675,9 @@ class PlistWindow(tk.Toplevel):
         self.current_plist = path
         try:
             self.last_saved = os.path.getmtime(path)
+            self.last_hash  = self.get_hash(path)
         except Exception:
-            self.last_saved = None # Reset it
+            self.last_saved = self.last_hash = None # Reset them
         # Set the window title to the path
         self.title(path)
         # No changes - so we'll reset that
@@ -2687,8 +2692,9 @@ class PlistWindow(tk.Toplevel):
         self.current_plist = os.path.normpath(path) if path else path
         try:
             self.last_saved = os.path.getmtime(path)
+            self.last_hash  = self.get_hash(path)
         except Exception:
-            self.last_saved = None
+            self.last_saved = self.last_hash = None
         if path is None:
             self._ensure_edited(title=title or "Untitled.plist")
         else:
