@@ -2321,6 +2321,8 @@ class PlistWindow(tk.Toplevel):
                     self.last_saved = None
                     return
                 if self.last_saved != last_modified:
+                    # Update to avoid continually warning
+                    self.last_saved = last_modified
                     self.bell()
                     if mb.askyesno(
                         "File Was Modified",
@@ -2329,8 +2331,6 @@ class PlistWindow(tk.Toplevel):
                         ),
                         parent=self):
                         self.reload_from_disk()
-                    # Update to avoid continually warning
-                    self.last_saved = last_modified
 
     def move_selection(self, event):
         # Check if we have a entry_popup - and relocate it
