@@ -632,14 +632,10 @@ class PlistWindow(tk.Toplevel):
         self.f_options = ["Key", "Boolean", "Data", "Date", "Number", "UID", "String"]
         self.find_type = self.f_options[0]
         self.f_text = EntryPlus(self.find_frame,self,self.controller)
-        self.f_text.bind("<Return>", self.find_next)
-        self.f_text.bind("<KP_Enter>", self.find_next)
         self.f_text.delete(0,tk.END)
         self.f_text.insert(0,"")
         self.f_text.grid(row=0,column=2,sticky="we",padx=10,pady=10)
         self.r_text = EntryPlus(self.find_frame,self,self.controller)
-        self.r_text.bind("<Return>", self.replace)
-        self.r_text.bind("<KP_Enter>", self.replace)
         self.r_text.delete(0,tk.END)
         self.r_text.insert(0,"")
         self.r_text.grid(row=1,column=2,columnspan=1,sticky="we",padx=10,pady=10)
@@ -668,6 +664,9 @@ class PlistWindow(tk.Toplevel):
             for i,opt in enumerate(self.f_options,start=1):
                 widget.bind("<{}-Key-{}>".format(key,i), lambda x:self.set_find_type_by_index(x))
                 widget.bind("<{}-KP_{}>".format(key,i), lambda x:self.set_find_type_by_index(x))
+            widget.bind("<Return>", self.find_next)
+            widget.bind("<KP_Enter>", self.find_next)
+            widget.bind("<Escape>", lambda x:self.hide_show_find(override=False))
             for child in widget.children.values():
                 set_frame_binds(child)
         set_frame_binds(self.find_frame)
@@ -977,8 +976,11 @@ class PlistWindow(tk.Toplevel):
             else:
                 self._tree.focus_force()
 
-    def hide_show_find(self, event=None):
+    def hide_show_find(self, event=None, override=None):
         # Let's find out if we're set to show
+        if isinstance(override,bool) and self.show_find_replace == override:
+            # Already set - bail
+            return
         self.show_find_replace ^= True
         self.draw_frames(event,"hideshow")
 
