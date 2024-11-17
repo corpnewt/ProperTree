@@ -178,29 +178,32 @@ class ProperTree:
         self.mod_check = tk.IntVar()
         self.enable_mod_check = tk_or_ttk.Checkbutton(self.settings_window,text="Warn If Files Are Externally Modified",variable=self.mod_check,command=self.mod_check_command)
         self.enable_mod_check.grid(row=13,column=0,columnspan=3,stick="w",padx=10)
+        self.first_check = tk.IntVar()
+        self.enable_first_check = tk_or_ttk.Checkbutton(self.settings_window,text="Enter Edits Values Before Keys Where Possible",variable=self.first_check,command=self.first_check_command)
+        self.enable_first_check.grid(row=14,column=0,columnspan=3,stick="w",padx=10)
         self.enable_drag_and_drop = tk.BooleanVar()
         self.toggle_drag_drop = tk_or_ttk.Checkbutton(self.settings_window,text="Enable Row Drag & Drop", variable=self.enable_drag_and_drop,command=self.drag_drop_command)
-        self.toggle_drag_drop.grid(row=14,column=0,columnspan=3,sticky="w",padx=10)
+        self.toggle_drag_drop.grid(row=15,column=0,columnspan=3,sticky="w",padx=10)
         self.drag_label = tk.Label(self.settings_window,text="Drag Dead Zone (1-100 pixels):")
-        self.drag_label.grid(row=15,column=0,sticky="w",padx=10)
+        self.drag_label.grid(row=16,column=0,sticky="w",padx=10)
         self.drag_pixels = tk.Label(self.settings_window,text="20")
-        self.drag_pixels.grid(row=15,column=1,sticky="w",padx=(10,0))
+        self.drag_pixels.grid(row=16,column=1,sticky="w",padx=(10,0))
         self.drag_scale = tk_or_ttk.Scale(self.settings_window,from_=1,to=100,orient=tk.HORIZONTAL,command=self.scale_command)
         # Try to hide the value if using tk - will throw an exception in ttk
         try: self.drag_scale.configure(showvalue=False)
         except tk.TclError: pass
-        self.drag_scale.grid(row=15,column=2,sticky="we",padx=(0,10))
+        self.drag_scale.grid(row=16,column=2,sticky="we",padx=(0,10))
         self.drag_disabled = tk.Label(self.settings_window,text="[ Drag & Drop Disabled ]")
         self.drag_disabled.configure(state="disabled")
-        self.drag_disabled.grid(row=15,column=1,columnspan=2,sticky="we",padx=10)
+        self.drag_disabled.grid(row=16,column=1,columnspan=2,sticky="we",padx=10)
         undo_max_label = tk.Label(self.settings_window,text="Max Undo (0=unlim, {}=default):".format(self.max_undo))
-        undo_max_label.grid(row=16,column=0,sticky="w",padx=10)
+        undo_max_label.grid(row=17,column=0,sticky="w",padx=10)
         self.undo_max_text = plistwindow.EntryPlus(self.settings_window,self.tk,self)
-        self.undo_max_text.grid(row=16,column=1,columnspan=2,sticky="we",padx=10)
+        self.undo_max_text.grid(row=17,column=1,columnspan=2,sticky="we",padx=10)
         
         # Left/right separator:
         sep = ttk.Separator(self.settings_window,orient="vertical")
-        sep.grid(row=1,column=3,rowspan=14,sticky="ns",padx=10)
+        sep.grid(row=1,column=3,rowspan=17,sticky="ns",padx=10)
 
         # Right side - theme elements:
         t_func = ttk.Separator(self.settings_window,orient="horizontal")
@@ -289,21 +292,21 @@ class ProperTree:
         default_dark.grid(row=14,column=5,columnspan=2,sticky="we",padx=10)
 
         sep_theme = ttk.Separator(self.settings_window,orient="horizontal")
-        sep_theme.grid(row=17,column=0,columnspan=7,sticky="we",padx=10,pady=(10,0))
+        sep_theme.grid(row=18,column=0,columnspan=7,sticky="we",padx=10,pady=(10,0))
 
         # Add the check for updates checkbox and button
         self.update_int = tk.IntVar()
         self.update_check = tk_or_ttk.Checkbutton(self.settings_window,text="Check For Updates At Start",variable=self.update_int,command=self.update_command)
-        self.update_check.grid(row=18,column=0,sticky="w",padx=10,pady=(5,0))
+        self.update_check.grid(row=19,column=0,sticky="w",padx=10,pady=(5,0))
         self.notify_once_int = tk.IntVar()
         self.notify_once_check = tk_or_ttk.Checkbutton(self.settings_window,text="Only Notify Once Per Version",variable=self.notify_once_int,command=self.notify_once)
-        self.notify_once_check.grid(row=19,column=0,sticky="w",padx=10,pady=(0,10))
+        self.notify_once_check.grid(row=20,column=0,sticky="w",padx=10,pady=(0,10))
         self.update_button = tk_or_ttk.Button(self.settings_window,text="Check Now",command=lambda:self.check_for_updates(user_initiated=True))
-        self.update_button.grid(row=19,column=1,columnspan=2,sticky="w",padx=10,pady=(0,10))
+        self.update_button.grid(row=20,column=1,columnspan=2,sticky="w",padx=10,pady=(0,10))
         self.tex_button = tk_or_ttk.Button(self.settings_window,text="Get Configuration.tex",command=self.get_latest_tex)
-        self.tex_button.grid(row=19,column=4,sticky="we",padx=10,pady=(0,10))
+        self.tex_button.grid(row=20,column=4,sticky="we",padx=10,pady=(0,10))
         reset_settings = tk_or_ttk.Button(self.settings_window,text="Restore All Defaults",command=self.reset_settings)
-        reset_settings.grid(row=19,column=5,columnspan=2,sticky="we",padx=10,pady=(0,10))
+        reset_settings.grid(row=20,column=5,columnspan=2,sticky="we",padx=10,pady=(0,10))
 
         # Setup the color picker click methods
         self.r1_canvas.bind("<ButtonRelease-1>",lambda x:self.pick_color("alternating_color_1",self.r1_canvas))
@@ -486,6 +489,7 @@ class ProperTree:
         # invert_row2_text_color:       bool
         # invert_hl_text_color:         bool
         # warn_if_modified:             bool
+        # edit_values_before_keys:      bool
         # enable_drag_and_drop:         bool
         # drag_dead_zone:               pixel distance before drag starts (default is 20)
         # open_recent:                  list, paths recently opened
@@ -1137,6 +1141,9 @@ class ProperTree:
     def mod_check_command(self, event = None):
         self.settings["warn_if_modified"] = True if self.mod_check.get() else False
 
+    def first_check_command(self, event = None):
+        self.settings["edit_values_before_keys"] = True if self.first_check.get() else False
+
     def update_command(self, event = None):
         self.settings["check_for_updates_at_startup"] = True if self.update_int.get() else False
         self.update_notify()
@@ -1289,6 +1296,7 @@ class ProperTree:
         self.snapshot_string.set(snapshot_name if snapshot_name in snapshot_choices else "Auto-detect")
         self.force_schema.set(self.settings.get("force_snapshot_schema",False))
         self.mod_check.set(self.settings.get("warn_if_modified",True))
+        self.first_check.set(self.settings.get("edit_values_before_keys",False))
         self.comment_ignore_case.set(self.settings.get("comment_strip_ignore_case",False))
         self.comment_check_string.set(self.settings.get("comment_strip_check_string",True))
         self.update_int.set(self.settings.get("check_for_updates_at_startup",True))
