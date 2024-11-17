@@ -1273,13 +1273,18 @@ class PlistWindow(tk.Toplevel):
             else:
                 # Should at least be able to edit the value - *probably*
                 parent_type = "array"
-        edit_col = "#0"
+        available_cols = ["#0","#2"]
         if parent_type == "array":
-            if check_type == "boolean":
-                # Can't edit anything - bail
-                return 'break'
-            # Can at least edit the value
-            edit_col = "#2"
+            available_cols.remove("#0") # Can't edit the key
+        if check_type in ("array","boolean","dictionary"):
+            available_cols.remove("#2") # Can't edit the value
+        if not available_cols:
+            return "break" # Nothing to do - bail
+        elif len(available_cols)==1:
+            edit_col = available_cols[0] # Only one option
+        else:
+            # Get our preferred option first
+            edit_col = "#2" if self.controller.settings.get("edit_values_before_keys") else "#0"
         # Let's get the bounding box for our other field
         try:
             x,y,width,height = self._tree.bbox(node, edit_col)
