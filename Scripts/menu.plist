@@ -61,7 +61,7 @@
 					<key>Enabled</key>
 					<true/>
 					<key>OemTableId</key>
-					<data>AAAAAA==</data>
+					<data>AAAAAAAAAAA=</data>
 					<key>TableLength</key>
 					<integer>0</integer>
 					<key>TableSignature</key>
@@ -86,7 +86,7 @@
 					<key>Enabled</key>
 					<true/>
 					<key>OemTableId</key>
-					<data>AAAAAA==</data>
+					<data>AAAAAAAAAAA=</data>
 					<key>TableLength</key>
 					<integer>0</integer>
 					<key>TableSignature</key>
@@ -120,7 +120,7 @@
 					<key>Mask</key>
 					<data></data>
 					<key>OemTableId</key>
-					<data>AAAAAA==</data>
+					<data>AAAAAAAAAAA=</data>
 					<key>Replace</key>
 					<data></data>
 					<key>ReplaceMask</key>
