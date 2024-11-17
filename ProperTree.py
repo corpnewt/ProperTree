@@ -1013,12 +1013,17 @@ class ProperTree:
                 "-" if s else "",
                 keysym
             )
+            # Check bind_all for the sequence we built first
+            if sequence in event.widget.bind_all():
+                # Just propagate the event
+                event.widget.event_generate(sequence)
+                return "break"
             # Walk each widget and its parents looking for the
-            # bind/bind_all sequence we just built
+            # bind sequence we just built
             parent = event.widget
             while True:
-                if any(sequence in x for x in (parent.bind(),parent.bind_all())):
-                    event.widget.event_generate(sequence)
+                if sequence in parent.bind():
+                    parent.event_generate(sequence)
                     return "break"
                 parent_name = parent.winfo_parent()
                 if not parent_name:
