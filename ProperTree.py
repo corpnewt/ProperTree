@@ -1015,8 +1015,15 @@ class ProperTree:
             )
             # Walk each widget and its parents looking for the
             # bind/bind_all sequence we just built
-            event.widget.event_generate(sequence)
-            return "break"
+            parent = event.widget
+            while True:
+                if any(sequence in x for x in (parent.bind(),parent.bind_all())):
+                    event.widget.event_generate(sequence)
+                    return "break"
+                parent_name = parent.winfo_parent()
+                if not parent_name:
+                    return # Bail - out of widgets
+                parent = parent._nametowidget(parent_name)
 
     def text_color(self, hex_color, invert = False):
         hex_color = hex_color.lower()
