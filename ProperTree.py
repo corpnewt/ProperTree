@@ -995,8 +995,19 @@ class ProperTree:
         self.lift_window(windows[-1])
 
     def handle_keypress(self, event, generate=True):
-        if event.state & 0x2 and not event.keysym == "Caps_Lock":
-            event.state -= 0x2 # Strip Caps Lock
+        if event.state & 0x2 and event.keysym != "Caps_Lock":
+            # Check which OS we're on and strip mod keys we don't
+            # care about
+            state_bitmask = 0xFFFFFFFF
+            if os.name == "nt":
+                state_bitmask -= 0x8  # Num Lock
+                state_bitmask -= 0x20 # Scroll Lock
+            elif sys.platform == "darwin":
+                state_bitmask -= 0x20 # Num Lock
+            else: # Assume Linux
+                state_bitmask -= 0x10 # Num Lock
+            state_bitmask -= 0x2 # Strip Caps Lock on all platforms
+            event.state &= state_bitmask
             # Build our sequence - modified from:
             #  - https://github.com/python/cpython/blob/3.13/Lib/tkinter/__init__.py
             mods = ('Shift', 'Lock', 'Control',
