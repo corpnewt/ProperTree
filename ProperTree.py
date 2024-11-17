@@ -454,6 +454,9 @@ class ProperTree:
             # Rewrite the default Command-Q command
             self.tk.bind_all("<{}-q>".format(key), self.quit)
             self.tk.bind_all("<{}-comma>".format(key), lambda event, x=self.settings_window:self.show_window(x))
+
+        self.tk.bind("<KeyPress>", self.handle_keypress)
+        self.settings_window.bind("<KeyPress>", self.handle_keypress)
         
         cwd = os.getcwd()
         os.chdir(os.path.abspath(os.path.dirname(__file__)))
@@ -990,6 +993,30 @@ class ProperTree:
         windows = self.stackorder(self.tk,include_defaults=True)
         if not len(windows): return
         self.lift_window(windows[-1])
+
+    def handle_keypress(self, event, generate=True):
+        if event.state & 0x2 and not event.keysym == "Caps_Lock":
+            event.state -= 0x2 # Strip Caps Lock
+            # Build our sequence - modified from:
+            #  - https://github.com/python/cpython/blob/3.13/Lib/tkinter/__init__.py
+            mods = ('Shift', 'Lock', 'Control',
+                    'Mod1', 'Mod2', 'Mod3', 'Mod4', 'Mod5',
+                    'Button1', 'Button2', 'Button3', 'Button4', 'Button5')
+            s = []
+            for i, n in enumerate(mods):
+                if event.state & (1 << i):
+                    s.append(n)
+            # Get the lowercase keysym if it's just one char
+            keysym = event.keysym.lower() if len(event.keysym)==1 else event.keysym
+            sequence = "<{}{}Key-{}>".format(
+                "-".join(s),
+                "-" if s else "",
+                keysym
+            )
+            # Walk each widget and its parents looking for the
+            # bind/bind_all sequence we just built
+            event.widget.event_generate(sequence)
+            return "break"
 
     def text_color(self, hex_color, invert = False):
         hex_color = hex_color.lower()
