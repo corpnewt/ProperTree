@@ -658,18 +658,21 @@ class PlistWindow(tk.Toplevel):
         self.f_case.grid(row=0,column=5,sticky="w")
 
         # Set find_frame bindings - also bind to child widgets to ensure keybinds are captured
-        def set_frame_binds(widget):
-            for k in ("Up","Down"):
-                widget.bind("<{}-{}>".format(key,k), lambda x:self.cycle_find_type(x))
-            for i,opt in enumerate(self.f_options,start=1):
-                widget.bind("<{}-Key-{}>".format(key,i), lambda x:self.set_find_type_by_index(x))
-                widget.bind("<{}-KP_{}>".format(key,i), lambda x:self.set_find_type_by_index(x))
-            widget.bind("<Return>", self.find_next)
-            widget.bind("<KP_Enter>", self.find_next)
-            widget.bind("<Escape>", lambda x:self.hide_show_find(override=False))
+        def set_frame_binds(widget, just_keypress=False):
+            widget.bind("<KeyPress>",self.controller.handle_keypress)
+            if not just_keypress:
+                for k in ("Up","Down"):
+                    widget.bind("<{}-{}>".format(key,k), lambda x:self.cycle_find_type(x))
+                for i,opt in enumerate(self.f_options,start=1):
+                    widget.bind("<{}-Key-{}>".format(key,i), lambda x:self.set_find_type_by_index(x))
+                    widget.bind("<{}-KP_{}>".format(key,i), lambda x:self.set_find_type_by_index(x))
+                widget.bind("<Return>", self.find_next)
+                widget.bind("<KP_Enter>", self.find_next)
+                widget.bind("<Escape>", lambda x:self.hide_show_find(override=False))
             for child in widget.children.values():
                 set_frame_binds(child)
         set_frame_binds(self.find_frame)
+        set_frame_binds(self.display_frame,just_keypress=True)
 
         # Add the scroll bars and show the treeview
         self.vsb.pack(side="right",fill="y")
@@ -705,6 +708,11 @@ class PlistWindow(tk.Toplevel):
         return bit_mask
 
     def quick_search(self, event=None):
+        # Use the handle_keypress() method of the controller
+        # to determine if Caps Lock is pressed
+        if self.controller.handle_keypress(event) == "break":
+            # Bail, as the event is re-raised without caps
+            return "break"
         if event.state & self.mod_bitmask:
             return # Some disallowed modifier was held - bail
         # Check if we have a char, or a tab
@@ -978,16 +986,16 @@ class PlistWindow(tk.Toplevel):
 
     def hide_show_find(self, event=None, override=None):
         # Let's find out if we're set to show
-        if isinstance(override,bool) and self.show_find_replace == override:
-            # Already set - bail
-            return
-        self.show_find_replace ^= True
-        self.draw_frames(event,"hideshow")
+        if self.show_find_replace != override:
+            self.show_find_replace ^= True
+            self.draw_frames(event,"hideshow")
+        return "break"
 
     def hide_show_type(self, event=None):
         # Let's find out if we're set to show
         self.show_type ^= True
         self.draw_frames(event,"showtype")
+        return "break"
 
     def get_index(self, iterable, item):
         # Returns the index of the passed item in the iterable
@@ -1265,13 +1273,18 @@ class PlistWindow(tk.Toplevel):
             else:
                 # Should at least be able to edit the value - *probably*
                 parent_type = "array"
-        edit_col = "#0"
+        available_cols = ["#0","#2"]
         if parent_type == "array":
-            if check_type == "boolean":
-                # Can't edit anything - bail
-                return 'break'
-            # Can at least edit the value
-            edit_col = "#2"
+            available_cols.remove("#0") # Can't edit the key
+        if check_type in ("array","boolean","dictionary"):
+            available_cols.remove("#2") # Can't edit the value
+        if not available_cols:
+            return "break" # Nothing to do - bail
+        elif len(available_cols)==1:
+            edit_col = available_cols[0] # Only one option
+        else:
+            # Get our preferred option first
+            edit_col = "#2" if self.controller.settings.get("edit_values_before_keys") else "#0"
         # Let's get the bounding box for our other field
         try:
             x,y,width,height = self._tree.bbox(node, edit_col)
@@ -2605,6 +2618,7 @@ class PlistWindow(tk.Toplevel):
                 )
             if not len(path):
                 # User cancelled - no changes
+                self.controller.lift_window(self)
                 return None
         # Check if it should be binary
         binary = self.plist_type_string.get().lower() == "binary"
@@ -2659,6 +2673,7 @@ class PlistWindow(tk.Toplevel):
             # Had an issue, throw up a display box
             self.bell()
             mb.showerror("An Error Occurred While Saving", str(e), parent=self)
+            self.controller.lift_window(self)
             return None
         finally:
             # Close our StringIO/BytesIO buffer
