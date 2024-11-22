@@ -1955,7 +1955,8 @@ class ProperTree:
             if windows: # Get the last window we saw
                 window = windows[-1]
         if window is None: return # No windows in the stack order?
-        window.deiconify() # Lift minimized windows as well
+        if window.state() == "iconic":
+            window.deiconify() # Lift minimized windows as well
         window.lift()
         window.focus_force()
         try: window._tree.focus_force()
