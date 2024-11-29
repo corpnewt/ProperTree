@@ -985,8 +985,16 @@ class PlistWindow(tk.Toplevel):
                 self._tree.focus_force()
 
     def hide_show_find(self, event=None, override=None):
+        if event and override is None and self.show_find_replace \
+        and not str(event.widget.focus_get()).startswith(str(self.find_frame)):
+            # We got a non-overridden ctrl/cmd-f event triggered from somewhere
+            # other than our find/replace pane while that pane already exists.
+            # Let's just force focus to the find entry widget - and select all
+            # contents
+            self.f_text.focus()
+            self.f_text.select_all()
         # Let's find out if we're set to show
-        if self.show_find_replace != override:
+        elif self.show_find_replace != override:
             self.show_find_replace ^= True
             self.draw_frames(event,"hideshow")
         return "break"
