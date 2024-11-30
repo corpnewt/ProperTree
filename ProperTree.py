@@ -1949,13 +1949,13 @@ class ProperTree:
         # Return the list, omitting any windows that are withdrawn
         return [x for x in stack_order if x.wm_state() != "withdrawn"]
 
-    def lift_window(self, window=None):
+    def lift_window(self, window=None, deiconify=False):
         if window is None:
             windows = self.stackorder(self.tk,include_defaults=True)
             if windows: # Get the last window we saw
                 window = windows[-1]
         if window is None: return # No windows in the stack order?
-        if window.state() == "iconic":
+        if deiconify and window.state() == "iconic":
             window.deiconify() # Lift minimized windows as well
         window.lift()
         window.focus_force()
@@ -1990,7 +1990,7 @@ class ProperTree:
             for window in self.stackorder(self.tk)[::-1]:
                 if window in self.default_windows or not window.edited:
                     continue
-                self.lift_window(window)
+                self.lift_window(window,deiconify=True)
                 if not window.close_window(check_saving=ask_to_save,check_close=False):
                     self.is_quitting = False # Unlock the quit
                     return # User cancelled or we failed to save, bail
