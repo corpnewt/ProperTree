@@ -812,6 +812,7 @@ class ProperTree:
                 # We pressed the button - but another check is in progress
                 self.tk.bell()
                 mb.showerror("Already Checking For Updates","An update check is already in progress.  If you consistently get this error when manually checking for updates - it may indicate a netowrk issue.")
+                self.lift_window()
             return
         self.is_checking_for_updates = True # Lock out other update checks
         self.update_button.configure(
@@ -852,6 +853,7 @@ class ProperTree:
             if user_initiated:
                 self.tk.bell()
                 mb.showerror(error,excep)
+                self.lift_window()
             return self.reset_update_button()
         # Parse the output returned
         version_dict = output_dict.get("json",{})
@@ -859,6 +861,7 @@ class ProperTree:
             if user_initiated:
                 self.tk.bell()
                 mb.showerror("An Error Occurred Checking For Updates","Data returned was malformed or nonexistent.")
+                self.lift_window()
             return self.reset_update_button()
         # At this point - we should have json data containing the version key/value
         check_version = str(version_dict["version"]).lower()
@@ -899,9 +902,7 @@ class ProperTree:
         # Reset the update button after notifying
         self.reset_update_button()
         # If we got here - we displayed some message, let's lift our window to the top
-        windows = self.stackorder(self.tk,include_defaults=True)
-        if not len(windows): return
-        self.lift_window(windows[-1])
+        self.lift_window()
 
     def get_best_tex_path(self):
         pt_path = os.path.abspath(os.path.dirname(__file__))
@@ -994,9 +995,7 @@ class ProperTree:
                     )
         self.reset_tex_button()
         # If we got here - we displayed some message, let's lift our window to the top
-        windows = self.stackorder(self.tk,include_defaults=True)
-        if not len(windows): return
-        self.lift_window(windows[-1])
+        self.lift_window()
 
     def handle_keypress(self, event, generate=True):
         if event.state & 0x2 and event.keysym != "Caps_Lock":
@@ -1455,6 +1454,7 @@ class ProperTree:
         if not (os.path.exists(path) and os.path.isfile(path)):
             self.tk.bell()
             mb.showerror("An Error Occurred While Opening {}".format(os.path.basename(path)), "The path '{}' does not exist.".format(path))
+            self.lift_window()
             return
         return self.pre_open_with_path(path)
 
@@ -1484,6 +1484,7 @@ class ProperTree:
         except Exception as e:
             self.tk.bell()
             mb.showerror("Error in check_open() function",repr(e))
+            self.lift_window()
         self.is_opening = False
 
     def open_plist_from_app(self, *args):
@@ -1514,6 +1515,7 @@ class ProperTree:
         except Exception as e:
             self.tk.bell()
             mb.showerror("Error in open_plist_from_app() function",repr(e))
+            self.lift_window()
         self.is_opening = False
 
     def change_hd_type(self, value):
@@ -1673,6 +1675,7 @@ class ProperTree:
             if [x for x in from_value if x.lower() not in "0123456789abcdef"]:
                 self.tk.bell()
                 mb.showerror("Invalid Hex Data","Invalid character in passed hex data.") # ,parent=self.tk)
+                self.lift_window()
                 return
         try:
             if from_type in ("decimal","binary"):
@@ -1729,6 +1732,7 @@ class ProperTree:
             self.t_text.configure(state='readonly')
             self.tk.bell()
             mb.showerror("Conversion Error",str(e)) # ,parent=self.tk)
+            self.lift_window()
 
     ###                       ###
     # Save/Load Plist Functions #
@@ -1905,6 +1909,7 @@ class ProperTree:
             # Had an issue, throw up a display box
             self.tk.bell()
             mb.showerror("An Error Occurred While Opening {}".format(os.path.basename(path)), str(e)) # ,parent=current_window)
+            self.lift_window()
             return
         # Opened it correctly - let's load it, and set our values
         if not current_window:
