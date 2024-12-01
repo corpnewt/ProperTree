@@ -2346,7 +2346,7 @@ class PlistWindow(tk.Toplevel):
                     return
                 if self.last_hash != modified_hash:
                     # Update to avoid continually warning
-                    self.last_hash  = modified_hash
+                    self.last_hash = modified_hash
                     self.bell()
                     if mb.askyesno(
                         "File Was Modified",
@@ -2696,7 +2696,7 @@ class PlistWindow(tk.Toplevel):
         # Retain the new path if the save worked correctly
         self.current_plist = path
         try:
-            self.last_hash  = save_hash
+            self.last_hash = save_hash
         except Exception:
             self.last_hash = None # Reset them
         # Set the window title to the path
@@ -2712,7 +2712,7 @@ class PlistWindow(tk.Toplevel):
         self.add_node(plist_data,check_binary=plist_type.lower() == "binary")
         self.current_plist = os.path.normpath(path) if path else path
         try:
-            self.last_hash  = self.get_hash(path)
+            self.last_hash = self.get_hash(path)
         except Exception:
             self.last_hash = None
         if path is None:
