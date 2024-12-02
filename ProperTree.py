@@ -1962,7 +1962,11 @@ class ProperTree:
         if window is None: return # No windows in the stack order?
         if deiconify and window.state() == "iconic":
             window.deiconify() # Lift minimized windows as well
-        window.lift()
+        if sys.platform != "darwin":
+            # For all non-macOS platforms, lift the window
+            # whether deiconifying or not.  Don't lift on
+            # macOS as it deiconifies windows.
+            window.lift()
         window.focus_force()
         try: window._tree.focus_force()
         except: pass
