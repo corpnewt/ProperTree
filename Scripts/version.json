@@ -1,4 +1,4 @@
 {
-    "version": "0.3.1",
-    "changes": "- Add OC 1.0.2 hashes.\n- Add Kernel -> Block/Force/Patch right-click templates.\n- Text selection QoL improvements."
+    "version": "0.3.2",
+    "changes": "- Add OC 1.0.3 hashes.\n- Warn if document has been edited externally.\n- Fix handling of hot keys when Caps Lock is on.\n- Add setting to allow editing values before keys.\n- UI and window management improvements."
 }
