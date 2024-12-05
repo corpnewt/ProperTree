@@ -1329,14 +1329,14 @@ class ProperTree:
         self.update_canvases()
 
     def update_canvas_text(self, canvas = None):
-        if canvas == None: # Update all
+        if canvas is None: # Update all
             canvas = (self.bg_canvas,self.r1_canvas,self.r2_canvas,self.hl_canvas)
         if not isinstance(canvas, (tuple,list)): canvas = (canvas,)
         for c in canvas:
             if not c in self.canvas_connect: continue # Not a recognized canvas - skip
             # Update each canvas as needed - but mind the text color
             color = self.text_color(c["background"],self.canvas_connect[c]["invert"].get())
-            if self.canvas_connect[c].get("text_id",None) == None: # We haven't drawn it yet - try to
+            if self.canvas_connect[c].get("text_id",None) is None: # We haven't drawn it yet - try to
                 # Get the size
                 w = self.settings_window.winfo_width()
                 h = c.winfo_height()
@@ -1472,7 +1472,7 @@ class ProperTree:
                     window = self.pre_open_with_path(p)
                     if not window: continue
                     at_least_one = True
-                    if self.start_window == None:
+                    if self.start_window is None:
                         self.start_window = window
                 if not at_least_one: # If none of them opened, open a fresh plist
                     windows = self.stackorder(self.tk)
@@ -1504,14 +1504,14 @@ class ProperTree:
                     self.lift_window(existing_window)
                     existing_window.reload_from_disk(None)
                     continue
-                if len(windows) == 1 and windows[0] == self.start_window and windows[0].edited == False and windows[0].current_plist == None:
+                if len(windows) == 1 and windows[0] == self.start_window and windows[0].edited == False and windows[0].current_plist is None:
                     # Fresh window - replace the contents
                     current_window = windows[0]
                 else:
                     current_window = None
                 # Let's load the plist
                 window = self.pre_open_with_path(arg,current_window)
-                if self.start_window == None: self.start_window = window
+                if self.start_window is None: self.start_window = window
         except Exception as e:
             self.tk.bell()
             mb.showerror("Error in open_plist_from_app() function",repr(e))
@@ -1884,7 +1884,7 @@ class ProperTree:
         if not path: return # Hmmm... shouldn't happen, but just in case
         path = os.path.abspath(os.path.expanduser(path))
         windows = self.stackorder(self.tk)
-        if current_window == None and len(windows) == 1 and windows[0] == self.start_window and windows[0].edited == False and windows[0].current_plist == None:
+        if current_window is None and len(windows) == 1 and windows[0] == self.start_window and windows[0].edited == False and windows[0].current_plist is None:
             # Fresh window - replace the contents
             current_window = windows[0]
         # Verify that no other window has that file selected already
