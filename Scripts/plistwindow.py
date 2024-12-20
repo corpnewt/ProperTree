@@ -3146,6 +3146,7 @@ class PlistWindow(tk.Toplevel):
             target = "" if not len(self._tree.selection()) else self._tree.selection()[0]
         if target in ("",self.get_root_node()):
             # Can't remove top level
+            self.removing_rows = False
             return
         parent = self._tree.parent(target)
         self.add_undo({
