@@ -15,6 +15,8 @@ use_py3="TRUE"
 
 # We'll parse if the first argument passed is
 # --install-python and if so, we'll just install
+# Can optionally take a version number as the
+# second arg - i.e. --install-python 3.13.1
 just_installing="FALSE"
 
 tempdir=""
@@ -326,7 +328,7 @@ check_py3_stub="$(compare_to_version "3" "10.15")"
 trap cleanup EXIT
 if [ "$1" == "--install-python" ] && [ "$kernel" == "Darwin" ]; then
     just_installing="TRUE"
-    download_py
+    download_py "$2"
 else
     main
 fi
