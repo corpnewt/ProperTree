@@ -90,7 +90,7 @@ download_py () {
     echo "Located Version:  $vers"
     echo
     echo "Building download url..."
-    url="$(curl -L https://www.python.org/downloads/release/python-${vers//./}/ --compressed 2>&1 | grep -iE "python-$vers-macos.*.pkg\"" | awk -F'"' '{ print $2 }')"
+    url="$(curl -L https://www.python.org/downloads/release/python-${vers//./}/ --compressed 2>&1 | grep -iE "python-$vers-macos.*.pkg\"" | awk -F'"' '{ print $2 }' | head -n 1)"
     if [ -z "$url" ]; then
         # Couldn't get the URL - bail
         print_error
