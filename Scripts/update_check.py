@@ -1,5 +1,5 @@
 import downloader
-import json, os, sys, argparse
+import json, os, sys, argparse, tempfile, shutil
 
 DEFAULT_URL = "https://raw.githubusercontent.com/corpnewt/ProperTree/master/Scripts/version.json"
 DEFAULT_TEX_URL = "https://raw.githubusercontent.com/acidanthera/OpenCorePkg/master/Docs/Configuration.tex"
@@ -23,19 +23,22 @@ def _get_latest_tex(url = None, file_path = None):
             "error":"Missing required arguments."
         })
     # We should have a target path and a URL - let's download
+    temp = tempfile.mkdtemp()
     try:
-        file_path = DL.stream_to_file(url,file_path,False)
+        # Download to a temp dir
+        temp_file = os.path.join(temp,os.path.basename(file_path))
+        assert DL.stream_to_file(url,temp_file,False)
+        # Copy it over
+        shutil.copy(temp_file,file_path)
+        assert os.path.isfile(file_path)
     except:
         return _print_output({
             "exception":"Could not get the Configuration.tex from github.  Potentially a network issue.",
             "error":"An Error Occurred Downloading Configuration.tex"
         })
-    # Ensure the path exists
-    if not os.path.isfile(file_path):
-        return _print_output({
-            "exception":"Could not get the Configuration.tex from github.  Potentially a network issue.",
-            "error":"An Error Occurred Downloading Configuration.tex"
-        })
+    finally:
+        # Clean up after ourselves
+        shutil.rmtree(temp,ignore_errors=True)
     _print_output({
         "json":file_path
     })
