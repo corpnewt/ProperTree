@@ -500,7 +500,7 @@ class PlistWindow(tk.Toplevel):
         self.bind("<{}-i>".format(key), self.show_config_info)
         # Add the treeview bindings
         self._tree.bind("<{}-c>".format(key), self.copy_selection)
-        self._tree.bind("<{}-C>".format(key), self.copy_all)
+        self._tree.bind("<{}-Shift-C>".format(key), self.copy_children)
         self._tree.bind("<{}-v>".format(key), self.paste_selection)
 
         # Create the scrollbar
@@ -2759,9 +2759,9 @@ class PlistWindow(tk.Toplevel):
 
     def copy_children(self, event = None):
         node = self._tree.focus()
-        if node == "":
-            # Nothing to copy
-            return
+        if node in ("",self.get_root_node()) or not self.get_check_type(node).lower() in ("array","dictionary"):
+            # Run the regular copy operation
+            return self.copy_selection()
         try:
             plist_data = self.nodes_to_values(node)
             if isinstance(plist_data,dict) and len(plist_data):
@@ -2771,16 +2771,6 @@ class PlistWindow(tk.Toplevel):
                 # Set it to the first item of the array
                 plist_data = plist_data[0]
             clipboard_string = plist.dumps(plist_data,sort_keys=self.controller.settings.get("sort_dict",False))
-            self._clipboard_append(clipboard_string)
-        except:
-            pass
-
-    def copy_all(self, event = None):
-        try:
-            clipboard_string = plist.dumps(self.nodes_to_values(self.get_root_node()),sort_keys=self.controller.settings.get("sort_dict",False))
-            if self.controller.settings.get("xcode_data",True):
-                clipboard_string = self._format_data_string(clipboard_string)
-            # Get just the values
             self._clipboard_append(clipboard_string)
         except:
             pass
@@ -3590,7 +3580,7 @@ class PlistWindow(tk.Toplevel):
         except: p_state = "disabled" # Invalid clipboard content
         popup_menu.add_command(label="Copy{}".format(" (Cmd+C)" if is_mac else ""),command=self.copy_selection,state=c_state,accelerator=None if is_mac else "(Ctrl+C)")
         if not cell in ("",self.get_root_node()) and self.get_check_type(cell).lower() in ("array","dictionary"):
-            popup_menu.add_command(label="Copy Children", command=self.copy_children,state=c_state)
+            popup_menu.add_command(label="Copy Children{}".format(" (Cmd+Shift+C)" if is_mac else ""), command=self.copy_children,state=c_state,accelerator=None if is_mac else "(Ctrl+Shift+C)")
         popup_menu.add_command(label="Paste{}".format(" (Cmd+V)" if is_mac else ""),command=self.paste_selection,state=p_state,accelerator=None if is_mac else "(Ctrl+V)")
         cell_path = self.get_cell_path(cell)
         # Add rbits option
