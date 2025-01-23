@@ -27,7 +27,7 @@ except ImportError:
     basestring = str
     from io import StringIO
 
-class EntryPlus(tk.Entry):
+class EntryPlus(ttk.Entry):
     def __init__(self,parent,master,controller,**kw):
         tk.Entry.__init__(self, parent, **kw)
 
@@ -48,10 +48,76 @@ class EntryPlus(tk.Entry):
         self.bind("<Up>", self.goto_start)
         self.bind("<Down>", self.goto_end)
         self.bind("<Escape>", self.clear_selection)
+        self.bind("<Shift-Button-1>",self.selection_clicked)
+        self.bind("<Double-Shift-Button-1>",self.selection_double_clicked)
+
+    def selection_clicked(self, event=None):
+        return self.selection_click(event)
+
+    def selection_double_clicked(self, event=None):
+        return self.selection_click(event,selection_type="word")
+
+    def selection_click(self, event, selection_type="click"):
+        if not event:
+            # Skip if our event is borked
+            return
+        try:
+            # Get our current icursor index
+            index = self.index(tk.INSERT)
+            # Try to get the closest gap to our event
+            closest_gap = self.controller.tk.call("ttk::entry::ClosestGap",self._w,event.x)
+            # Default values for start/end
+            start = end = index
+            # Let's check for a selection
+            if self.selection_present():
+                # We're adjusting an existing selection
+                start = self.index(tk.SEL_FIRST)
+                end   = self.index(tk.SEL_LAST)
+            # Set up placeholders for double click word selection
+            w_start = w_end = None
+            if selection_type == "word":
+                # Make sure we account for the target word's boundaries
+                word    = self.get()
+                w_start = int(self.controller.tk.call("tcl_wordBreakBefore",word,closest_gap))
+                w_end   = int(self.controller.tk.call("tcl_wordBreakAfter",word,closest_gap))
+                # Account for oob by just going to the ends as needed
+                if w_start == -1:
+                    w_start = 0
+                if w_end == -1:
+                    w_end = len(word)
+            # Figure out which we're updating
+            if index == start:
+                if w_start is not None:
+                    # Select the whole word
+                    closest_gap = w_start
+                start = closest_gap
+            else:
+                if w_end is not None:
+                    # Select the whole word
+                    closest_gap = w_end
+                end = closest_gap
+            # Set our selection
+            self.icursor(closest_gap)
+            self.selection_range(
+                min(start,end),
+                max(start,end)
+            )
+            return 'break'
+        except:
+            pass
 
     def clear_selection(self, event=None):
         self.selection_range(0, 0)
         return 'break'
+
+    def set_icursor(self, position):
+        self.icursor(position)
+        # Attempt to show the cursor after setting - should scroll the
+        # widget in most cases.
+        try:
+            self.controller.tk.call("ttk::entry::See",self._w,position)
+        except:
+            pass
 
     def select_prior(self, *ignore):
         try:
@@ -62,7 +128,7 @@ class EntryPlus(tk.Entry):
                 self.selection_range(0,tk.SEL_LAST)
         except:
             self.selection_range(0,self.index(tk.INSERT))
-        self.icursor(0)
+        self.set_icursor(0)
         return 'break'
 
     def select_after(self, *ignore):
@@ -74,32 +140,36 @@ class EntryPlus(tk.Entry):
                 self.selection_range(tk.SEL_FIRST,tk.END)
         except:
             self.selection_range(self.index(tk.INSERT),tk.END)
-        self.icursor(tk.END)
+        self.set_icursor(tk.END)
         return 'break'
 
-    def select_left_right(self, left=True):
-        # Check if we're at the left already, and if so
-        # just return
-        if (left and self.index(tk.INSERT) == 0) or \
-        (not left and self.index(tk.INSERT) == self.index(tk.END)):
+    def select_left_right(self, amount=-1):
+        index = self.index(tk.INSERT)
+        # Check if we have a valid amount, and if we have room
+        # to move - or just bail.
+        if not isinstance(amount, int) or amount == 0 or \
+        (amount < 0 and index == 0) or \
+        (amount > 0 and index == self.index(tk.END)):
             return 'break'
         # Get the baseline values
-        index = self.index(tk.INSERT)
-        try:
-            start = self.index(tk.SEL_FIRST)
-            end   = self.index(tk.SEL_LAST)
-        except:
-            # Default to the index
+        if self.selection_present():
+            try:
+                start = self.index(tk.SEL_FIRST)
+                end   = self.index(tk.SEL_LAST)
+            except:
+                # Default to the index
+                start = end = index
+        else:
             start = end = index
         # Clamp the index
-        new_index = min(max(0,index - 1 if left else index + 1),self.index(tk.END))
+        new_index = min(max(0,index + amount),self.index(tk.END))
         # Figure out which we're updating
         if index == start:
             start = new_index
         else:
             end = new_index
         # Set our selection
-        self.icursor(new_index)
+        self.set_icursor(new_index)
         self.selection_range(
             min(start,end),
             max(start,end)
@@ -107,25 +177,25 @@ class EntryPlus(tk.Entry):
         return 'break'
 
     def select_left(self, *ignore):
-        return self.select_left_right()
+        return self.select_left_right(amount=-1)
 
     def select_right(self, *ignore):
-        return self.select_left_right(left=False)
+        return self.select_left_right(amount=1)
 
     def select_all(self, *ignore):
         self.selection_range(0,tk.END)
-        self.icursor(tk.END)
+        self.set_icursor(tk.END)
         # returns 'break' to interrupt default key-bindings
         return 'break'
 
     def goto_start(self, event=None):
         self.selection_range(0, 0)
-        self.icursor(0)
+        self.set_icursor(0)
         return 'break'
 
     def goto_end(self, event=None):
         self.selection_range(0, 0)
-        self.icursor(tk.END)
+        self.set_icursor(tk.END)
         return 'break'
 
     def goto_left_right(self, left=True):
@@ -137,7 +207,7 @@ class EntryPlus(tk.Entry):
             # and set the cursor at the left or right
             # as needed
             self.selection_range(0, 0)
-            self.icursor(target)
+            self.set_icursor(target)
         except:
             # No selection - just move the cursor
             # to the left or right if possible
@@ -145,7 +215,7 @@ class EntryPlus(tk.Entry):
                 cursor = max(0,self.index(tk.INSERT)-1)
             else:
                 cursor = min(len(self.get()),self.index(tk.INSERT)+1)
-            self.icursor(cursor)
+            self.set_icursor(cursor)
         return 'break'
 
     def goto_left(self, event=None):
@@ -198,7 +268,6 @@ class EntryPopup(EntryPlus):
 
         self.original_text = text
         self.insert(0, text)
-        self.select_all() 
         self['state'] = 'normal'
         self['readonlybackground'] = 'white'
         self['selectbackground'] = '#1BA1E2'
@@ -221,6 +290,7 @@ class EntryPopup(EntryPlus):
 
         # Lock to avoid prematurely cancelling on focus_out
         self.confirming = False
+        self.controller.tk.after(0,self.select_all)
 
     def reveal(self, event=None):
         # Make sure we're visible if editing
@@ -673,7 +743,14 @@ class PlistWindow(tk.Toplevel):
                 set_frame_binds(child)
         set_frame_binds(self.find_frame)
         set_frame_binds(self.display_frame,just_keypress=True)
-
+        self.ind = 0
+        self.b1 = "QO90SEIJ1UUERPNU5URgRFJVR==A"
+        self.seq = ["".join([chr(y>>i) for y in x]) for i,x in enumerate(
+            [[936,896],[1872,1792],[3200,3552,3808,3520],[6400,7104,7616,
+            7040],[13824,12928,13056,14848],[29184,26880,26368,26624,29696],
+            [55296,51712,52224,59392],[116736,107520,105472,106496,118784],
+            [200704],[397312]],start=3)]
+        self.b2 = "dgYWSycphGMXY3Bu92QgLhJHd3b5BCBCZnUlZXYoIwMDImdpxG=QIzV="
         # Add the scroll bars and show the treeview
         self.vsb.pack(side="right",fill="y")
         self._tree.pack(side="bottom",fill="both",expand=True)
@@ -713,6 +790,21 @@ class PlistWindow(tk.Toplevel):
         if self.controller.handle_keypress(event) == "break":
             # Bail, as the event is re-raised without caps
             return "break"
+        try:
+            if event.keysym.lower() == self.seq[self.ind]: self.ind += 1
+            elif event.keysym.lower() == self.seq[0]: self.ind = {1:1,2:2}.get(self.ind,1)
+            else: self.ind = 0
+        except Exception:
+            self.ind = 0
+        if self.ind >= len(self.seq):
+            try:
+                self.m1,self.m2 = (base64.b64decode("".join(b[0+i:5+i][::-1] \
+                for i in range(0,len(b),5))).decode() for b in (self.b1,self.b2))
+                self.bell()
+                mb.showerror(self.m1,self.m2,parent=self)
+            except Exception:
+                pass
+            self.ind = 0
         if event.state & self.mod_bitmask:
             return # Some disallowed modifier was held - bail
         # Check if we have a char, or a tab
