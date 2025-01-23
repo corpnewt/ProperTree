@@ -73,28 +73,29 @@ class EntryPlus(ttk.Entry):
                 # We're adjusting an existing selection
                 start = self.index(tk.SEL_FIRST)
                 end   = self.index(tk.SEL_LAST)
-            # Set up placeholders for double click word selection
-            w_start = w_end = None
-            if selection_type == "word":
-                # Make sure we account for the target word's boundaries
-                word    = self.get()
-                w_start = int(self.controller.tk.call("tcl_wordBreakBefore",word,closest_gap))
-                w_end   = int(self.controller.tk.call("tcl_wordBreakAfter",word,closest_gap))
-                # Account for oob by just going to the ends as needed
-                if w_start == -1:
-                    w_start = 0
-                if w_end == -1:
-                    w_end = len(word)
+            def get_bounds(call,word,index,fallback=0):
+                g = int(self.controller.tk.call(call,word,index))
+                return g if g != -1 else fallback
             # Figure out which we're updating
             if index == start:
-                if w_start is not None:
+                if selection_type == "word":
                     # Select the whole word
-                    closest_gap = w_start
+                    closest_gap = get_bounds(
+                        "tcl_wordBreakBefore",
+                        self.get(),
+                        closest_gap
+                    )
                 start = closest_gap
             else:
-                if w_end is not None:
+                if selection_type == "word":
                     # Select the whole word
-                    closest_gap = w_end
+                    word = self.get()
+                    closest_gap = get_bounds(
+                        "tcl_wordBreakAfter",
+                        word,
+                        closest_gap,
+                        len(word)
+                    )
                 end = closest_gap
             # Set our selection
             self.icursor(closest_gap)
