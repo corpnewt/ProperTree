@@ -292,7 +292,7 @@
 			</dict>
 			<dict>
 				<key>name</key>
-				<string>Add VoodooPS2Controller [first to load]</string>
+				<string>Add VoodooPS2Controller [First to load]</string>
 				<key>types</key>
 				<string>d/d/a</string>
 				<key>value</key>
@@ -417,7 +417,7 @@
 			</dict>
 			<dict>
 				<key>name</key>
-				<string>Add CPUFriend DataProvider [load after CPUFriend]</string>
+				<string>Add CPUFriend DataProvider [Load after CPUFriend]</string>
 				<key>types</key>
 				<string>d/d/a</string>
 				<key>value</key>
@@ -667,7 +667,7 @@
 			</dict>
 			<dict>
 				<key>name</key>
-				<string>Add SMCProcessor kext [load after VSMC]</string>
+				<string>Add SMCProcessor kext [Load after VSMC]</string>
 				<key>types</key>
 				<string>d/d/a</string>
 				<key>value</key>
@@ -738,6 +738,10 @@
 					<key>Strategy</key>
 					<string>Exclude</string>
 				</dict>
+			</dict>
+			<dict>
+				<key>separator</key>
+				<true/>
 			</dict>
 			<dict>
 				<key>name</key>
@@ -826,6 +830,47 @@
 					<string></string>
 					<key>Replace</key>
 					<data></data>
+					<key>ReplaceMask</key>
+					<data></data>
+					<key>Skip</key>
+					<integer>0</integer>
+				</dict>
+			</dict>
+			<dict>
+				<key>separator</key>
+				<true/>
+			</dict>
+			<dict>
+				<key>name</key>
+				<string>Force FileVault on Broken Seal</string>
+				<key>types</key>
+				<string>d/d/a</string>
+				<key>value</key>
+				<dict>
+					<key>Arch</key>
+					<string>x86_64</string>
+					<key>Base</key>
+					<string>_apfs_filevault_allowed</string>
+					<key>Comment</key>
+					<string>Force FileVault on Broken Seal</string>
+					<key>Count</key>
+					<integer>0</integer>
+					<key>Enabled</key>
+					<true/>
+					<key>Find</key>
+					<data></data>
+					<key>Identifier</key>
+					<string>com.apple.filesystems.apfs</string>
+					<key>Limit</key>
+					<integer>0</integer>
+					<key>Mask</key>
+					<data></data>
+					<key>MaxKernel</key>
+					<string></string>
+					<key>MinKernel</key>
+					<string>20.4.0</string>
+					<key>Replace</key>
+					<data>uAEAAADD</data>
 					<key>ReplaceMask</key>
 					<data></data>
 					<key>Skip</key>
