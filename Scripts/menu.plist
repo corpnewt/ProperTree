@@ -842,7 +842,7 @@
 			</dict>
 			<dict>
 				<key>name</key>
-				<string>Force FileVault on Broken Seal</string>
+				<string>Force FileVault on Broken Seal (11.3+)</string>
 				<key>types</key>
 				<string>d/d/a</string>
 				<key>value</key>
