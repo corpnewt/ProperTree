@@ -3,10 +3,12 @@ import sys
 import re
 if sys.version_info.major >= 3:
     import tkinter as tk
+    import tkinter.ttk as ttk
     import tkinter.font as tk_font
     from tkinter import messagebox as mb
 else:
     import Tkinter as tk
+    import ttk
     import tkFont as tk_font #pylint: disable=E0401
     import tkMessageBox as mb #pylint: disable=E0401
 
@@ -58,7 +60,7 @@ def display_info_window(config_tex, search_list, width, valid_only, show_urls, c
                 "reverse", font=self.normal_font, background="white", foreground="black")
 
     # Another online discovery for auto-hiding scrollbars in a text widget
-    class AutoHideScrollbar(tk.Scrollbar):
+    class AutoHideScrollbar(ttk.Scrollbar):
         def set(self, low, high):
             if float(low) <= 0 and float(high) >= 1.0:
                 try: self.tk.call("grid", "remove", self)
@@ -66,7 +68,7 @@ def display_info_window(config_tex, search_list, width, valid_only, show_urls, c
             else:
                 try: self.grid()
                 except: pass
-            tk.Scrollbar.set(self, low, high)
+            ttk.Scrollbar.set(self, low, high)
 
     try:
         result = parse_configuration_tex(
