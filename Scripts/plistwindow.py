@@ -1547,7 +1547,7 @@ class PlistWindow(tk.Toplevel):
         # Verify folder structure - should be as follows:
         # OC
         #  +- ACPI
-        #  | +- SSDT.aml
+        #  | +- SSDT.aml/.bin
         #  +- Drivers
         #  | +- EfiDriver.efi
         #  +- Kexts
@@ -1718,7 +1718,7 @@ class PlistWindow(tk.Toplevel):
                 # User said "no", let's bail
                 return
 
-        # ACPI is first, we'll iterate the .aml files we have and add what is missing
+        # ACPI is first, we'll iterate the .aml/.bin files we have and add what is missing
         # while also removing what exists in the plist and not in the folder.
         # If something exists in the table already, we won't touch it.  This leaves the
         # enabled and comment properties untouched.
@@ -1727,7 +1727,7 @@ class PlistWindow(tk.Toplevel):
         new_acpi = []
         for path, subdirs, files in os.walk(oc_acpi):
             for name in files:
-                if not name.startswith(".") and name.lower().endswith(".aml"):
+                if not name.startswith(".") and name.lower().endswith((".aml",".bin")):
                     new_acpi.append(os.path.join(path,name)[len(oc_acpi):].replace("\\", "/").lstrip("/"))
         add = [] if clean else tree_dict["ACPI"]["Add"]
         for aml in sorted(new_acpi,key=lambda x:x.lower()):
