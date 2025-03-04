@@ -1,4 +1,4 @@
 {
-    "version": "0.3.2",
-    "changes": "- Add OC 1.0.3 hashes.\n- Warn if document has been edited externally.\n- Fix handling of hot keys when Caps Lock is on.\n- Add setting to allow editing values before keys.\n- UI and window management improvements."
+    "version": "0.3.3",
+    "changes": "- Add OC 1.0.4 hashes.\n- OC Snapshot considers .bin files in addition to .aml in EFI/OC/ACPI.\n- More tkinter event handling fixes.\n- Cmd/Ctrl+Shift+C now copies children instead of all.\n- Misc bug fixes and improvements."
 }
