@@ -258,7 +258,9 @@ if "!release!" == "" (
             goto checkpy
         )
     )
+    echo Located Version:  !release!
 ) else (
+    echo User-Provided Version:  !release!
     REM Update our targetpy to reflect the first number of
     REM our release
     for /f "tokens=1 delims=." %%a in ("!release!") do (
@@ -267,11 +269,6 @@ if "!release!" == "" (
             set "targetpy=%%a"
         )
     )
-)
-if "!user_provided!" == "" (
-    echo Located Version:  !release!
-) else (
-    echo User-Provided Version:  !release!
 )
 echo Building download url...
 REM At this point - we should have the version number.
