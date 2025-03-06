@@ -116,8 +116,11 @@ download_py () {
         echo " - Failed to download python installer!"
         exit $?
     fi
+    echo
     echo "Running python install package..."
+    echo
     sudo installer -pkg "$tempdir/python.pkg" -target /
+    echo
     if [ "$?" != "0" ]; then
         echo " - Failed to install python!"
         exit $?
@@ -127,13 +130,17 @@ download_py () {
     if [ -e "$tempdir/python/Python_Shell_Profile_Updater.pkg/Scripts/postinstall" ]; then
         # Run the script
         echo "Updating PATH..."
+        echo
         "$tempdir/python/Python_Shell_Profile_Updater.pkg/Scripts/postinstall"
+        echo
     fi
     vers_folder="Python $(echo "$vers" | cut -d'.' -f1 -f2)"
     if [ -f "/Applications/$vers_folder/Install Certificates.command" ]; then
         # Certs script exists - let's execute that to make sure our certificates are updated
         echo "Updating Certificates..."
+        echo
         "/Applications/$vers_folder/Install Certificates.command"
+        echo
     fi
     echo "Cleaning up..."
     cleanup
