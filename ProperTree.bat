@@ -45,9 +45,9 @@ if "!syspath!" == "" (
     )
     if "!syspath!" == "" (
         cls
-        echo   ###     ###
-        echo  # Warning #
-        echo ###     ###
+        echo   ###                      ###
+        echo  #  Missing Required Files  #
+        echo ###                      ###
         echo.
         echo Could not locate cmd.exe, reg.exe, or where.exe
         echo.
@@ -81,6 +81,11 @@ if "!script_name!" == "" (
     )
 )
 if not exist "!thisDir!\!script_name!" (
+    cls
+    echo   ###                      ###
+    echo  #     Target Not Found     #
+    echo ###                      ###
+    echo.
     echo Could not find !looking_for!.
     echo Please make sure to run this script from the same directory
     echo as !looking_for!.
@@ -118,9 +123,9 @@ if !tried! lss 1 (
     )
 ) else (
     cls
-    echo   ###     ###
-    echo  # Warning #
-    echo ###     ###
+    echo   ###                      ###
+    echo  #     Python Not Found     #
+    echo ###                      ###
     echo.
     REM Couldn't install for whatever reason - give the error message
     echo Python is not installed or not found in your PATH var.
@@ -203,9 +208,9 @@ exit /b 0
 
 :askinstall
 cls
-echo   ###              ###
-echo  # Python Not Found #
-echo ###              ###
+echo   ###                      ###
+echo  #     Python Not Found     #
+echo ###                      ###
 echo.
 echo Python !targetpy! was not found on the system or in the PATH var.
 echo.
@@ -225,9 +230,9 @@ goto askinstall
 REM This will attempt to download and install python
 set /a tried=!tried!+1
 cls
-echo   ###               ###
-echo  # Installing Python #
-echo ###               ###
+echo   ###                        ###
+echo  #     Downloading Python     #
+echo ###                        ###
 echo.
 set "release=!user_provided!"
 if "!release!" == "" (
