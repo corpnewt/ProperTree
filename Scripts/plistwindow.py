@@ -643,6 +643,7 @@ class PlistWindow(tk.Toplevel):
             file_menu.add_command(label="Convert Window", command=lambda:self.controller.show_window(self.controller.tk), accelerator="Ctrl+T")
             file_menu.add_command(label="Strip Comments", command=self.strip_comments, accelerator="Ctrl+M")
             file_menu.add_command(label="Strip Disabled Entries", command=self.strip_disabled, accelerator="Ctrl+E")
+            file_menu.add_command(label="Strip Surrounding Whitespace from Keys & Values", command=lambda:self.strip_whitespace(keys=True,values=True), accelerator="Ctrl+K")
             file_menu.add_separator()
             file_menu.add_command(label="Settings",command=lambda:self.controller.show_window(self.controller.settings_window), accelerator="Ctrl+,")
             file_menu.add_separator()
@@ -2645,6 +2646,44 @@ class PlistWindow(tk.Toplevel):
         # We removed some, flush the changes, update the view,
         # post the undo, and make sure we're edited
         self.add_undo(removedlist)
+        self._ensure_edited()
+        self.update_all_children()
+        self.reselect(selected)
+
+    def strip_whitespace(self, event=None, keys=False, values=False):
+        # Strips whitespace from keys and/or values
+        if not keys and not values:
+            # Nothing to do
+            return
+        nodes = self.iter_nodes(False)
+        selected = self.preselect()
+        changed_list = []
+        for node in nodes:
+            # vals[0] = type, vals[1] = value
+            vals = self.get_padded_values(node)
+            key = key_orig = str(self._tree.item(node,"text"))
+            val = val_orig = vals[1]
+            if keys:   key = key.strip()
+            if values: val = val.strip()
+            # Check if either are different - and add them
+            # to our list for undoing.
+            if (keys and key != key_orig) or (values and val != val_orig):
+                # Retain the original for the undo/redo stack
+                changed_list.append({
+                    "type":"edit",
+                    "cell":node,
+                    "text":self._tree.item(node,"text"),
+                    "values":self._tree.item(node,"values")
+                })
+                # Apply our changes
+                self._tree.item(node,text=key)
+                self._tree.item(node,values=(vals[0],val))
+        if not len(changed_list):
+            # Nothing changed
+            return
+        # We changed some, flush the changes, update the view,
+        # post the undo, and make sure we're edited
+        self.add_undo(changed_list)
         self._ensure_edited()
         self.update_all_children()
         self.reselect(selected)

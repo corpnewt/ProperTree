@@ -426,6 +426,7 @@ class ProperTree:
             file_menu.add_command(label="Convert Window (Cmd+T)", command=lambda:self.show_window(self.tk))
             file_menu.add_command(label="Strip Comments (Cmd+M)", command=self.strip_comments)
             file_menu.add_command(label="Strip Disabled Entries (Cmd+E)", command=self.strip_disabled)
+            file_menu.add_command(label="Strip Surrounding Whitespace from Keys & Values (Cmd+K)", command=lambda:self.strip_whitespace(keys=True,values=True))
             file_menu.add_separator()
             file_menu.add_command(label="Settings (Cmd+,)",command=lambda:self.show_window(self.settings_window))
             file_menu.add_separator()
@@ -450,6 +451,7 @@ class ProperTree:
         self.tk.bind_all("<{}-Shift-Z>".format(key), self.redo)
         self.tk.bind_all("<{}-m>".format(key), self.strip_comments)
         self.tk.bind_all("<{}-e>".format(key), self.strip_disabled)
+        self.tk.bind_all("<{}-k>".format(key), lambda x:self.strip_whitespace(keys=True,values=True))
         self.tk.bind_all("<{}-r>".format(key), self.oc_snapshot)
         self.tk.bind_all("<{}-Shift-R>".format(key), self.oc_clean_snapshot)
         self.tk.bind_all("<{}-l>".format(key), self.reload_from_disk)
@@ -1608,6 +1610,16 @@ class ProperTree:
         if window in self.default_windows:
             return
         window.strip_disabled(event)
+
+    def strip_whitespace(self, event = None, keys = False, values = False):
+        windows = self.stackorder(self.tk)
+        if not len(windows):
+            # Nothing to do
+            return
+        window = windows[-1] # Get the last item (most recent)
+        if window in self.default_windows:
+            return
+        window.strip_whitespace(event,keys=keys,values=values)
 
     def change_to_type(self, value):
         self.settings["convert_to_type"] = value
