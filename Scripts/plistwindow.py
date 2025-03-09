@@ -2656,14 +2656,26 @@ class PlistWindow(tk.Toplevel):
             # Nothing to do
             return
         nodes = self.iter_nodes(False)
-        selected = self.preselect()
         changed_list = []
+        numbered_key = []
         for node in nodes:
             # vals[0] = type, vals[1] = value
             vals = self.get_padded_values(node)
             key = key_orig = str(self._tree.item(node,"text"))
             val = val_orig = vals[1]
-            if keys:   key = key.strip()
+            key_numbered = False
+            if keys:
+                parent = self._tree.parent(node)
+                if self.get_check_type(parent).lower() == "dictionary":
+                    # Only strip keys that have dictionary parents
+                    key = key.strip()
+                    # Ensure the name is unique
+                    names = [self._tree.item(x,"text")for x in self._tree.get_children(parent) if x!=node]
+                    num_key = self.get_unique_name(key,names)
+                    if num_key != key:
+                        # We appended a number to our key - retain it
+                        key_numbered = True
+                        key = num_key
             if values: val = val.strip()
             # Check if either are different - and add them
             # to our list for undoing.
@@ -2678,7 +2690,10 @@ class PlistWindow(tk.Toplevel):
                 # Apply our changes
                 self._tree.item(node,text=key)
                 self._tree.item(node,values=(vals[0],val))
-        if not len(changed_list):
+                # Retain the updated numbered path as needed
+                if key_numbered:
+                    numbered_key.append(self.get_cell_path(node))
+        if not changed_list:
             # Nothing changed
             return
         # We changed some, flush the changes, update the view,
@@ -2686,7 +2701,20 @@ class PlistWindow(tk.Toplevel):
         self.add_undo(changed_list)
         self._ensure_edited()
         self.update_all_children()
-        self.reselect(selected)
+        self._tree.update()
+        if numbered_key:
+            # One or more keys had numbers appended to remain unique,
+            # let's warn the user of that change.
+            self.bell()
+            key_string = "\n".join([" - {}".format(x) for x in numbered_key])
+            mb.showerror(
+                "Keys Updated For Uniqueness",
+                "The following dictionary keys were updated after stripping whitespace to remain unique:\n{}".format(
+                    key_string
+                ),
+                parent=self
+            )
+            self.controller.lift_window(self)
 
     ###                       ###
     # Save/Load Plist Functions #
