@@ -1781,6 +1781,7 @@ class PlistWindow(tk.Toplevel):
 
         # Now we need to walk the kexts
         kext_list = []
+        omitted_kexts = []
         # We need to check any directory whose name ends with .kext
         for path, subdirs, files in os.walk(oc_kexts):
             for name in sorted(subdirs, key=lambda x:x.lower()):
@@ -1807,6 +1808,7 @@ class PlistWindow(tk.Toplevel):
                     if plist_full_path: break # Found it - break
                 else:
                     # Didn't find it - skip
+                    omitted_kexts.append(name)
                     continue
                 kdict["PlistPath"] = plist_rel_path
                 # Let's load the plist and check for other info
@@ -1814,6 +1816,7 @@ class PlistWindow(tk.Toplevel):
                     with open(plist_full_path,"rb") as f:
                         info_plist = plist.load(f)
                     if not "CFBundleIdentifier" in info_plist or not isinstance(info_plist["CFBundleIdentifier"],basestring):
+                        omitted_kexts.append(name)
                         continue # Requires a valid CFBundleIdentifier string
                     kinfo = {
                         "CFBundleIdentifier": info_plist["CFBundleIdentifier"],
@@ -1823,13 +1826,22 @@ class PlistWindow(tk.Toplevel):
                     }
                     if info_plist.get("CFBundleExecutable",None):
                         if not os.path.exists(os.path.join(path,name,"Contents","MacOS",info_plist["CFBundleExecutable"])):
+                            omitted_kexts.append(name)
                             continue # Requires an executable that doesn't exist - bail
                         kdict["ExecutablePath"] = "Contents/MacOS/"+info_plist["CFBundleExecutable"]
-                except Exception as e: 
+                except Exception as e:
+                    omitted_kexts.append(name)
                     continue # Something else broke here - bail
                 # Should have something valid here
                 kext_list.append((OrderedDict(sorted(kdict.items(),key=lambda x: str(x[0]).lower())),kinfo))
-
+        if omitted_kexts:
+            mb.showwarning(
+                "Invalid Kexts",
+                "The following kexts have been omitted from the snapshot as they are incomplete or incorrectly configured:\n\n{}".format(
+                    "\n".join(omitted_kexts)
+                ),
+                parent=self
+            )
         bundle_list = [x[0].get("BundlePath","") for x in kext_list]
         kexts = [] if clean else tree_dict["Kernel"]["Add"]
         original_kexts = [x for x in kexts if isinstance(x,dict) and x.get("BundlePath","") in bundle_list] # get the original load order for comparison purposes - but omit any that no longer exist
