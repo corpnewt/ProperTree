@@ -1,4 +1,4 @@
-#!/usr/bin/env bas
+#!/usr/bin/env bash
 
 # Get the curent directory, the script name
 # and the script name with "py" substituted for the extension.
