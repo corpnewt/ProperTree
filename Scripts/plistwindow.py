@@ -464,6 +464,11 @@ class PlistWindow(tk.Toplevel):
         #self.drag_code = u"\u2630"
         self.drag_code = u"\u2261"
         self.safe_path_length = 128 # OC_STORAGE_SAFE_PATH_MAX from Include/Acidanthera/Library/OcStorageLib.h in OpenCorePkg
+        # Get the relative paths to adjust our path max
+        self.acpi_path        = "ACPI\\"
+        self.kext_path        = "Kexts\\"
+        self.tool_path        = "Tools\\"
+        self.uefi_driver_path = "Drivers\\"
 
         # self = tk.Toplevel(self.root)
         try:
@@ -1463,22 +1468,31 @@ class PlistWindow(tk.Toplevel):
     def oc_clean_snapshot(self, event = None):
         self.oc_snapshot(event,True)
 
-    def check_path_length(self, item):
+    def check_path_length(self, item, prefix=""):
+        prefix_len = len(prefix)
         paths_too_long = []
         if isinstance(item,dict):
             # Get the last path component of the Path or BundlePath values for the name
             name = os.path.basename(item.get("Path",item.get("BundlePath","Unknown Name")))
             # Check the keys containing "path"
             for key in item:
-                if "path" in key.lower() and isinstance(item[key],basestring) and len(item[key])>self.safe_path_length:
-                    paths_too_long.append(key) # Too long - keep a reference of the key
+                if "path" in key.lower() and isinstance(item[key],basestring):
+                    if key.lower() in ("executablepath","plistpath") and isinstance(item.get("BundlePath"),basestring):
+                        # We got a kext and need to join the executable/plist paths with the
+                        # bundle path using `\\` as a delimiter
+                        if prefix_len+len(item["BundlePath"]+"\\"+item[key])>self.safe_path_length:
+                            paths_too_long.append(key)
+                    elif prefix_len+len(item[key])>self.safe_path_length:
+                        paths_too_long.append(key) # Too long - keep a reference of the key
         elif isinstance(item,basestring):
             name = os.path.basename(item) # Retain the last path component as the name
             # Checking the item itself
-            if len(item)>self.safe_path_length:
+            if prefix_len+len(item)>self.safe_path_length:
                 paths_too_long.append(item)
-        else: return paths_too_long # Empty list
-        if not paths_too_long: return [] # Return an empty array to allow .extend()
+        else:
+            return paths_too_long # Empty list
+        if not paths_too_long:
+            return [] # Return an empty array to allow .extend()
         return [(item,name,paths_too_long)] # Return a list containing a tuple of the original item, and which paths are too long
 
     def get_hash(self,path,block_size=65536):
@@ -1754,7 +1768,7 @@ class PlistWindow(tk.Toplevel):
                 continue
             new_add.append(aml)
             # Check path length
-            long_paths.extend(self.check_path_length(aml))
+            long_paths.extend(self.check_path_length(aml,self.acpi_path))
         # Make sure we don't have duplicates
         acpi_enabled = []
         acpi_duplicates = []
@@ -1924,7 +1938,7 @@ class PlistWindow(tk.Toplevel):
         duplicates_disabled = []
         for kext in ordered_kexts:
             # Check path length
-            long_paths.extend(self.check_path_length(kext))
+            long_paths.extend(self.check_path_length(kext,self.kext_path))
             temp_kext = OrderedDict() if isinstance(kext,OrderedDict) else {}
             # Shallow copy the kext entry to avoid changing it in ordered_kexts
             for x in kext: temp_kext[x] = kext[x]
@@ -2011,7 +2025,7 @@ class PlistWindow(tk.Toplevel):
                     continue
                 new_tools.append(tool)
                 # Check path length
-                long_paths.extend(self.check_path_length(tool))
+                long_paths.extend(self.check_path_length(tool,self.tool_path))
             # Make sure we don't have duplicates
             tools_enabled = []
             tools_duplicates = []
@@ -2082,7 +2096,7 @@ class PlistWindow(tk.Toplevel):
                     continue
             new_drivers.append(driver)
             # Check path length
-            long_paths.extend(self.check_path_length(driver))
+            long_paths.extend(self.check_path_length(driver,self.uefi_driver_path))
         # Make sure we don't have duplicates
         drivers_enabled = []
         drivers_duplicates = []
