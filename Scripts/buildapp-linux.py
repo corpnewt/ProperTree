@@ -1,94 +1,143 @@
-# Usage: python3 buildapp-linux.py [--debug] [--verbose] [--write-output] [--skip-app-creation]
-    # --debug: adds extra debug options
-    # --verbose: show stdout/stderr from pyinstaller
-    # --keep-output: skip deleting BuildAppOutput.py
-    # --skip-app-creation: skips running pyinstaller
-    # --skip-script-generate: uses an already-made BuildAppOutput.py (and forces keep-output)
+# Usage: python3 buildapp-linux.py [--verbose] [--python [@]]
+    # "--verbose": Verbose mode.
+    # "--python [@]": Select a Python executable to use (default is output of "which python3").
 
 from pathlib import Path
-import re
 import sys
 import platform
 import subprocess
 import os
+import shutil
+import tarfile
 
 dir = Path(__file__).resolve().parent.parent
-file = dir / "ProperTree.py"
+scripts = dir / "Scripts"
+dist = dir / "dist" / "linux"
+payload_dir = dist / "payload"
+payload_scripts = payload_dir / "Scripts"
+settings = Path(f'/home/{os.environ.get('USER')}/.ProperTree').resolve() # /home/$USER/.ProperTree
 args = sys.argv[1:]
-command = f'pyinstaller --add-data Scripts:Scripts {dir}/BuildAppOutput.py --name ProperTree --onefile -y'
+verbose = "--verbose" in args
+
+# For verbose-specific logs.
+def log(*args):
+    if verbose:
+        print('\n'.join(map(str, args)))
+
+def is_python(path):
+    if not os.path.isfile(path) or not os.access(path, os.X_OK):
+        log(f"is_python fail: not os.path.isfile({path}) or not os.access({path}, os.X_OK)")
+        return False
+    
+    try:
+        result = subprocess.run([path, '-V'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        log(f"is_python log: result: {result}")
+
+        if result.returncode == 0:
+            log(f"is_python success: {result.returncode}")
+            return True
+    except Exception as e:
+        log(f"is_python fail: exception:\n{e}")
+        return False
+    
+    log("is_python fail: overlow[1]")
+    return False
 
 if platform.system() != "Linux":
     print("Can only be run on Linux")
-    exit()
+    exit(1)
 
-if "--skip-app-creation" not in args:
-    try:
-        result = subprocess.run(['which', 'pyinstaller'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-        if result.stdout:
-            print(f"Found pyinstaller: {result.stdout.decode().strip()}")
-        else:
-            print("pyinstaller not found: \"which pyinstaller\" could not find a valid command.\nPlease install pyinstaller as a globally accessible command.")
-            exit()
-    except Exception as e:
-        print(f"pyinstaller not found: {e}\nPlease install pyinstaller as a globally accessible command.")
-        exit()
-
-with open(file, 'r') as f:
-    code = f.read()
-
-file_exists_check_pattern = r'os\.path\.exists\("Scripts/(.*?)"\)'
-file_exists_check_match = re.search(file_exists_check_pattern, code)
-
-open_file_pattern = r'open\("Scripts/(.*)"\)'
-open_file_match = re.search(open_file_pattern, code)
-
-if file_exists_check_match:
-    print("Match: file_exists_check")
-    value = file_exists_check_match.group(1)
-    code = re.sub(file_exists_check_pattern, f'os.path.exists(os.path.join(sys._MEIPASS,"Scripts","{value}"))', code)
+if "--python" in args:
+    if args.index("--python") + 1 < len(args):
+        python = args[args.index("--python") + 1]
+        if not is_python(python):
+            print(f"Invalid python executable: {python}")
+            exit(1)
+    else:
+        print("Invalid Python executable: no executable provided")
+        exit(1)
 else:
-    print("No match: file_exists_check")
+    result = subprocess.run(["which", "python3"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if result.stdout:
+        python = result.stdout.decode().strip()
+    else:
+        print("Invalid Python executable: no executable found")
+        exit(1)
 
-if open_file_match:
-    print("Match: open_file")
-    value = open_file_match.group(1)
-    code = re.sub(open_file_pattern, f'open(os.path.join(sys._MEIPASS,"Scripts","{value}"))', code)
-else:
-    print("No match: open_file")
+# Success
+print(f"Found Python: {python}")
 
-code = code.replace('os.path.join(os.path.abspath(os.path.dirname(__file__)),"Scripts","update_check.py")', 'os.path.join(sys._MEIPASS,"Scripts","update_check.py")')
-code = code.replace('os.path.dirname(__file__)', 'sys._MEIPASS')
+# Generate the extraction script. It's meant to be as compact as possible.
+script = f"""#!/bin/bash
+S=$(awk '/^A/ {{print NR + 1; exit 0; }}' "$0")
+mkdir "/tmp/.ProperTree" > /dev/null
+tail -n+$S "$0" | tar xz -C "/tmp/.ProperTree"
+{python} /tmp/.ProperTree/ProperTree.py "$@"
+rm -rf "/tmp/.ProperTree"
+exit 0
+A
+"""
 
-#code = '\n'.join(code.split('\n')[:21] + ["# added debug line\nraise Exception(f\"tempdir: {sys._MEIPASS} ;; tempdir[ls]: {subprocess.run(['ls', f'{sys._MEIPASS}/Scripts'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)}\")"] + code.split('\n')[21:])
+# We're gonna put our settings into a persistent user-specific directory, since otherwise it'd go into a temporary directory, which we don't want.
+if not os.path.exists(settings):
+    os.makedirs(settings)
 
-if "--debug" in args:
-    code = '\n'.join([line for line in code.replace('mb.showerror(', 'debug_exception(').split('\n') if "tk.bell()" not in line])
-    code = '\n'.join(code.split('\n')[:21] + [f"""\n# Generated Debug Exception Handler\ndef debug_exception(*args):
-    raise Exception(
-        f"--- DEBUG EXCEPTION CAUGHT ({{len(args)}} arguments) --\\n\\n" + 
-        "\\n".join(str(arg) for arg in args)
-    )\n"""] + code.split('\n')[21:])
+print("Processing code...")
+# Load ProperTree.py's code so we can edit it.
+with open(dir / "ProperTree.py", 'r') as file:
+    code = file.read()
 
-if "--skip-script-generate" not in args:
-    with open(dir / 'BuildAppOutput.py', 'w') as file:
-        print("Writing output...")
-        file.write(code)
+# These next lines make sure ProperTree uses our new settings directory.
+code = code.replace('Scripts/settings.json', f"{settings}/settings.json")
+code = code.replace('Scripts/version.json', f"{settings}/version.json")
+code = code.replace('join(pt_path,"Configuration.tex")', f'join("{settings}", "Configuration.tex")')
 
-if "--skip-app-creation" not in args:
-    print("Creating application...")
-    result = subprocess.run(command.split(' '), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+# Put a small notice on the code.
+code = f"# This code has been processed and edited from the original ProperTree.py.\n\n{code}"
 
-    if "--verbose" in args:
-        if (result.stdout):
-            print(f"-- Verbose output (stdout) --\n{result.stdout.decode().strip()}")
-        else:
-            print(f"-- Verbose output (stderr) --\n{result.stderr.decode().strip()}")
+# Here, we're gonna transfer settings.json and version.json to our new settings directory.
+if os.path.exists(scripts / "settings.json"):
+    print("Copying settings.json...")
+    shutil.copy(scripts / "settings.json", settings / "settings.json")
+print("Copying version.json...")
+shutil.copy(scripts / "version.json", settings / "version.json")
 
-    print(f"Created executable in ${Path(__file__).resolve().parent.parent}/dist")
+# This creates /dist, /dist/linux, /dist/linux/payload, and /dist/linux/payload/Scripts all in one check.
+log(f"Creating output directories... (sources: [{payload_scripts}])")
+if not os.path.exists(payload_scripts):
+    os.makedirs(payload_scripts)
 
-if "--keep-output" not in args and "--skip-script-generate" not in args:
-    print("Deleting temporary file...")
-    os.remove(dir / 'BuildAppOutput.py')
+print("Writing main.sh...")
+with open(dist / 'main.sh', 'w') as file:
+    file.write(script)
 
+with open(payload_dir / 'ProperTree.py', 'w') as file:
+    file.write(code)
+
+# Copies from the Scripts folder into the payload's Scripts folders.
+def copy_script(target):
+    log(f"Copying Python script: {target}")
+    shutil.copy(scripts / target, payload_scripts / target)
+
+print("Copying scripts...")
+copy_script("__init__.py")
+copy_script("config_tex_info.py")
+copy_script("downloader.py")
+copy_script("plist.py")
+copy_script("plistwindow.py")
+copy_script("update_check.py")
+copy_script("utils.py")
+
+print("Creating payload...")
+with tarfile.open(dist / "payload.tar.gz", "w:gz") as tar:
+    for dirpath, dirnames, filenames in os.walk(payload_dir):
+        for filename in filenames:
+            filepath = os.path.join(dirpath, filename)
+            tar.add(filepath, arcname=os.path.relpath(filepath, payload_dir))
+
+# Here's where we add the payload.
+result = subprocess.run(f"cat {dist}/payload.tar.gz >> {dist}/main.sh", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+# Done!
 print("Done!")
+exit(0)
