@@ -112,9 +112,9 @@ with open(dir / "ProperTree.py", 'r') as file:
     code = file.read()
 
 # These next lines make sure ProperTree uses our new settings directory.
-code = code.replace('Scripts/settings.json', f"{settings}/settings.json")
-code = code.replace('Scripts/version.json', f"{settings}/version.json")
-code = code.replace('join(pt_path,"Configuration.tex")', f'join("{settings}", "Configuration.tex")')
+code = code.replace('"Scripts/settings.json"', "f'/home/{os.environ.get('USER')}/.ProperTree/settings.json'")
+code = code.replace('"Scripts/version.json"', "f'/home/{os.environ.get('USER')}/.ProperTree/version.json'")
+code = code.replace('join(pt_path,"Configuration.tex")', 'join(f"/home/{os.environ.get(\'USER\')}/.ProperTree", "Configuration.tex")')
 
 def copy_settings_json():
     print("Copying settings.json...")
@@ -167,14 +167,15 @@ def copy_script(target):
     log(f"Copying Python script: {target}")
     shutil.copy(scripts / target, payload_scripts / target)
 
-print("Copying scripts...")
-copy_script("__init__.py")
-copy_script("config_tex_info.py")
-copy_script("downloader.py")
-copy_script("plist.py")
-copy_script("plistwindow.py")
-copy_script("update_check.py")
-copy_script("utils.py")
+if "--use-existing-payload" not in args:
+    print("Copying scripts...")
+    copy_script("__init__.py")
+    copy_script("config_tex_info.py")
+    copy_script("downloader.py")
+    copy_script("plist.py")
+    copy_script("plistwindow.py")
+    copy_script("update_check.py")
+    copy_script("utils.py")
 
 print("Creating payload...")
 with tarfile.open(dist / "payload.tar.gz", "w:gz") as tar:
