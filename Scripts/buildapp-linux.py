@@ -14,7 +14,6 @@
     # ProperTree: The optional ELF executable that can be run as an application instead of as a script.
 
 from pathlib import Path
-import re
 import sys
 import platform
 import subprocess
@@ -120,7 +119,7 @@ cp "/home/$USER/.ProperTree/Configuration.tex" "/tmp/.ProperTree/app-$ID/Configu
 "{python}" "/tmp/.ProperTree/app-$ID/ProperTree.py" "$@"
 cp "/tmp/.ProperTree/app-$ID/Scripts/settings.json" "/home/$USER/.ProperTree/settings.json" > /dev/null 2>&1
 cp "/tmp/.ProperTree/app-$ID/Configuration.tex" "/home/$USER/.ProperTree/Configuration.tex" > /dev/null 2>&1
-rm -rf "/tmp/.ProperTree" > /dev/null 2>&1
+rm -rf "/tmp/.ProperTree/app-$ID" > /dev/null 2>&1
 exit 0
 A
 """
@@ -212,9 +211,13 @@ with tarfile.open(dist / "payload.tar.gz", "w:gz") as tar:
 
 # Here's where we add the payload.
 result = subprocess.run(f"cat {dist}/payload.tar.gz >> {dist}/main.sh", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+if result.returncode != 0:
+    print(f"Error: {result.stderr}")
 
 print("Copying script...")
 subprocess.run(["chmod", "+x", f"{dist}/main.sh"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+if result.returncode != 0:
+    print(f"Error: {result.stderr}")
 shutil.copy(dist / "main.sh", result_dir / "ProperTree.sh")
 
 if "--skip-compile" not in args:

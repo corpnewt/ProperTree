@@ -13,7 +13,7 @@ int main() {
     DIR *entry = opendir("/tmp/.ProperTree");
     if (entry == NULL) {
         if (mkdir("/tmp/.ProperTree", 0777) != 0) {
-            perror("Failed to create /tmp/.ProperTree.");
+            perror("mkdir");
         }
     }
 
@@ -42,6 +42,9 @@ int main() {
 
     int status = system(filename);
 
-    unlink(filename);
+    if (remove(filename) != 0) {
+        perror("remove");
+    }
+
     return status;
 }
