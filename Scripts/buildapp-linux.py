@@ -14,7 +14,11 @@
 # Results - The script will build results in /dist/linux/result.
     # ProperTree.sh: The shell script containing ProperTree.
     # ProperTree: The optional ELF executable that can be run as an application instead of as a script. This is only built for x64 systems, but for ARM-based systems, you can build main.c from source. main.c contains all the required data.
-    # install-ProperTree-x.x.sh: Installs ProperTree as an application.
+    # ProperTree-Installer-x.x.sh: Installs ProperTree as an application.
+
+# The Scripts
+    # ProperTree.sh: Runs ProperTree. Please note that it can be run with "--clear-data" to clear ProperTree data.
+    # ProperTree-Installer-x.x.sh: Installs ProperTree by adding "ProperTree" and "propertree" to /home/$USER/.local/bin and adding ProperTree.desktop to /home/$USER/.local/share/applications. Please note that it can be run with "--uninstall" to delete these three files.
 
 from pathlib import Path
 import sys
@@ -31,7 +35,7 @@ dist = dir / "dist" / "linux"
 payload_dir = dist / "payload"
 payload_scripts = payload_dir / "Scripts"
 result_dir = dist / "result"
-settings = Path(f'/home/{os.environ.get('USER')}/.ProperTree').resolve() # /home/$USER/.ProperTree
+settings = Path(f'/home/{os.environ.get('USER')}/.ProperTree').resolve() # $HOME/.ProperTree
 
 args = sys.argv[1:]
 verbose = "--verbose" in args
@@ -114,58 +118,76 @@ else:
 print(f"Found Python: {python}")
 
 # Generate the extraction script. The script extracts the payload to "/tmp/.ProperTree/app-ID". "ID" is a random number between 0 and 32767.
-# The script works by first ensuring directories exist, then copying settings.json and Configuration.tex (if they exist) to the new temporary directory. After ProperTree runs, then settings.json and Configuration.tex are placed back in /home/$USER/.ProperTree.
+# The script works by first ensuring directories exist, then copying settings.json and Configuration.tex (if they exist) to the new temporary directory. After ProperTree runs, then settings.json and Configuration.tex are placed back in $HOME/.ProperTree.
 script = f"""#!/bin/bash
 # This is an auto-generated script.
 # ProperTree V. {version}
+# Run with --clear-data to remove data.
+
+for arg in "$@"; do
+  if [ "$arg" == "--clear-data" ]; then
+    echo "Removing data..."
+    rm -rf "$HOME/.ProperTree" > /dev/null 2>&1
+    echo "Done! ProperTree data has been cleared."
+    exit 0
+  fi
+done
+
 ID=$RANDOM
 DATA=$(awk '/^BREAKER/ {{print NR + 1; exit 0; }}' "$0")
-mkdir "/home/$USER/.ProperTree" > /dev/null 2>&1
+mkdir "$HOME/.ProperTree" > /dev/null 2>&1
 mkdir "/tmp/.ProperTree" > /dev/null 2>&1
 mkdir "/tmp/.ProperTree/app-$ID" > /dev/null 2>&1
 tail -n+$DATA "$0" | tar xz -C "/tmp/.ProperTree/app-$ID"
-cp "/home/$USER/.ProperTree/settings.json" "/tmp/.ProperTree/app-$ID/Scripts/settings.json" > /dev/null 2>&1
-cp "/home/$USER/.ProperTree/Configuration.tex" "/tmp/.ProperTree/app-$ID/Configuration.tex" > /dev/null 2>&1
+cp "$HOME/.ProperTree/settings.json" "/tmp/.ProperTree/app-$ID/Scripts/settings.json" > /dev/null 2>&1
+cp "$HOME/.ProperTree/Configuration.tex" "/tmp/.ProperTree/app-$ID/Configuration.tex" > /dev/null 2>&1
 "{python}" "/tmp/.ProperTree/app-$ID/ProperTree.py" "$@"
-cp "/tmp/.ProperTree/app-$ID/Scripts/settings.json" "/home/$USER/.ProperTree/settings.json" > /dev/null 2>&1
-cp "/tmp/.ProperTree/app-$ID/Configuration.tex" "/home/$USER/.ProperTree/Configuration.tex" > /dev/null 2>&1
+cp "/tmp/.ProperTree/app-$ID/Scripts/settings.json" "$HOME/.ProperTree/settings.json" > /dev/null 2>&1
+cp "/tmp/.ProperTree/app-$ID/Configuration.tex" "$HOME/.ProperTree/Configuration.tex" > /dev/null 2>&1
 rm -rf "/tmp/.ProperTree/app-$ID" > /dev/null 2>&1
 exit 0
 BREAKER
 """
 
-# Generate the .desktop file for the installer.
-desktop = f"""[Desktop Entry]
-Name=ProperTree
-Comment=By CorpNewt
-Exec=~/.local/bin/ProperTree
-Icon=~/.ProperTree/icon.png
-Terminal=false
-Type=Application
-Categories=Utility;"""
-
-# Generate the install script.
+# Generate the install script. Also includes an uninstall option.
 # BREAKER is now DESTROYER to avoid awk confusion.
 install_script = f"""#!/bin/bash
 # This is an auto-generated script.
 echo "Preparing..."
-desktop="{desktop}"
-rm "/home/$USER/.local/bin/ProperTree" > /dev/null 2>&1
-rm "/home/$USER/.local/bin/propertree" > /dev/null 2>&1
-rm "/home/$USER/.local/share/applications/ProperTree.desktop" > /dev/null 2>&1
+
+rm "$HOME/.local/bin/ProperTree" > /dev/null 2>&1
+rm "$HOME/.local/bin/propertree" > /dev/null 2>&1
+rm "$HOME/.local/share/applications/ProperTree.desktop" > /dev/null 2>&1
+
+for arg in "$@"; do
+  if [ "$arg" == "--uninstall" ]; then
+    echo "Done! ProperTree uninstalled. Your data was not affected."
+    exit 0
+  fi
+done
+
+desktop="[Desktop Entry]
+Name=ProperTree
+Comment=By CorpNewt
+Exec=$HOME/.local/bin/ProperTree
+Icon=$HOME/.ProperTree/icon.png
+Terminal=false
+Type=Application
+Categories=Utility;"
+
 echo "Extracting payload..."
 DATA=$(awk '/^DESTROYER/ {{print NR + 1; exit 0; }}' "$0")
-tail -n+$DATA "$0" > "/home/$USER/.local/bin/ProperTree"
+tail -n+$DATA "$0" > "$HOME/.local/bin/ProperTree"
 echo "Writing files..."
-echo "#!/bin/bash\n# This is an auto-generated script.\n\\"/home/$USER/.local/bin/ProperTree\\"" > "/home/$USER/.local/bin/propertree"
-echo "$desktop" > "/home/$USER/.local/share/applications/ProperTree.desktop"
+echo "#!/bin/bash\n# This is an auto-generated script.\n\\"$HOME/.local/bin/ProperTree\\"" > "$HOME/.local/bin/propertree"
+echo "$desktop" > "$HOME/.local/share/applications/ProperTree.desktop"
 echo "Managing permissions..."
-chmod +x "/home/$USER/.local/bin/ProperTree"
-chmod +x "/home/$USER/.local/bin/propertree"
+chmod +x "$HOME/.local/bin/ProperTree"
+chmod +x "$HOME/.local/bin/propertree"
 echo "Refreshing sources..."
 update-desktop-database ~/.local/share/applications
 source ~/.bashrc
-echo "Done!"
+echo "Done! Run this script with --uninstall to uninstall the ProperTree application."
 exit 0
 DESTROYER
 """

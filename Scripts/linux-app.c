@@ -9,7 +9,7 @@
 const unsigned char shell_script[] = {};
 const size_t shell_script_len = sizeof(shell_script);
 
-int main() {
+int main(int argc, char *argv[]) {
     DIR *entry = opendir("/tmp/.ProperTree");
     if (entry == NULL) {
         if (mkdir("/tmp/.ProperTree", 0777) != 0) {
@@ -39,12 +39,35 @@ int main() {
         unlink(filename);
         return 1;
     }
-
-    int status = system(filename);
-
-    if (remove(filename) != 0) {
-        perror("remove");
+    char **exec_args = malloc(sizeof(char *) * (argc + 1));
+    if (!exec_args) {
+        perror("malloc");
+        unlink(filename);
+        return 1;
     }
 
-    return status;
+    exec_args[0] = filename;
+    for (int i = 1; i < argc; i++) {
+        exec_args[i] = argv[i];
+    }
+
+    exec_args[argc] = NULL;
+    pid_t pid = fork();
+
+    if (pid == -1) {
+        perror("fork");
+        free(exec_args);
+        unlink(filename);
+        return 1;
+    } else if (pid == 0) {
+        execv(filename, exec_args);
+        perror("execv");
+        _exit(127);
+    } else {
+        int status;
+        waitpid(pid, &status, 0);
+        remove(filename);
+        free(exec_args);
+        return WIFEXITED(status) ? WEXITSTATUS(status) : 1;
+    }
 }
