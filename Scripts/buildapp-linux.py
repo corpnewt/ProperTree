@@ -29,23 +29,23 @@ import shutil
 import tarfile
 import json
 
-dir = Path(__file__).resolve().parent.parent
-scripts = dir / "Scripts"
-dist = dir / "dist" / "linux"
-payload_dir = dist / "payload"
-payload_scripts = payload_dir / "Scripts"
-result_dir = dist / "result"
+dir = Path(__file__).resolve().parent.parent # Directory of ProperTree
+scripts = dir / "Scripts" # /Scripts
+dist = dir / "dist" / "linux" # /dist/linux
+payload_dir = dist / "payload" # /dist/linux/payload
+payload_scripts = payload_dir / "Scripts" # /dist/linux/payload/Scripts
+result_dir = dist / "result" # /dist/linux/result
 settings = Path(f'/home/{os.environ.get('USER')}/.ProperTree').resolve() # /home/user/.ProperTree
 
 args = sys.argv[1:]
 verbose = "--verbose" in args
 
-# For verbose-specific logs.
+# For verbose-specific logs. These will only be seen with --verbose.
 def log(*args):
     if verbose:
         print('\n'.join(map(str, args)))
 
-# Get version.
+# Get the version of ProperTree.
 with open(scripts / 'version.json', 'r') as file:
     version = json.load(file)['version']
     log(f'ProperTree version: {version}')
@@ -69,11 +69,12 @@ if os.path.exists(dist):
 if not os.path.exists(dist):
     os.makedirs(dist)
 
-# Only clear /dist/linux.
+# Only clear /dist/linux if --clear is used.
 if "--clear" in args:
     print("Done!")
     exit(0)
 
+# Tries to see if the inputted Python executable is a valid one.
 def is_python(path):
     if not os.path.isfile(path) or not os.access(path, os.X_OK):
         log(f"is_python fail: not os.path.isfile({path}) or not os.access({path}, os.X_OK)")
@@ -179,7 +180,8 @@ Exec=$HOME/.local/bin/ProperTree
 Icon=$HOME/.ProperTree/icon.png
 Terminal=false
 Type=Application
-Categories=Utility;"
+Categories=Utility
+MimeType=text/xml;"
 
 mkdir "$HOME/.ProperTree" > /dev/null 2>&1
 printf '{icon}' > "$HOME/.ProperTree/icon.png"
