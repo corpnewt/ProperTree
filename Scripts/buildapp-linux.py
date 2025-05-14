@@ -1,4 +1,6 @@
-# A Python script to compile ProperTree to run as a native Linux app. Officially supports x64 Debian-based distros, but any architecture is theoretically supported.
+# A Python script to compile ProperTree to run as a native Linux app. Officially supports x64 Debian-based distros, but any architecture/distro is theoretically supported.
+    # ProperTree by: CorpNewt
+    # This script by: Calebh101
 
 # Usage: python3 buildapp-linux.py [--verbose] [--python [@]] [--always-overwrite] [--use-existing-payload]
     # "--verbose": Verbose mode.
@@ -14,11 +16,22 @@
 # Results - The script will build results in /dist/linux/result.
     # ProperTree.sh: The shell script containing ProperTree.
     # ProperTree: The optional ELF executable that can be run as an application instead of as a script. This is only built for x64 systems, but for ARM-based systems, you can build main.c from source. main.c contains all the required data.
-    # ProperTree-Installer-x.x.sh: Installs ProperTree as an application.
+    # ProperTree-Installer-V.sh: Installs ProperTree as an application.
 
 # The Scripts
     # ProperTree.sh: Runs ProperTree. Please note that it can be run with "--clear-data" to clear ProperTree data.
-    # ProperTree-Installer-x.x.sh: Installs ProperTree by adding "ProperTree" and "propertree" to /home/$USER/.local/bin and adding ProperTree.desktop to /home/$USER/.local/share/applications. Please note that it can be run with "--uninstall" to delete these three files.
+    # ProperTree-Installer-V.sh: Installs ProperTree by adding "ProperTree" and "propertree" to /home/$USER/.local/bin and adding ProperTree.desktop to /home/$USER/.local/share/applications. Please note that it can be run with "--uninstall" to delete these three files.
+
+# Extra Files (in /dist/linux)
+    # main: The exact same file as ProperTree (in /result).
+    # main.sh: The exact same file as ProperTree.sh (in /result).
+    # main.c: The generated source code for the executable. This can be used to compile the executable for multiple architectures. It contains all the necessary data, so you don't have to include multiple files.
+    # payload.tar.gz: The compressed version of /payload.
+
+# Known Issues
+    # ARM is not officially supported by this script, but you can compile main.c (in /dist/linux) from source.
+    # ProperTree does not have an icon in the taskbar. This is due to the fact that when you run the .desktop file from the launcher, it doesn't directly load a GUI; it goes through ProperTree.py, which loads a window by itself - separate from the launcher or the .desktop.
+    # ProperTree's taskbar window is named "Toplevel". This is on ProperTree.py's side (most likely tkinter's side), and I do not know a fix for this at the moment.
 
 from pathlib import Path
 import sys
@@ -118,7 +131,8 @@ else:
 # Success
 print(f"Found Python: {python}")
 
-# Get the icon binary.
+# Get the icon binary and also copy the icon to the settings directory.
+print("Processing icon...")
 with open(scripts / "icon.png", 'rb') as f:
     content = f.read()
     icon = ''.join(f'\\x{byte:02X}' for byte in content)
@@ -133,7 +147,8 @@ script = f"""#!/bin/bash
 for arg in "$@"; do
   if [ "$arg" == "--clear-data" ]; then
     echo "Removing data..."
-    rm -rf "$HOME/.ProperTree" > /dev/null 2>&1
+    rm -rf "$HOME/.ProperTree/settings.json" > /dev/null 2>&1
+    rm -rf "$HOME/.ProperTree/Configuration.tex" > /dev/null 2>&1
     echo "Done! ProperTree data has been cleared."
     exit 0
   fi
@@ -168,6 +183,8 @@ rm "$HOME/.local/share/applications/ProperTree.desktop" > /dev/null 2>&1
 
 for arg in "$@"; do
   if [ "$arg" == "--uninstall" ]; then
+    echo "Uninstalling..."
+    rm "$HOME/.ProperTree/icon.png" > /dev/null 2>&1
     echo "Done! ProperTree uninstalled. Your data was not affected."
     exit 0
   fi
@@ -190,7 +207,7 @@ echo "Extracting payload..."
 DATA=$(awk '/^DESTROYER/ {{print NR + 1; exit 0; }}' "$0")
 tail -n+$DATA "$0" > "$HOME/.local/bin/ProperTree"
 echo "Writing files..."
-echo "#!/bin/bash\n# This is an auto-generated script.\n\\"$HOME/.local/bin/ProperTree\\"" > "$HOME/.local/bin/propertree"
+echo "#!/bin/bash\n# This is an auto-generated script.\n\\"$HOME/.local/bin/ProperTree\\" \\"@\\"" > "$HOME/.local/bin/propertree"
 echo "$desktop" > "$HOME/.local/share/applications/ProperTree.desktop"
 echo "Managing permissions..."
 chmod +x "$HOME/.local/bin/ProperTree"
@@ -212,6 +229,7 @@ print("Processing code...")
 # Load ProperTree.py's code so we can edit it.
 with open(dir / "ProperTree.py", 'r') as file:
     code = file.read()
+
 # Load linux-app.c's code so we can edit it.
 with open(scripts / "linux-app.c", 'r') as file:
     ccode = file.read()
