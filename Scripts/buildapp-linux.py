@@ -35,7 +35,7 @@ dist = dir / "dist" / "linux"
 payload_dir = dist / "payload"
 payload_scripts = payload_dir / "Scripts"
 result_dir = dist / "result"
-settings = Path(f'/home/{os.environ.get('USER')}/.ProperTree').resolve() # $HOME/.ProperTree
+settings = Path(f'/home/{os.environ.get('USER')}/.ProperTree').resolve() # /home/user/.ProperTree
 
 args = sys.argv[1:]
 verbose = "--verbose" in args
@@ -117,8 +117,13 @@ else:
 # Success
 print(f"Found Python: {python}")
 
+# Get the icon binary.
+with open(scripts / "icon.png", 'rb') as f:
+    content = f.read()
+    icon = ''.join(f'\\x{byte:02X}' for byte in content)
+
 # Generate the extraction script. The script extracts the payload to "/tmp/.ProperTree/app-ID". "ID" is a random number between 0 and 32767.
-# The script works by first ensuring directories exist, then copying settings.json and Configuration.tex (if they exist) to the new temporary directory. After ProperTree runs, then settings.json and Configuration.tex are placed back in $HOME/.ProperTree.
+# The script works by first ensuring directories exist, then copying settings.json and Configuration.tex (if they exist) to the new temporary directory. After ProperTree runs, then settings.json and Configuration.tex are placed back in /home/user/.ProperTree.
 script = f"""#!/bin/bash
 # This is an auto-generated script.
 # ProperTree V. {version}
@@ -150,6 +155,7 @@ BREAKER
 """
 
 # Generate the install script. Also includes an uninstall option.
+# We embed the icon binary so we can copy it over without relying on external files.
 # BREAKER is now DESTROYER to avoid awk confusion.
 install_script = f"""#!/bin/bash
 # This is an auto-generated script.
@@ -175,6 +181,9 @@ Terminal=false
 Type=Application
 Categories=Utility;"
 
+mkdir "$HOME/.ProperTree" > /dev/null 2>&1
+printf '{icon}' > "$HOME/.ProperTree/icon.png"
+
 echo "Extracting payload..."
 DATA=$(awk '/^DESTROYER/ {{print NR + 1; exit 0; }}' "$0")
 tail -n+$DATA "$0" > "$HOME/.local/bin/ProperTree"
@@ -187,6 +196,7 @@ chmod +x "$HOME/.local/bin/propertree"
 echo "Refreshing sources..."
 update-desktop-database ~/.local/share/applications
 source ~/.bashrc
+
 echo "Done! Run this script with --uninstall to uninstall the ProperTree application."
 exit 0
 DESTROYER
@@ -203,10 +213,6 @@ with open(dir / "ProperTree.py", 'r') as file:
 # Load linux-app.c's code so we can edit it.
 with open(scripts / "linux-app.c", 'r') as file:
     ccode = file.read()
-
-# These next lines make sure ProperTree uses our new settings directory.
-#code = re.sub(r'join\(pt_path,["\']Configuration\.tex["\']\)', 'join(f"/home/{os.environ.get(\'USER\')}/.ProperTree", "Configuration.tex")', code)
-#code = re.sub(r'["\']Scripts/settings.json["\']', "f'/home/{os.environ.get('USER')}/.ProperTree/settings.json'", code)
 
 def copy_settings_json():
     print("Copying settings.json...")
