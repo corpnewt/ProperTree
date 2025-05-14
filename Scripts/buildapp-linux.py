@@ -1,3 +1,5 @@
+# A Python script to compile ProperTree to run as a native Linux app. Officially supports x64 Debian-based distros, but any architecture is theoretically supported.
+
 # Usage: python3 buildapp-linux.py [--verbose] [--python [@]] [--always-overwrite] [--use-existing-payload]
     # "--verbose": Verbose mode.
     # "--python [@]": Select a Python executable to use (default is output of "which python3").
@@ -11,7 +13,8 @@
 
 # Results - The script will build results in /dist/linux/result.
     # ProperTree.sh: The shell script containing ProperTree.
-    # ProperTree: The optional ELF executable that can be run as an application instead of as a script.
+    # ProperTree: The optional ELF executable that can be run as an application instead of as a script. This is only built for x64 systems, but for ARM-based systems, you can build main.c from source. main.c contains all the required data.
+    # install-ProperTree-x.x.sh: Installs ProperTree as an application.
 
 from pathlib import Path
 import sys
@@ -20,6 +23,7 @@ import subprocess
 import os
 import shutil
 import tarfile
+import json
 
 dir = Path(__file__).resolve().parent.parent
 scripts = dir / "Scripts"
@@ -31,6 +35,16 @@ settings = Path(f'/home/{os.environ.get('USER')}/.ProperTree').resolve() # /home
 
 args = sys.argv[1:]
 verbose = "--verbose" in args
+
+# For verbose-specific logs.
+def log(*args):
+    if verbose:
+        print('\n'.join(map(str, args)))
+
+# Get version.
+with open(scripts / 'version.json', 'r') as file:
+    version = json.load(file)['version']
+    log(f'ProperTree version: {version}')
 
 # Delete /dist if it exists.
 print(f"Clearing {dist}...")
@@ -55,11 +69,6 @@ if not os.path.exists(dist):
 if "--clear" in args:
     print("Done!")
     exit(0)
-
-# For verbose-specific logs.
-def log(*args):
-    if verbose:
-        print('\n'.join(map(str, args)))
 
 def is_python(path):
     if not os.path.isfile(path) or not os.access(path, os.X_OK):
@@ -108,12 +117,13 @@ print(f"Found Python: {python}")
 # The script works by first ensuring directories exist, then copying settings.json and Configuration.tex (if they exist) to the new temporary directory. After ProperTree runs, then settings.json and Configuration.tex are placed back in /home/$USER/.ProperTree.
 script = f"""#!/bin/bash
 # This is an auto-generated script.
+# ProperTree V. {version}
 ID=$RANDOM
-S=$(awk '/^A/ {{print NR + 1; exit 0; }}' "$0")
+DATA=$(awk '/^BREAKER/ {{print NR + 1; exit 0; }}' "$0")
 mkdir "/home/$USER/.ProperTree" > /dev/null 2>&1
 mkdir "/tmp/.ProperTree" > /dev/null 2>&1
 mkdir "/tmp/.ProperTree/app-$ID" > /dev/null 2>&1
-tail -n+$S "$0" | tar xz -C "/tmp/.ProperTree/app-$ID"
+tail -n+$DATA "$0" | tar xz -C "/tmp/.ProperTree/app-$ID"
 cp "/home/$USER/.ProperTree/settings.json" "/tmp/.ProperTree/app-$ID/Scripts/settings.json" > /dev/null 2>&1
 cp "/home/$USER/.ProperTree/Configuration.tex" "/tmp/.ProperTree/app-$ID/Configuration.tex" > /dev/null 2>&1
 "{python}" "/tmp/.ProperTree/app-$ID/ProperTree.py" "$@"
@@ -121,7 +131,43 @@ cp "/tmp/.ProperTree/app-$ID/Scripts/settings.json" "/home/$USER/.ProperTree/set
 cp "/tmp/.ProperTree/app-$ID/Configuration.tex" "/home/$USER/.ProperTree/Configuration.tex" > /dev/null 2>&1
 rm -rf "/tmp/.ProperTree/app-$ID" > /dev/null 2>&1
 exit 0
-A
+BREAKER
+"""
+
+# Generate the .desktop file for the installer.
+desktop = f"""[Desktop Entry]
+Name=ProperTree
+Comment=By CorpNewt
+Exec=~/.local/bin/ProperTree
+Icon=~/.ProperTree/icon.png
+Terminal=false
+Type=Application
+Categories=Utility;"""
+
+# Generate the install script.
+# BREAKER is now DESTROYER to avoid awk confusion.
+install_script = f"""#!/bin/bash
+# This is an auto-generated script.
+echo "Preparing..."
+desktop="{desktop}"
+rm "/home/$USER/.local/bin/ProperTree" > /dev/null 2>&1
+rm "/home/$USER/.local/bin/propertree" > /dev/null 2>&1
+rm "/home/$USER/.local/share/applications/ProperTree.desktop" > /dev/null 2>&1
+echo "Extracting payload..."
+DATA=$(awk '/^DESTROYER/ {{print NR + 1; exit 0; }}' "$0")
+tail -n+$DATA "$0" > "/home/$USER/.local/bin/ProperTree"
+echo "Writing files..."
+echo "#!/bin/bash\n# This is an auto-generated script.\n\\"/home/$USER/.local/bin/ProperTree\\"" > "/home/$USER/.local/bin/propertree"
+echo "$desktop" > "/home/$USER/.local/share/applications/ProperTree.desktop"
+echo "Managing permissions..."
+chmod +x "/home/$USER/.local/bin/ProperTree"
+chmod +x "/home/$USER/.local/bin/propertree"
+echo "Refreshing sources..."
+update-desktop-database ~/.local/share/applications
+source ~/.bashrc
+echo "Done!"
+exit 0
+DESTROYER
 """
 
 # We're gonna put our settings into a persistent user-specific directory, since otherwise it'd go into a temporary directory, which we don't want.
@@ -214,11 +260,22 @@ result = subprocess.run(f"cat {dist}/payload.tar.gz >> {dist}/main.sh", shell=Tr
 if result.returncode != 0:
     print(f"Error: {result.stderr}")
 
-print("Copying script...")
+# Here's where we create install.sh by adding a payload here too.
+with open(dist / "install.sh", 'wb') as file, open(dist / "main.sh", 'rb') as main_file:
+    file.write(install_script.encode('utf-8') + main_file.read())
+
+# These next couple sections is processing and copying main.sh and install.sh.
+print("Copying scripts...")
+
 subprocess.run(["chmod", "+x", f"{dist}/main.sh"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 if result.returncode != 0:
     print(f"Error: {result.stderr}")
+subprocess.run(["chmod", "+x", f"{dist}/install.sh"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+if result.returncode != 0:
+    print(f"Error: {result.stderr}")
+
 shutil.copy(dist / "main.sh", result_dir / "ProperTree.sh")
+shutil.copy(dist / "install.sh", result_dir / f"ProperTree-Installer-{version}.sh")
 
 if "--skip-compile" not in args:
     print("Embedding script...")
