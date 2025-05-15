@@ -201,20 +201,35 @@ Categories=Utility
 MimeType=text/xml;"
 
 mkdir "$HOME/.ProperTree" > /dev/null 2>&1
+mkdir "$HOME/.local" > /dev/null 2>&1
+mkdir "$HOME/.local/bin" > /dev/null 2>&1
 printf '{icon}' > "$HOME/.ProperTree/icon.png"
 
 echo "Extracting payload..."
 DATA=$(awk '/^DESTROYER/ {{print NR + 1; exit 0; }}' "$0")
 tail -n+$DATA "$0" > "$HOME/.local/bin/ProperTree"
+
 echo "Writing files..."
-echo "#!/bin/bash\n# This is an auto-generated script.\n\\"$HOME/.local/bin/ProperTree\\" \\"@\\"" > "$HOME/.local/bin/propertree"
 echo "$desktop" > "$HOME/.local/share/applications/ProperTree.desktop"
+
+cat << 'EOF' > "$HOME/.local/bin/propertree"
+#!/bin/bash
+# This is an auto-generated script.
+"/home/caleb/.local/bin/ProperTree" "$@"
+EOF
+
 echo "Managing permissions..."
 chmod +x "$HOME/.local/bin/ProperTree"
 chmod +x "$HOME/.local/bin/propertree"
+
 echo "Refreshing sources..."
 update-desktop-database ~/.local/share/applications
 source ~/.bashrc
+
+if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
+    echo "WARNING: $HOME/.local/bin is not in PATH. You will not be able to run ProperTree from the command line if it's not in PATH."
+    echo 'Please add `PATH="$PATH:$HOME/.local/bin"` to PATH in .bashrc or whatever you use.'
+fi
 
 echo "Done! Run this script with --uninstall to uninstall the ProperTree application."
 exit 0
