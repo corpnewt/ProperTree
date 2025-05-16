@@ -10,7 +10,7 @@
     # "--verbose": Verbose mode.
     # "--python [@]": Select a Python executable to use (default is output of "which python3").
     # "--always-overwrite": Always overwrite applicable files instead of prompting.
-    # "--use-existing-payload": Don't overwrite /dist/linux/payload/ProperTree.py.
+    # "--use-existing-payload": Don't overwrite /dist/linux/payload/ProperTree.py. This was helpful in early debugging, where I was messing around with different techniques before deciding upon this one.
     # "--skip-compile": Skip compiling the script to an ELF executable.
 
 # Generated Directories - The script will build in /dist/linux.
@@ -18,13 +18,21 @@
     # result: This is the directory with the results. It will have a ProperTree.sh (the raw shell file) and (maybe) an ELF executable named ProperTree.
 
 # Results - The script will build results in /dist/linux/result.
-    # ProperTree.sh: The shell script containing ProperTree.
+    # ProperTree.sh: The shell script containing ProperTree. This manages all of ProperTree's files and data.
     # ProperTree: The optional ELF executable that can be run as an application instead of as a script. This is only built for x64 systems, but for ARM-based systems, you can build main.c from source. main.c contains all the required data.
     # ProperTree-Installer-V.sh: Installs ProperTree as an application.
 
 # The Scripts
     # ProperTree.sh: Runs ProperTree. Please note that it can be run with "--clear-data" to clear ProperTree data.
     # ProperTree-Installer-V.sh: Installs ProperTree by adding "ProperTree" and "propertree" to /home/$USER/.local/bin and adding ProperTree.desktop to /home/$USER/.local/share/applications. Please note that it can be run with "--uninstall" to delete these three files.
+
+# The Process
+    # 1. Generate a main script and an install script.
+    # 2. Generate a payload by copying over required assets in /Scripts and compress it.
+    # 3. Attach the payload to the main script.
+    # 4. Attach the main script as another payload to the installer.
+    # 5. Optionally compile a generated C file to the executable. This uses the least external resources possible, as it only used the base install of gcc. It does not need any extra tools or packages.
+    # 6. Copy it all into result.
 
 # Extra Files (in /dist/linux)
     # main: The exact same file as ProperTree (in /result).
@@ -46,7 +54,7 @@ import shutil
 import tarfile
 import json
 
-dir = Path(__file__).resolve().parent.parent # Directory of ProperTree
+dir = Path(__file__).resolve().parent.parent # Directory of ProperTree. All of the refrences of the other directories are based on this, aside from data and temporary directories.
 scripts = dir / "Scripts" # /Scripts
 dist = dir / "dist" / "linux" # /dist/linux
 payload_dir = dist / "payload" # /dist/linux/payload
@@ -54,12 +62,16 @@ payload_scripts = payload_dir / "Scripts" # /dist/linux/payload/Scripts
 result_dir = dist / "result" # /dist/linux/result
 settings = Path(f'/home/{os.environ.get('USER')}/.ProperTree').resolve() # /home/user/.ProperTree
 
+# Capture the arguments passed.
 args = sys.argv[1:]
-verbose = "--verbose" in args
+
+if platform.system() != "Linux":
+    print("Can only be run on Linux")
+    exit(1)
 
 # For verbose-specific logs. These will only be seen with --verbose.
 def log(*args):
-    if verbose:
+    if "--verbose" in args:
         print('\n'.join(map(str, args)))
 
 # Get the version of ProperTree.
@@ -111,23 +123,23 @@ def is_python(path):
     log("is_python fail: overlow[1]")
     return False
 
-if platform.system() != "Linux":
-    print("Can only be run on Linux")
-    exit(1)
-
 if "--python" in args:
+    # Find the argument that they're claiming is a valid Python executable.
     if args.index("--python") + 1 < len(args):
         python = args[args.index("--python") + 1]
         if not is_python(python):
             print(f"Invalid python executable: {python}")
             exit(1)
-    else:
+    else: # Otherwise, they trolled us.
         print("Invalid Python executable: no executable provided")
         exit(1)
-else:
+else: # If they didn't supply a Python, we take the result from "which python3". The reason we use "which python3" instead of "which python" is because there's typically not a default "python" executable, but Debian expects the user to use "python3".
     result = subprocess.run(["which", "python3"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if result.stdout:
         python = result.stdout.decode().strip()
+        if not is_python(python):
+            print(f"Invalid python executable: {python} (auto-detected)")
+            exit(1)
     else:
         print("Invalid Python executable: no executable found")
         exit(1)
@@ -135,14 +147,14 @@ else:
 # Success
 print(f"Found Python: {python}")
 
-# Get the icon binary and also copy the icon to the settings directory.
+# Get the icon binary so we can embed it.
 print("Processing icon...")
 with open(scripts / "icon.png", 'rb') as f:
     content = f.read()
     icon = ''.join(f'\\x{byte:02X}' for byte in content)
 
 # Generate the extraction script. The script extracts the payload to "/tmp/.ProperTree/app-ID". "ID" is a random number between 0 and 32767.
-# The script works by first ensuring directories exist, then copying settings.json and Configuration.tex (if they exist) to the new temporary directory. After ProperTree runs, then settings.json and Configuration.tex are placed back in /home/user/.ProperTree.
+# The script works by first ensuring directories exist, then copying settings.json and Configuration.tex (if they exist) to the new temporary directory. After ProperTree runs, then settings.json and Configuration.tex are copied back in /home/user/.ProperTree and the temporary directory is deleted.
 script = f"""#!/bin/bash
 # This is an auto-generated script.
 # ProperTree V. {version}
@@ -177,6 +189,7 @@ BREAKER
 # Generate the install script. Also includes an uninstall option.
 # We embed the icon binary so we can copy it over without relying on external files.
 # BREAKER is now DESTROYER to avoid awk confusion.
+# It also handles instances where /home/$USER/.local/bin isn't in path (or when it doesn't even exist), which happens on clean installations of Debian-based distros.
 install_script = f"""#!/bin/bash
 # This is an auto-generated script.
 echo "Preparing..."
@@ -235,23 +248,23 @@ if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
     echo 'Please add `PATH="$PATH:$HOME/.local/bin"` to PATH in .bashrc or whatever you use.'
 fi
 
-echo "Done! Run this script with --uninstall to uninstall the ProperTree application."
+echo "Done! Run this script with --uninstall to uninstall the ProperTree application. You can also run ProperTree with --clear-data to clear ProperTree data."
 exit 0
 DESTROYER
 """
 
-# We're gonna put our settings into a persistent user-specific directory, since otherwise it'd go into a temporary directory, which we don't want.
+# We're gonna put our settings into a persistent user-specific directory, since otherwise ProperTree would generate it in a temporary directory, which we don't want as it just gets deleted.
 if not os.path.exists(settings):
     os.makedirs(settings)
 
+# Load ProperTree.py's code. This will be written later.
 print("Processing code...")
-# Load ProperTree.py's code so we can edit it.
 with open(dir / "ProperTree.py", 'r') as file:
     code = file.read()
 
-# Load linux-app.c's code so we can edit it.
+# Load linux-app.c's code so we can embed main.sh into it.
 with open(scripts / "linux-app.c", 'r') as file:
-    ccode = file.read()
+    ccode = file.read() # This isn't a typo; "code" was already taken
 
 def copy_settings_json():
     print("Copying settings.json...")
@@ -262,13 +275,13 @@ if os.path.exists(scripts / "settings.json"):
     # If the file already exists, then ask the user if they want to overwrite it.
     if os.path.exists(settings / "settings.json") and "--always-overwrite" not in args:
         while True:
-            response = input(f"Do you want to overwrite {settings / "settings.json"}? (y/n/x): >> ").strip().lower()
+            response = input(f"Do you want to overwrite {settings / "settings.json"}? (y/n/c): >> ").strip().lower()
             if response == 'y':
                 copy_settings_json()
                 break
             elif response == 'n':
                 break
-            elif response == 'x': # Quit
+            elif response == 'c': # Quit
                 print("Done!")
                 exit(0)
             else:
@@ -282,9 +295,9 @@ if not os.path.exists(payload_scripts):
     os.makedirs(payload_scripts)
 if not os.path.exists(result_dir):
     os.makedirs(result_dir)
-if not os.path.exists(dist / "archive"):
-    os.makedirs(dist / "archive")
 
+# If the user decided to use the existing payload (for debugging), but ProperTree.py isn't found, then we tell them and exit.
+# The other scripts normally packaged into /payload/Scripts will have errors at runtime if not present, so it's not our problem.
 if not os.path.exists(payload_dir / 'ProperTree.py') and "--use-existing-payload" in args:
     print("No ProperTree.py given for payload.")
     exit(1)
@@ -302,6 +315,7 @@ def copy_asset(target):
     log(f"Copying asset: {target}")
     shutil.copy(scripts / target, payload_scripts / target)
 
+# Copy all the assets.
 if "--use-existing-payload" not in args:
     print("Copying assets...")
     copy_asset("__init__.py")
@@ -315,6 +329,7 @@ if "--use-existing-payload" not in args:
     copy_asset("snapshot.plist")
     copy_asset("version.json")
 
+# Compress the payload into a .tar.gz.
 print("Creating payload...")
 with tarfile.open(dist / "payload.tar.gz", "w:gz") as tar:
     for dirpath, dirnames, filenames in os.walk(payload_dir):
@@ -322,12 +337,12 @@ with tarfile.open(dist / "payload.tar.gz", "w:gz") as tar:
             filepath = os.path.join(dirpath, filename)
             tar.add(filepath, arcname=os.path.relpath(filepath, payload_dir))
 
-# Here's where we add the payload.
+# Here's where we add the payload. We cat payload.tar.gz into main.sh, which uses the delimiter "BREAKER" to decide where the binary is.
 result = subprocess.run(f"cat {dist}/payload.tar.gz >> {dist}/main.sh", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 if result.returncode != 0:
     print(f"Error: {result.stderr}")
 
-# Here's where we create install.sh by adding a payload here too.
+# Here's where we create install.sh by adding a payload here too. The payload is just main.sh, uncompressed.
 with open(dist / "install.sh", 'wb') as file, open(dist / "main.sh", 'rb') as main_file:
     file.write(install_script.encode('utf-8') + main_file.read())
 
@@ -355,6 +370,7 @@ if "--skip-compile" not in args:
 
     print("Generating executable...")
     try:
+        # Run gcc, a C compiler. main.c is the generated source code, and it can be compiled manually to ARM or any other architecture.
         result = subprocess.run(["gcc", "-o", "dist/linux/main", f"{dist / "main.c"}"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stderr = result.stderr
     except Exception as e:

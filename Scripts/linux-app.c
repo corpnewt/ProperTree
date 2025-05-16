@@ -6,18 +6,18 @@
 #include <time.h>
 #include <dirent.h>
 
-const unsigned char shell_script[] = {};
+const unsigned char shell_script[] = {}; // Placeholder, as raw bytes will be written here by buildapp-linux.py
 const size_t shell_script_len = sizeof(shell_script);
 
 int main(int argc, char *argv[]) {
     DIR *entry = opendir("/tmp/.ProperTree");
     if (entry == NULL) {
-        if (mkdir("/tmp/.ProperTree", 0777) != 0) {
+        if (mkdir("/tmp/.ProperTree", 0777) != 0) { // Make /tmp/.ProperTree if it doesn't exist
             perror("mkdir");
         }
     }
 
-    char filename[100] = "/tmp/.ProperTree/script-XXXXXX";
+    char filename[100] = "/tmp/.ProperTree/script-XXXXXX"; // Generate the script's name to be extracted and ran
     int fd = mkstemp(filename);
 
     if (fd == -1) {
@@ -39,6 +39,7 @@ int main(int argc, char *argv[]) {
         unlink(filename);
         return 1;
     }
+
     char **exec_args = malloc(sizeof(char *) * (argc + 1));
     if (!exec_args) {
         perror("malloc");
