@@ -2,6 +2,10 @@
     # ProperTree by: CorpNewt
     # This script by: Calebh101
 
+# Notes:
+    # This script places data in /home/$USER/.ProperTree. Please do not delete this directory or any files in it.
+    # This script needs Python 3 to run.
+
 # Usage: python3 buildapp-linux.py [--verbose] [--python [@]] [--always-overwrite] [--use-existing-payload]
     # "--verbose": Verbose mode.
     # "--python [@]": Select a Python executable to use (default is output of "which python3").
