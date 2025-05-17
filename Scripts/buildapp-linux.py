@@ -232,7 +232,7 @@ echo "$desktop" > "$HOME/.local/share/applications/ProperTree.desktop"
 cat << 'EOF' > "$HOME/.local/bin/propertree"
 #!/bin/bash
 # This is an auto-generated script.
-"/home/caleb/.local/bin/ProperTree" "$@"
+"$HOME/.local/bin/ProperTree" "$@"
 EOF
 
 echo "Managing permissions..."
@@ -318,16 +318,10 @@ def copy_asset(target):
 # Copy all the assets.
 if "--use-existing-payload" not in args:
     print("Copying assets...")
-    copy_asset("__init__.py")
-    copy_asset("config_tex_info.py")
-    copy_asset("downloader.py")
-    copy_asset("plist.py")
-    copy_asset("plistwindow.py")
-    copy_asset("update_check.py")
-    copy_asset("utils.py")
-    copy_asset("menu.plist")
-    copy_asset("snapshot.plist")
-    copy_asset("version.json")
+    for x in os.listdir(scripts):
+        if x.startswith(".") or not x.lower().endswith((".py",".plist","version.json")):
+            continue
+        copy_asset(x)
 
 # Compress the payload into a .tar.gz.
 print("Creating payload...")
