@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <dirent.h>
+#include <sys/wait.h>
 
 const unsigned char shell_script[] = {}; // Placeholder, as raw bytes will be written here by buildapp-linux.py
 const size_t shell_script_len = sizeof(shell_script);
