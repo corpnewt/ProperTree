@@ -1037,7 +1037,7 @@ class PlistWindow(tk.Toplevel):
                     except:
                         return (False,"Invalid Number Data","Couldn't convert to an integer or float.")
             # Check if we're saving an integer that's out of range
-            if isinstance(value,(int,long)) and not (-1 << 63 <= value < 1 << 63):
+            if isinstance(value,(int,long)) and not (-1 << 63 <= value < 1 << 64):
                 # Convert it to a float which will force it into scientific notation
                 value = float(value)
             if self.int_type_string.get().lower() == "hex" and not isinstance(value,float) and value >= 0:
