@@ -70,7 +70,7 @@ def writePlist(value, pathOrFile):
 
 def load(fp, fmt=None, use_builtin_types=None, dict_type=dict):
     if _is_binary(fp):
-        use_builtin_types = False if use_builtin_types == None else use_builtin_types
+        use_builtin_types = False if use_builtin_types is None else use_builtin_types
         try:
             p = _BinaryPlistParser(use_builtin_types=use_builtin_types, dict_type=dict_type)
         except:
@@ -78,7 +78,7 @@ def load(fp, fmt=None, use_builtin_types=None, dict_type=dict):
             p = _BinaryPlistParser(dict_type=dict_type)
         return p.parse(fp)
     elif _check_py3():
-        use_builtin_types = True if use_builtin_types == None else use_builtin_types
+        use_builtin_types = True if use_builtin_types is None else use_builtin_types
         # We need to monkey patch this to allow for hex integers - code taken/modified from 
         # https://github.com/python/cpython/blob/3.8/Lib/plistlib.py
         if fmt is None:
