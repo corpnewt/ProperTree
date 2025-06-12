@@ -2172,6 +2172,11 @@ class PlistWindow(tk.Toplevel):
         self.add_undo(undo_list)
         # Select the root element
         self.select(self.get_root_node())
+        # Close if need be
+        if not self.controller.settings.get("expand_all_items_on_open",True):
+            self.collapse_all()
+            # Ensure the root is expanded
+            self._tree.item(self.get_root_node(),open=True)
         # Ensure we're edited
         self._ensure_edited()
         self.update_all_children()
