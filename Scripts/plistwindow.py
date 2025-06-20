@@ -1486,8 +1486,9 @@ class PlistWindow(tk.Toplevel):
                         paths_too_long.append(key) # Too long - keep a reference of the key
         elif isinstance(item,basestring):
             name = os.path.basename(item) # Retain the last path component as the name
-            # Checking the item itself
-            if prefix_len+len(item)>self.safe_path_length:
+            # Checking the item itself - subtract 1 from the path max
+            # to account for null terminator
+            if prefix_len+len(item)>self.safe_path_length-1:
                 paths_too_long.append(item)
         else:
             return paths_too_long # Empty list
@@ -1895,6 +1896,8 @@ class PlistWindow(tk.Toplevel):
             })
         ordered_kexts = []
         disabled_parents = []
+        loops_without_changes = 0
+        cyclic_dependencies = False
         while len(unordered_kexts): # This could be dangerous if things aren't properly prepared above
             kext = unordered_kexts.pop(0)
             if len(kext["parents"]):
@@ -1910,9 +1913,21 @@ class PlistWindow(tk.Toplevel):
                             continue # Already have a warning copy
                         disabled_parents.append(p)
                 if not all(x[0] in ordered_kexts for x in kext["parents"]):
+                    loops_without_changes += 1
+                    if loops_without_changes > len(unordered_kexts):
+                        cyclic_dependencies = True
+                        break
                     unordered_kexts.append(kext)
                     continue
+            loops_without_changes = 0 # Reset the counter
             ordered_kexts.append(kext["kext"])
+        # If we bailed because of cyclic deps - let's warn the user
+        if cyclic_dependencies:
+            mb.showwarning(
+                "Cyclic Kext Dependencies",
+                "Three or more of your kexts list each other as dependencies, Kernel -> Add order may not be correct.",
+                parent=self
+            )
         # Let's compare against the original load order - to prevent mis-prompting
         missing_kexts = [x for x in ordered_kexts if not x in original_kexts]
         original_kexts.extend(missing_kexts)
@@ -2187,7 +2202,7 @@ class PlistWindow(tk.Toplevel):
                     formatted.append("{} -> {}".format(name,", ".join(keys)))
             # Show the dialog warning of lengthy paths
             mb.showwarning(
-                "Potentially Unsafe Paths".format(self.safe_path_length),
+                "Potentially Unsafe Paths",
                 "The following exceed the {:,} character safe path max declared by OpenCore and may not work as intended:\n\n{}".format(
                     self.safe_path_length,
                     "\n".join(formatted)
