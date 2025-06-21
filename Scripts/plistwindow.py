@@ -261,6 +261,7 @@ class EntryPlus(ttk.Entry):
             else:
                 start = self.index(tk.INSERT)
             self.insert(start,contents)
+            self.set_icursor(start+len(contents))
         return 'break'
 
 class EntryPopup(EntryPlus):
@@ -1882,14 +1883,12 @@ class PlistWindow(tk.Toplevel):
                     kext[check] = kext_match.get(check,"")
             new_kexts.append(kext)
         # Let's check inheritance via the info
-        # We need to ensure that no 2 kexts consider each other as parents
         unordered_kexts = []
         for x in new_kexts:
             info = next((y[1] for y in kext_list if y[0].get("BundlePath","") == x.get("BundlePath","")),None)
             if not info: continue
             parents = [(z,y[1]) for z in new_kexts for y in kext_list if z.get("BundlePath","") == y[0].get("BundlePath","") if y[1].get("cfbi",None) in info.get("osbl",[])]
             children = [next((z for z in new_kexts if z.get("BundlePath","") == y[0].get("BundlePath","")),[]) for y in kext_list if info.get("cfbi",None) in y[1].get("osbl",[])]
-            parents = [y for y in parents if not y[0] in children and not y[0].get("BundlePath","") == x.get("BundlePath","")]
             unordered_kexts.append({
                 "kext":x,
                 "parents":parents
