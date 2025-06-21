@@ -1896,6 +1896,7 @@ class PlistWindow(tk.Toplevel):
             })
         ordered_kexts = []
         disabled_parents = []
+        cyclic_kexts = []
         loops_without_changes = 0
         cyclic_dependencies = False
         while len(unordered_kexts): # This could be dangerous if things aren't properly prepared above
@@ -1914,18 +1915,22 @@ class PlistWindow(tk.Toplevel):
                         disabled_parents.append(p)
                 if not all(x[0] in ordered_kexts for x in kext["parents"]):
                     loops_without_changes += 1
+                    cyclic_kexts.append(kext["kext"])
                     if loops_without_changes > len(unordered_kexts):
                         cyclic_dependencies = True
                         break
                     unordered_kexts.append(kext)
                     continue
+            cyclic_kexts = [] # Reset the cyclic kext list
             loops_without_changes = 0 # Reset the counter
             ordered_kexts.append(kext["kext"])
         # If we bailed because of cyclic deps - let's warn the user
         if cyclic_dependencies:
             mb.showwarning(
                 "Cyclic Kext Dependencies",
-                "Three or more of your kexts list each other as dependencies, Kernel -> Add order may not be correct.",
+                "The following kexts list each other as dependencies, Kernel -> Add order may not be correct:\n\n{}".format(
+                    "\n".join([x.get("BundlePath","") for x in cyclic_kexts])
+                ),
                 parent=self
             )
         # Let's compare against the original load order - to prevent mis-prompting
