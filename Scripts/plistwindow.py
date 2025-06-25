@@ -1841,20 +1841,22 @@ class PlistWindow(tk.Toplevel):
                         "osbl": [x.lower() for x in info_plist.get("OSBundleLibraries",[]) if isinstance(x,basestring)] # Case insensitive
                     }
                     if info_plist.get("CFBundleExecutable",None):
-                        exec_full_path = exec_rel_path = None
-                        if os.path.exists(os.path.join(path,name,"Contents","MacOS",info_plist["CFBundleExecutable"])):
+                        exec_rel_path  = None
+                        exec_full_path = os.path.join(path,name,"Contents","MacOS",info_plist["CFBundleExecutable"])
+                        if os.path.exists(exec_full_path):
                             # Found it in the usual spot
                             exec_rel_path = "Contents/MacOS/"+info_plist["CFBundleExecutable"]
                         else:
                             # Didn't find it in the usual spot - check for it anywhere in the kext
                             cfbundle_lower = info_plist["CFBundleExecutable"].lower()
+                            exec_rel_path = exec_full_path = None
                             for kpath, ksubdirs, kfiles in os.walk(os.path.join(path,name)):
                                 for kname in kfiles:
                                     if kname.lower() == cfbundle_lower:
                                         exec_full_path = os.path.join(kpath,kname)
                                         exec_rel_path  = exec_full_path[len(os.path.join(path,name)):].replace("\\", "/").lstrip("/")
                                         break
-                        if not exec_rel_path:
+                        if not exec_rel_path or not exec_full_path or not os.path.getsize(exec_full_path):
                             omitted_kexts.append(name)
                             continue # Requires an executable that doesn't exist - bail
                         # Found something
