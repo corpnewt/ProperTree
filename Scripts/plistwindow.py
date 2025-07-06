@@ -3030,7 +3030,7 @@ class PlistWindow(tk.Toplevel):
         adj = 0
         for t in tags_to_remove:
             start,end = t.span()
-            data = data[adj:start-adj]+data[end-adj:]
+            data = data[:start-adj]+data[end-adj:]
             adj += end-start
         return "".join(opening_tags+[data.strip()]+closing_tags).strip()
 
