@@ -2480,7 +2480,12 @@ class PlistWindow(tk.Toplevel):
         nodes = self.iter_nodes()
         if selected in nodes: return self.select(selected)
         # Our item no longer exists, let's adjust our selection
-        index = original_nodes.index(selected)
+        try:
+            # Deques only allow checking index in python 3+
+            index = original_nodes.index(selected)
+        except:
+            # Convert to a tuple, and get the index from there
+            index = tuple(original_nodes).index(selected)
         self.select(nodes[index] if index < len(nodes) else nodes[-1])
 
     def got_focus(self, event=None):
@@ -2995,6 +3000,7 @@ class PlistWindow(tk.Toplevel):
             pass
 
     def _walk_tags(self, data):
+        last_open = parent_tag = None
         opening_tags = []
         tag_stack = deque()
         tags_to_remove = deque()
@@ -3006,18 +3012,28 @@ class PlistWindow(tk.Toplevel):
                 # Got a closing tag - make sure it matches the last
                 # opening tag - or forego that prefixed info
                 if not len(tag_stack):
-                    tags_to_remove.append(tag)
+                    if last_open is None:
+                        tags_to_remove.append(tag)
                     continue
                 last_tag = tag_stack.pop()
                 if last_tag != open_tag:
                     # Doesn't match - scope is wrong
                     tag_stack.append(last_tag)
                     opening_tags.insert(0,open_tag)
+                elif not len(tag_stack):
+                    # We left our scope entirely
+                    parent_tag = "array"
             else:
                 # Got a new tag - append it to the stack
+                if tag_text == "<key>" and last_open is None:
+                    # Prepend a dict open tag
+                    tag_stack.appendleft("<dict>")
+                    opening_tags.insert(0,"<dict>")
+                # Add the open tag and retain it
                 tag_stack.append(tag_text)
+                last_open = tag_text
         # If we made it through - check if we need anything
-        if not tag_stack:
+        if not any((tag_stack,tags_to_remove)):
             return None
         # Walk the orphaned tags and return their closing elements
         closing_tags = []
@@ -3032,6 +3048,11 @@ class PlistWindow(tk.Toplevel):
             start,end = t.span()
             data = data[:start-adj]+data[end-adj:]
             adj += end-start
+        # If we bailed on scope - wrap things in an array
+        if parent_tag is not None:
+            opening_tags.insert(0,"<array>")
+            closing_tags.append("</array>")
+        # Return the final data
         return "".join(opening_tags+[data.strip()]+closing_tags).strip()
 
     def paste_selection(self, event = None):
