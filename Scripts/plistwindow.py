@@ -439,10 +439,8 @@ class PlistWindow(tk.Toplevel):
         tk.Toplevel.__init__(self, root, **kw)
         self.plist_header = """<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-"""
-        self.plist_footer = """
-</plist>"""
+<plist version="1.0">"""
+        self.plist_footer = """</plist>"""
         # Create the window
         self.root = root
         self.controller = controller
@@ -2996,6 +2994,38 @@ class PlistWindow(tk.Toplevel):
         except:
             pass
 
+    def _walk_tags(self, data):
+        opening_tags = []
+        tag_stack = deque()
+        tag_search = re.compile(r"<[^?!]\/?[a-z]+>")
+        for tag in tag_search.finditer(data):
+            tag_text = tag.group(0)
+            if tag_text[1] == "/":
+                open_tag = tag_text.replace("/","")
+                # Got a closing tag - make sure it matches the last
+                # opening tag - or forego that prefixed info
+                if not len(tag_stack):
+                    opening_tags.insert(0,open_tag)
+                    continue
+                last_tag = tag_stack.pop()
+                if last_tag != open_tag:
+                    # Doesn't match - scope is wrong
+                    tag_stack.append(last_tag)
+                    opening_tags.insert(0,open_tag)
+            else:
+                # Got a new tag - append it to the stack
+                tag_stack.append(tag_text)
+        # If we made it through - check if we need anything
+        if not tag_stack:
+            return None
+        # Walk the orphaned tags and return their closing elements
+        closing_tags = []
+        while tag_stack:
+            orphan = tag_stack.pop()
+            if orphan[1] != "/":
+                closing_tags.append("</"+orphan[1:])
+        return (opening_tags,closing_tags)
+
     def paste_selection(self, event = None):
         # We can't paste if another paste operation is in progress
         if self.pasting_nodes: return
@@ -3010,13 +3040,16 @@ class PlistWindow(tk.Toplevel):
         try:
             plist_data = plist.loads(clip,dict_type=dict if self.controller.settings.get("sort_dict",False) else OrderedDict)
         except:
-            # May need the header
-            # First check the type of the first element
-            clip_check = clip.strip().lower()
+            # Let's get all lines that aren't headers/footers
+            clip = "\n".join([c for c in clip.strip().split("\n") if not c.startswith(("<?","<!","<plist ","</plist>"))]).strip()
+            tags = self._walk_tags(clip)
+            if tags is not None:
+                # No need to worry about joining with whitespace
+                clip = "".join(tags[0]+[clip]+tags[1]).strip()
             cb_list = [self.plist_header,clip,self.plist_footer]
             # If we start with a key, assume it's a dict.  If we don't start with an array but have multiple newline-delimited elements, assume an array
             # - for all else, let the type remain
-            element_type = "dict" if clip_check.startswith("<key>") else "array" if not clip_check.startswith("<array>") and len(clip_check.split("\n")) > 1 else None
+            element_type = "dict" if clip.startswith("<key>") else "array" if not clip.startswith("<array>") and len(clip.split("\n")) > 1 else None
             if element_type:
                 cb_list.insert(1,"<{}>".format(element_type))
                 cb_list.insert(3,"</{}>".format(element_type))
