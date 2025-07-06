@@ -2997,6 +2997,7 @@ class PlistWindow(tk.Toplevel):
     def _walk_tags(self, data):
         opening_tags = []
         tag_stack = deque()
+        tags_to_remove = deque()
         tag_search = re.compile(r"<[^?!]\/?[a-z]+>")
         for tag in tag_search.finditer(data):
             tag_text = tag.group(0)
@@ -3005,7 +3006,7 @@ class PlistWindow(tk.Toplevel):
                 # Got a closing tag - make sure it matches the last
                 # opening tag - or forego that prefixed info
                 if not len(tag_stack):
-                    opening_tags.insert(0,open_tag)
+                    tags_to_remove.append(tag)
                     continue
                 last_tag = tag_stack.pop()
                 if last_tag != open_tag:
@@ -3024,7 +3025,14 @@ class PlistWindow(tk.Toplevel):
             orphan = tag_stack.pop()
             if orphan[1] != "/":
                 closing_tags.append("</"+orphan[1:])
-        return (opening_tags,closing_tags)
+        # Adjust the original data as needed to strip any leading
+        # tags that close missing elements
+        adj = 0
+        for t in tags_to_remove:
+            start,end = t.span()
+            data = data[adj:start-adj]+data[end-adj:]
+            adj += end-start
+        return "".join(opening_tags+[data.strip()]+closing_tags).strip()
 
     def paste_selection(self, event = None):
         # We can't paste if another paste operation is in progress
@@ -3042,14 +3050,13 @@ class PlistWindow(tk.Toplevel):
         except:
             # Let's get all lines that aren't headers/footers
             clip = "\n".join([c for c in clip.strip().split("\n") if not c.startswith(("<?","<!","<plist ","</plist>"))]).strip()
-            tags = self._walk_tags(clip)
-            if tags is not None:
-                # No need to worry about joining with whitespace
-                clip = "".join(tags[0]+[clip]+tags[1]).strip()
+            corrected = self._walk_tags(clip)
+            if corrected is not None:
+                clip = corrected
             cb_list = [self.plist_header,clip,self.plist_footer]
             # If we start with a key, assume it's a dict.  If we don't start with an array but have multiple newline-delimited elements, assume an array
             # - for all else, let the type remain
-            element_type = "dict" if clip.startswith("<key>") else "array" if not clip.startswith("<array>") and len(clip.split("\n")) > 1 else None
+            element_type = "dict" if clip.startswith("<key>") else "array" if not clip.startswith(("<array>","<dict>")) and len(clip.split("\n")) > 1 else None
             if element_type:
                 cb_list.insert(1,"<{}>".format(element_type))
                 cb_list.insert(3,"</{}>".format(element_type))
