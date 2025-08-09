@@ -439,10 +439,8 @@ class PlistWindow(tk.Toplevel):
         tk.Toplevel.__init__(self, root, **kw)
         self.plist_header = """<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-"""
-        self.plist_footer = """
-</plist>"""
+<plist version="1.0">"""
+        self.plist_footer = """</plist>"""
         # Create the window
         self.root = root
         self.controller = controller
@@ -2482,7 +2480,12 @@ class PlistWindow(tk.Toplevel):
         nodes = self.iter_nodes()
         if selected in nodes: return self.select(selected)
         # Our item no longer exists, let's adjust our selection
-        index = original_nodes.index(selected)
+        try:
+            # Deques only allow checking index in python 3+
+            index = original_nodes.index(selected)
+        except:
+            # Convert to a tuple, and get the index from there
+            index = tuple(original_nodes).index(selected)
         self.select(nodes[index] if index < len(nodes) else nodes[-1])
 
     def got_focus(self, event=None):
@@ -2996,6 +2999,62 @@ class PlistWindow(tk.Toplevel):
         except:
             pass
 
+    def _walk_tags(self, data):
+        last_open = parent_tag = None
+        opening_tags = []
+        tag_stack = deque()
+        tags_to_remove = deque()
+        tag_search = re.compile(r"<[^?!]\/?[a-z]+>")
+        for tag in tag_search.finditer(data):
+            tag_text = tag.group(0)
+            if tag_text[1] == "/":
+                open_tag = tag_text.replace("/","")
+                # Got a closing tag - make sure it matches the last
+                # opening tag - or forego that prefixed info
+                if not len(tag_stack):
+                    if last_open is None:
+                        tags_to_remove.append(tag)
+                    continue
+                last_tag = tag_stack.pop()
+                if last_tag != open_tag:
+                    # Doesn't match - scope is wrong
+                    tag_stack.append(last_tag)
+                    opening_tags.insert(0,open_tag)
+                elif not len(tag_stack):
+                    # We left our scope entirely
+                    parent_tag = "array"
+            else:
+                # Got a new tag - append it to the stack
+                if tag_text == "<key>" and last_open is None:
+                    # Prepend a dict open tag
+                    tag_stack.appendleft("<dict>")
+                    opening_tags.insert(0,"<dict>")
+                # Add the open tag and retain it
+                tag_stack.append(tag_text)
+                last_open = tag_text
+        # If we made it through - check if we need anything
+        if not any((tag_stack,tags_to_remove)):
+            return None
+        # Walk the orphaned tags and return their closing elements
+        closing_tags = []
+        while tag_stack:
+            orphan = tag_stack.pop()
+            if orphan[1] != "/":
+                closing_tags.append("</"+orphan[1:])
+        # Adjust the original data as needed to strip any leading
+        # tags that close missing elements
+        adj = 0
+        for t in tags_to_remove:
+            start,end = t.span()
+            data = data[:start-adj]+data[end-adj:]
+            adj += end-start
+        # If we bailed on scope - wrap things in an array
+        if parent_tag is not None:
+            opening_tags.insert(0,"<array>")
+            closing_tags.append("</array>")
+        # Return the final data
+        return "".join(opening_tags+[data.strip()]+closing_tags).strip()
+
     def paste_selection(self, event = None):
         # We can't paste if another paste operation is in progress
         if self.pasting_nodes: return
@@ -3010,13 +3069,15 @@ class PlistWindow(tk.Toplevel):
         try:
             plist_data = plist.loads(clip,dict_type=dict if self.controller.settings.get("sort_dict",False) else OrderedDict)
         except:
-            # May need the header
-            # First check the type of the first element
-            clip_check = clip.strip().lower()
+            # Let's get all lines that aren't headers/footers
+            clip = "\n".join([c for c in clip.strip().split("\n") if not c.startswith(("<?","<!","<plist ","</plist>"))]).strip()
+            corrected = self._walk_tags(clip)
+            if corrected is not None:
+                clip = corrected
             cb_list = [self.plist_header,clip,self.plist_footer]
             # If we start with a key, assume it's a dict.  If we don't start with an array but have multiple newline-delimited elements, assume an array
             # - for all else, let the type remain
-            element_type = "dict" if clip_check.startswith("<key>") else "array" if not clip_check.startswith("<array>") and len(clip_check.split("\n")) > 1 else None
+            element_type = "dict" if clip.startswith("<key>") else "array" if not clip.startswith(("<array>","<dict>")) and len(clip.split("\n")) > 1 else None
             if element_type:
                 cb_list.insert(1,"<{}>".format(element_type))
                 cb_list.insert(3,"</{}>".format(element_type))
