@@ -48,6 +48,22 @@ def _is_binary(fp):
     fp.seek(0)
     return header[:8] == b'bplist00'
 
+def _seek_past_whitespace(fp):
+    offset = 0
+    while True:
+        byte = fp.read(1)
+        if not byte:
+            # End of file, reset offset and bail
+            offset = 0
+            break
+        if not byte.isspace():
+            # Found our first non-whitespace character
+            break
+        offset += 1
+    # Seek to the first non-whitespace char
+    fp.seek(offset)
+    return offset
+
 ###                             ###
 # Deprecated Functions - Remapped #
 ###                             ###
@@ -70,7 +86,7 @@ def writePlist(value, pathOrFile):
 
 def load(fp, fmt=None, use_builtin_types=None, dict_type=dict):
     if _is_binary(fp):
-        use_builtin_types = False if use_builtin_types == None else use_builtin_types
+        use_builtin_types = False if use_builtin_types is None else use_builtin_types
         try:
             p = _BinaryPlistParser(use_builtin_types=use_builtin_types, dict_type=dict_type)
         except:
@@ -78,12 +94,13 @@ def load(fp, fmt=None, use_builtin_types=None, dict_type=dict):
             p = _BinaryPlistParser(dict_type=dict_type)
         return p.parse(fp)
     elif _check_py3():
-        use_builtin_types = True if use_builtin_types == None else use_builtin_types
+        offset = _seek_past_whitespace(fp)
+        use_builtin_types = True if use_builtin_types is None else use_builtin_types
         # We need to monkey patch this to allow for hex integers - code taken/modified from 
         # https://github.com/python/cpython/blob/3.8/Lib/plistlib.py
         if fmt is None:
             header = fp.read(32)
-            fp.seek(0)
+            fp.seek(offset)
             for info in plistlib._FORMATS.values():
                 if info['detect'](header):
                     P = info['parser']
@@ -102,7 +119,7 @@ def load(fp, fmt=None, use_builtin_types=None, dict_type=dict):
             def end_integer():
                 d = p.get_data()
                 value = int(d,16) if d.lower().startswith("0x") else int(d)
-                if -1 << 63 <= value < 1 << 63:
+                if -1 << 63 <= value < 1 << 64:
                     p.add_object(value)
                 else:
                     raise OverflowError("Integer overflow at line {}".format(p.parser.CurrentLineNumber))
@@ -115,6 +132,7 @@ def load(fp, fmt=None, use_builtin_types=None, dict_type=dict):
             p.end_data = end_data
         return p.parse(fp)
     else:
+        offset = _seek_past_whitespace(fp)
         # Is not binary - assume a string - and try to load
         # We avoid using readPlistFromString() as that uses
         # cStringIO and fails when Unicode strings are detected
@@ -136,7 +154,7 @@ def load(fp, fmt=None, use_builtin_types=None, dict_type=dict):
         def end_integer():
             d = p.getData()
             value = int(d,16) if d.lower().startswith("0x") else int(d)
-            if -1 << 63 <= value < 1 << 63:
+            if -1 << 63 <= value < 1 << 64:
                 p.addObject(value)
             else:
                 raise OverflowError("Integer overflow at line {}".format(parser.CurrentLineNumber))

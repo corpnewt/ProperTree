@@ -1,4 +1,4 @@
 {
-    "version": "0.3.3",
-    "changes": "- Add OC 1.0.4 hashes.\n- OC Snapshot considers .bin files in addition to .aml in EFI/OC/ACPI.\n- More tkinter event handling fixes.\n- Cmd/Ctrl+Shift+C now copies children instead of all.\n- Misc bug fixes and improvements."
+    "version": "0.3.4",
+    "changes": "- Add OC 1.0.5 hashes.\n- Add option to strip whitespace around keys and values.\n- Update plist.py to better reflect plist spec.\n- Improve safe path length calculations.\n- Improved OC Snapshot kext considerations.\n- Improved pasting flexibility."
 }
