@@ -3033,7 +3033,7 @@ class PlistWindow(tk.Toplevel):
                 tag_stack.append(tag_text)
                 last_open = tag_text
         # If we made it through - check if we need anything
-        if not any((tag_stack,tags_to_remove)):
+        if not any((tag_stack,tags_to_remove)) and parent_tag is None:
             return None
         # Walk the orphaned tags and return their closing elements
         closing_tags = []
