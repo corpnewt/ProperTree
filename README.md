@@ -63,9 +63,9 @@ Both snapshot variants accomplish the same tasks - they just leverage different 
 
 Typically, an OC **Clean** Snapshot should only be used the first time you snapshot to ensure any sample entries in the config.plist are removed and added anew.  Every subsequent snapshot should be a regular OC Snapshot to ensure any customizations you've made are preserved.
 
-### Tk version-related
+### Tk 8.5 on macOS
 
-TL;DR: tk versions before 8.6 are bugged. Unfortunately macOS ships with tk 8.5, so you need to get a version of Python linked to a newer version.
+TL;DR: tk versions before 8.6 are bugged on newer macOS. Unfortunately some versions of macOS ship with tk 8.5, so you need to get a version of Python linked to a newer version.
 
 #### Can't click anything on Sonoma (14.x) and Newer
 
@@ -95,9 +95,15 @@ If you already have python 3 installed via `brew` or another package manager - i
 
 #### When I try to run ProperTree, I get `[ModuleNotFoundError: No module name 'tkinter']`
 
-That is because the graphical interface library that ProperTree depends on isn't present or cannot be detected, you need to install the Python module `tkinter` from your package manager or get a version of Python with that module.
+That is because the graphical interface library that ProperTree depends on isn't present or cannot be detected. You need to install the Python module `tkinter` from your package manager or `pip` -- or just get a new copy of Python with this module included.
 
-For example, Ubuntu and other Debian-based distros split the `tkinker` part out of the main Python package. To install it, run `sudo apt-get install python3-tk -y`.
+To get `tkinter` from your package manager:
+* For Ubuntu and other Debian-based distros, use `sudo apt install python3-tk -y`.
+* For Fedora, CentOS and friends, use `sudo dnf install python3-tkinter`. The "tk" package includes Tk itself, not `tkinter`, which is a glue between Python and Tk.
+* For Arch Linux and derivatives, use `sudo pacman -S tk`. This installs "tk" instead of `tkinter`. This is intended because `tkinter` is included in Arch's "python" package, but `tk` is not installed as a dependency.
+* For Homebrew, use `brew install python-tk`. Note that you may still bump into the Tk version issue described above so we recommend just getting a fresh install from https://python.org.
+
+To get `tkinter` from pip: `pip install tkinter` or `pip3 install tkinter`. This is what you should do on Windows. On other systems this will get you the module but not necessarily an actual installation of Tk, so use your system package manager (see above) if possible.
 
 #### ProperTree doesn't run because it doesn't have permissions, what gives?
 
