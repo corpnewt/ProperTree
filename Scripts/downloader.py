@@ -144,7 +144,11 @@ class Downloader:
 
     def __init__(self,**kwargs):
         self.ua = kwargs.get("useragent",{"User-Agent":"Mozilla"})
-        self.chunk = 1048576 # 1024 x 1024 i.e. 1MiB
+        self.chunk = None # Auto-assign if None, otherwise explicit
+        self.min_chunk = 1024 # 1 KiB min chunk size
+        self.max_chunk = 1024 * 1024 * 4 # 4 MiB max chunk size
+        self.chunk_rate = 0.1 # Update every 0.1 seconds
+        self.chunk_growth = 1.5 # Max multiplier for chunk growth
         if os.name=="nt": os.system("color") # Initialize cmd for ANSI escapes
         # Provide reasonable default logic to workaround macOS CA file handling 
         cafile = ssl.get_default_verify_paths().openssl_cafile
@@ -244,13 +248,23 @@ class Downloader:
                 self._update_main_name()
             process.start()
         try:
+            chunk_size = self.chunk or 1024
+            auto_chunk_size = not self.chunk
             while True:
-                chunk = response.read(self.chunk)
+                t = time.perf_counter()
+                chunk = response.read(chunk_size)
+                chunk_time = time.perf_counter()-t
                 if progress:
                     # Add our items to the queue
                     queue.put((time.time(),len(chunk)))
                 if not chunk: break
                 chunk_so_far += chunk
+                if auto_chunk_size:
+                    # Adjust our chunk size based on the internet speed at our defined rate
+                    chunk_rate = int(len(chunk) / chunk_time * self.chunk_rate)
+                    chunk_change_max = round(chunk_size * self.chunk_growth)
+                    chunk_rate_clamped = min(max(self.min_chunk, chunk_rate), chunk_change_max)
+                    chunk_size = min(chunk_rate_clamped, self.max_chunk)
         finally:
             # Close the response whenever we're done
             response.close()
@@ -307,15 +321,25 @@ class Downloader:
                 self._update_main_name()
             process.start()
         with open(file_path,mode) as f:
+            chunk_size = self.chunk or 1024
+            auto_chunk_size = not self.chunk
             try:
                 while True:
-                    chunk = response.read(self.chunk)
+                    t = time.perf_counter()
+                    chunk = response.read(chunk_size)
+                    chunk_time = time.perf_counter()-t
                     bytes_so_far += len(chunk)
                     if progress:
                         # Add our items to the queue
                         queue.put((time.time(),len(chunk)))
                     if not chunk: break
                     f.write(chunk)
+                    if auto_chunk_size:
+                        # Adjust our chunk size based on the internet speed at our defined rate
+                        chunk_rate = int(len(chunk) / chunk_time * self.chunk_rate)
+                        chunk_change_max = round(chunk_size * self.chunk_growth)
+                        chunk_rate_clamped = min(max(self.min_chunk, chunk_rate), chunk_change_max)
+                        chunk_size = min(chunk_rate_clamped, self.max_chunk)
             finally:
                 # Close the response whenever we're done
                 response.close()
