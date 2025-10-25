@@ -3,14 +3,14 @@
 # ProperTree by CorpNewt, this script by Calebh101.
 
 # Usage: python3 buildapp-linux.py [--verbose] [--python PYTHON] [--always-overwrite] [--use-existing-payload]
-    # "--verbose" or "-v": Verbose mode.
-    # "--python PYTHON" or "-p PYTHON": Select a Python executable to use (default is output of "which python3").
-    # "--clear" or "-c": Clear /dist/linux. Does not respect --use-existing-payload.
-    # "--dir DIR" or "-d DIR": Select the root directory of ProperTree to use.
-    # "--out DIR" or "-o DIR": Select an output directory to use. All files will be placed in here; it will not make an extra subdirectory.
-    # "--always-overwrite": Always overwrite applicable files instead of prompting.
-    # "--use-existing-payload": Don't overwrite /dist/linux/payload. This was helpful in early debugging, where I was messing around with different techniques before deciding upon this one.
-    # "--skip-compile": Skip compiling the script to an ELF executable.
+    # '--verbose' or '-v': Verbose mode.
+    # '--python PYTHON' or '-p PYTHON': Select a Python executable to use (default is output of 'which python3').
+    # '--clear' or '-c': Clear /dist/linux. Does not respect --use-existing-payload.
+    # '--dir DIR' or '-d DIR': Select the root directory of ProperTree to use.
+    # '--out DIR' or '-o DIR': Select an output directory to use. All files will be placed in here; it will not make an extra subdirectory.
+    # '--always-overwrite': Always overwrite applicable files instead of prompting.
+    # '--use-existing-payload': Don't overwrite /dist/linux/payload. This was helpful in early debugging, where I was messing around with different techniques before deciding upon this one.
+    # '--skip-compile': Skip compiling the script to an ELF executable.
 
 # Generated Directories - The script will build in /dist/linux.
     # payload: This is where scripts and assets are processed and copied. This is what is extracted when the app is ran. It will extract into /tmp/.ProperTree/app-$ID.
@@ -22,8 +22,8 @@
     # ProperTree-Installer-V.sh: Installs ProperTree as an application.
 
 # The Scripts
-    # ProperTree.sh: Runs ProperTree. Please note that it can be run with "--clear-data" to clear ProperTree data.
-    # ProperTree-Installer-V.sh: Installs ProperTree by adding "ProperTree" and "propertree" to /home/$USER/.local/bin and adding ProperTree.desktop to /home/$USER/.local/share/applications. Please note that it can be run with "--uninstall" to delete these three files.
+    # ProperTree.sh: Runs ProperTree. Please note that it can be run with '--clear-data' to clear ProperTree data.
+    # ProperTree-Installer-V.sh: Installs ProperTree by adding 'ProperTree' and 'propertree' to /home/$USER/.local/bin and adding ProperTree.desktop to /home/$USER/.local/share/applications. Please note that it can be run with '--uninstall' to delete these three files.
 
 # The Process
     # 1. Generate a main script and an install script.
@@ -41,7 +41,7 @@
 
 # Known Issues
     # ARM is not officially supported by this script, but you can compile main.c (in /dist/linux) from source.
-    # ProperTree does not have an icon in the taskbar. This is due to the fact that when you run the .desktop file from the launcher, it doesn't directly load a GUI; it goes through ProperTree.py, which loads a window by itself - separate from the launcher or the .desktop.
+    # ProperTree does not have an icon in the taskbar. This is due to the fact that when you run the .desktop file from the launcher, it doesn't directly load a GUI; it goes through the generated script, then ProperTree.py, which loads a window by itself, separate from the launcher or the .desktop.
     # ProperTree's taskbar window is named "Toplevel". This is on ProperTree.py's side (most likely tkinter's side), and I do not know a fix for this at the moment.
 
 import platform
@@ -135,7 +135,7 @@ def is_python(path):
     if not os.path.isfile(path) or not os.access(path, os.X_OK):
         log("is_python fail: not os.path.isfile({path}) or not os.access({path}, os.X_OK)")
         return False
-    
+
     try:
         result = subprocess.Popen([path, '-V'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = result.communicate()
@@ -148,7 +148,7 @@ def is_python(path):
     except Exception as e:
         log("is_python fail: exception:\n{}".format(e))
         return False
-    
+
     log("is_python fail: unkown overlow")
     return False
 
@@ -222,7 +222,7 @@ BREAKER
 # We embed the icon binary so we can copy it over without relying on external files.
 # BREAKER is now DESTROYER to avoid awk confusion.
 # It also handles instances where /home/$USER/.local/bin isn't in path (or when it doesn't even exist), which happens on clean installations of Debian-based distros.
-install_script = """#!/bin/bash
+install_script = """#!/bin/sh
 # This is an auto-generated script.
 echo "Preparing..."
 
@@ -262,7 +262,7 @@ echo "Writing files..."
 echo "$desktop" > "$HOME/.local/share/applications/ProperTree.desktop"
 
 cat << 'EOF' > "$HOME/.local/bin/propertree"
-#!/bin/bash
+#!/bin/sh
 # This is an auto-generated script.
 "$HOME/.local/bin/ProperTree" "$@"
 EOF
@@ -272,12 +272,36 @@ chmod +x "$HOME/.local/bin/ProperTree"
 chmod +x "$HOME/.local/bin/propertree"
 
 echo "Refreshing sources..."
-update-desktop-database ~/.local/share/applications
-source ~/.bashrc
+shell_name=$(ps -p $$ -o comm=)
+
+if command -v update-desktop-database >/dev/null 2>&1; then
+    update-desktop-database ~/.local/share/applications
+else
+    echo "update-desktop-database not found; skipping..."
+fi
+
+case "$shell_name" in
+    bash)
+
+        [ -f "$HOME/.bashrc" ] && . "$HOME/.bashrc"
+        ;;
+    zsh)
+        [ -f "$HOME/.zshrc" ] && . "$HOME/.zshrc"
+        ;;
+    ksh)
+        [ -f "$HOME/.kshrc" ] && . "$HOME/.kshrc"
+        ;;
+    fish)
+        fish -c "source $HOME/.config/fish/config.fish" >/dev/null 2>&1
+        ;;
+    *)
+        echo "Shell '$shell_name' not supported for auto-sourcing; skipping"
+        ;;
+esac
 
 if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
     echo "WARNING: $HOME/.local/bin is not in PATH. You will not be able to run ProperTree from the command line if it's not in PATH."
-    echo 'Please add `PATH="$PATH:$HOME/.local/bin"` to PATH in .bashrc or whatever you use.'
+    echo 'Please add 'PATH="$PATH:$HOME/.local/bin"' to PATH in your environmental variables.'
 fi
 
 echo "Done! Run this script with --uninstall to uninstall the ProperTree application. You can also run ProperTree with --clear-data to clear ProperTree data."
@@ -403,7 +427,7 @@ if not args.skip_compile:
             bytes = ["0x{:02X}".format(ord(byte)) for byte in binary]
         except: # Python 3
             bytes = ["0x{:02X}".format(byte) for byte in binary]
-    
+
     with open(dist + '/main.c', 'w') as file:
         file.write(ccode.replace('const unsigned char shell_script[] = {};', 'const unsigned char shell_script[] = {{\n    {}\n}};'.format(', '.join(bytes))))
 
