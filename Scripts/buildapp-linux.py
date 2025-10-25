@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-# A Python script to compile ProperTree to run as a native Linux app. Officially supports x64 Debian-based distros, but any architecture/distro is theoretically supported.
+# A Python script to compile ProperTree to run as a native Linux app. Officially supports x64, but any architecture/distro is theoretically supported.
 
 # Usage: python3 buildapp-linux.py [--verbose] [--python PYTHON] [--always-overwrite] [--use-existing-payload]
     # "--verbose" or "-v": Verbose mode.
@@ -186,7 +186,7 @@ with open(scripts + "/icon.png", 'rb') as f:
 
 # Generate the extraction script. The script extracts the payload to "/tmp/.ProperTree/app-ID". "ID" is a random number between 0 and 32767.
 # The script works by first ensuring directories exist, then copying settings.json and Configuration.tex (if they exist) to the new temporary directory. After ProperTree runs, then settings.json and Configuration.tex are copied back in /home/user/.ProperTree and the temporary directory is deleted.
-script = """#!/bin/bash
+script = """#!/bin/sh
 # This is an auto-generated script.
 # ProperTree V. {}
 # Run with --clear-data to remove data.
