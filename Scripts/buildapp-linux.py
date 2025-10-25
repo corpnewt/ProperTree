@@ -45,6 +45,7 @@
     # ProperTree does not have an icon in the taskbar. This is due to the fact that when you run the .desktop file from the launcher, it doesn't directly load a GUI; it goes through the generated script, then ProperTree.py, which loads a window by itself, separate from the launcher or the .desktop.
     # ProperTree's taskbar window is named "Toplevel". This is on ProperTree.py's side (most likely tkinter's side), and I do not know a fix for this at the moment.
 
+import base64
 import platform
 import subprocess
 import os
@@ -181,11 +182,7 @@ print("Found Python: {}".format(python))
 # Get the icon binary so we can embed it.
 print("Processing icon...")
 with open(scripts + "/icon.png", 'rb') as f:
-    content = f.read()
-    try: # Python 2
-        icon = ''.join('\\x{0:02X}'.format(ord(byte)) for byte in content)
-    except: # Python 3
-        icon = ''.join('\\x{:02X}'.format(byte) for byte in content)
+    icon = base64.b64encode(f.read()).decode('ascii')
 
 # Generate the extraction script. The script extracts the payload to "/tmp/.ProperTree/app-ID". "ID" is a random number between 0 and 32767.
 # The script works by first ensuring directories exist, then copying settings.json and Configuration.tex (if they exist) to the new temporary directory. After ProperTree runs, then settings.json and Configuration.tex are copied back in /home/user/.ProperTree and the temporary directory is deleted.
@@ -266,7 +263,10 @@ MimeType=text/xml;application/xml;application/x-plist;"
 
 mkdir -p "$HOME/.ProperTree" > /dev/null 2>&1
 mkdir -p "$HOME/.local/bin" > /dev/null 2>&1
-printf '{}' > "$HOME/.ProperTree/icon.png"
+
+base64 -d > "$HOME/.ProperTree/icon.png" << 'EOF'
+{}
+EOF
 
 echo "Extracting payload..."
 DATA=$(awk '/^DESTROYER/ {{print NR + 1; exit 0; }}' "$0")
