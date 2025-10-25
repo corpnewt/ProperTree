@@ -190,10 +190,12 @@ with open(scripts + "/icon.png", 'rb') as f:
 script = """#!/bin/sh
 # This is an auto-generated script.
 # ProperTree V. {}
-# Run with --clear-data to remove data.
+# Run with '--clear-data' to remove data.
+
+set -eu
 
 for arg in "$@"; do
-  if [ "$arg" == "--clear-data" ]; then
+  if [ "$arg" = "--clear-data" ]; then
     echo "Removing data..."
     rm -rf "$HOME/.ProperTree/settings.json" > /dev/null 2>&1
     rm -rf "$HOME/.ProperTree/Configuration.tex" > /dev/null 2>&1
@@ -202,18 +204,28 @@ for arg in "$@"; do
   fi
 done
 
-ID=$RANDOM
+rand() {{
+    seed=$(expr \\( 1103515245 \\* $seed + 12345 \\) % 2147483648)
+    echo $seed
+}}
+
+randgen() {{
+    seed=$(expr $$ + $(date +%s))
+    echo $(( ($(rand) % (99999 - 10000 + 1)) + 10000 ))
+}}
+
+ID=$(randgen)
 DATA=$(awk '/^BREAKER/ {{print NR + 1; exit 0;}}' "$0")
-mkdir "$HOME/.ProperTree" > /dev/null 2>&1
-mkdir "/tmp/.ProperTree" > /dev/null 2>&1
-mkdir "/tmp/.ProperTree/app-$ID" > /dev/null 2>&1
+
+mkdir -p "$HOME/.ProperTree" > /dev/null 2>&1
+mkdir -p "/tmp/.ProperTree/app-$ID" > /dev/null 2>&1
 tail -n+$DATA "$0" | tar xz -C "/tmp/.ProperTree/app-$ID"
-cp "$HOME/.ProperTree/settings.json" "/tmp/.ProperTree/app-$ID/Scripts/settings.json" > /dev/null 2>&1
-cp "$HOME/.ProperTree/Configuration.tex" "/tmp/.ProperTree/app-$ID/Configuration.tex" > /dev/null 2>&1
+cp "$HOME/.ProperTree/settings.json" "/tmp/.ProperTree/app-$ID/Scripts/settings.json" > /dev/null 2>&1 || true
+cp "$HOME/.ProperTree/Configuration.tex" "/tmp/.ProperTree/app-$ID/Configuration.tex" > /dev/null 2>&1 || true
 "{}" "/tmp/.ProperTree/app-$ID/ProperTree.py" "$@"
-cp "/tmp/.ProperTree/app-$ID/Scripts/settings.json" "$HOME/.ProperTree/settings.json" > /dev/null 2>&1
-cp "/tmp/.ProperTree/app-$ID/Configuration.tex" "$HOME/.ProperTree/Configuration.tex" > /dev/null 2>&1
-rm -rf "/tmp/.ProperTree/app-$ID" > /dev/null 2>&1
+cp "/tmp/.ProperTree/app-$ID/Scripts/settings.json" "$HOME/.ProperTree/settings.json" > /dev/null 2>&1 || true
+cp "/tmp/.ProperTree/app-$ID/Configuration.tex" "$HOME/.ProperTree/Configuration.tex" > /dev/null 2>&1 || true
+rm -rf "/tmp/.ProperTree/app-$ID" > /dev/null 2>&1 || true
 exit 0
 BREAKER
 """.format(version, python)
@@ -221,19 +233,20 @@ BREAKER
 # Generate the install script. Also includes an uninstall option.
 # We embed the icon binary so we can copy it over without relying on external files.
 # BREAKER is now DESTROYER to avoid awk confusion.
-# It also handles instances where /home/$USER/.local/bin isn't in path (or when it doesn't even exist), which happens on clean installations of Debian-based distros.
+# It also handles instances where /home/$USER/.local/bin isn't in path (or when it doesn't even exist).
 install_script = """#!/bin/sh
 # This is an auto-generated script.
+set -eu
 echo "Preparing..."
 
-rm "$HOME/.local/bin/ProperTree" > /dev/null 2>&1
-rm "$HOME/.local/bin/propertree" > /dev/null 2>&1
-rm "$HOME/.local/share/applications/ProperTree.desktop" > /dev/null 2>&1
+rm "$HOME/.local/bin/ProperTree" > /dev/null 2>&1 || true
+rm "$HOME/.local/bin/propertree" > /dev/null 2>&1 || true
+rm "$HOME/.local/share/applications/ProperTree.desktop" > /dev/null 2>&1 || true
 
 for arg in "$@"; do
-  if [ "$arg" == "--uninstall" ]; then
+  if [ "$arg" = "--uninstall" ]; then
     echo "Uninstalling..."
-    rm "$HOME/.ProperTree/icon.png" > /dev/null 2>&1
+    rm "$HOME/.ProperTree/icon.png" > /dev/null 2>&1 || true
     echo "Done! ProperTree uninstalled. Your data was not affected."
     exit 0
   fi
@@ -249,9 +262,8 @@ Type=Application
 Categories=Utility
 MimeType=text/xml;"
 
-mkdir "$HOME/.ProperTree" > /dev/null 2>&1
-mkdir "$HOME/.local" > /dev/null 2>&1
-mkdir "$HOME/.local/bin" > /dev/null 2>&1
+mkdir -p "$HOME/.ProperTree" > /dev/null 2>&1
+mkdir -p "$HOME/.local/bin" > /dev/null 2>&1
 printf '{}' > "$HOME/.ProperTree/icon.png"
 
 echo "Extracting payload..."
@@ -276,40 +288,26 @@ shell_name=$(ps -p $$ -o comm=)
 
 if command -v update-desktop-database >/dev/null 2>&1; then
     update-desktop-database ~/.local/share/applications
+    echo "Updated the desktop database. Please source your shell file."
 else
     echo "update-desktop-database not found; skipping..."
 fi
 
-case "$shell_name" in
-    bash)
-
-        [ -f "$HOME/.bashrc" ] && . "$HOME/.bashrc"
-        ;;
-    zsh)
-        [ -f "$HOME/.zshrc" ] && . "$HOME/.zshrc"
-        ;;
-    ksh)
-        [ -f "$HOME/.kshrc" ] && . "$HOME/.kshrc"
-        ;;
-    fish)
-        fish -c "source $HOME/.config/fish/config.fish" >/dev/null 2>&1
-        ;;
-    *)
-        echo "Shell '$shell_name' not supported for auto-sourcing; skipping"
-        ;;
-esac
-
-if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
+case ":$PATH:" in
+  *":$HOME/.local/bin:"*)
+    ;;
+  *)
     echo "WARNING: $HOME/.local/bin is not in PATH. You will not be able to run ProperTree from the command line if it's not in PATH."
-    echo 'Please add 'PATH="$PATH:$HOME/.local/bin"' to PATH in your environmental variables.'
-fi
+    echo 'Please add '\''PATH="$PATH:$HOME/.local/bin"'\'" to your environmental variables."
+    ;;
+esac
 
 echo "Done! Run this script with --uninstall to uninstall the ProperTree application. You can also run ProperTree with --clear-data to clear ProperTree data."
 exit 0
 DESTROYER
 """.format(icon)
 
-# We're gonna put our settings into a persistent user-specific directory, since otherwise ProperTree would generate it in a temporary directory, which we don't want as it just gets deleted.
+# We're gonna put our settings into a persistent user-specific directory, since otherwise ProperTree would generate it in the temporary directory, which we don't want as it just gets deleted.
 if not os.path.exists(settings):
     os.makedirs(settings)
 
@@ -320,7 +318,7 @@ with open(dir + "/ProperTree.py", 'r') as file:
 
 # Load linux-app.c's code so we can embed main.sh into it.
 with open(scripts + "/linux-app.c", 'r') as file:
-    ccode = file.read() # This isn't a typo; "code" was already taken
+    ccode = file.read() # This isn't a typo; 'code' was already taken
 
 def copy_settings_json():
     print("Copying settings.json...")
@@ -331,7 +329,7 @@ if os.path.exists(scripts + "/settings.json"):
     # If the file already exists, then ask the user if they want to overwrite it.
     if os.path.exists(settings + "/settings.json") and not args.always_overwrite:
         while True:
-            message = "Do you want to overwrite {}? (y/n/c): >> ".format(settings + "/settings.json")
+            message = "Do you want to overwrite {}? (y/n/cancel): >> ".format(settings + "/settings.json")
             try: # Python 2
                 response = raw_input(message).strip().lower()
             except: # Python 3
@@ -341,11 +339,11 @@ if os.path.exists(scripts + "/settings.json"):
                 break
             elif response == 'n':
                 break
-            elif response == 'c': # Quit
-                print("Done!")
+            elif response == 'c' or response == 'cancel': # Cancel
+                print("Cancelled")
                 exit(0)
             else:
-                print("Invalid input. Please enter 'y' or 'n'.")
+                print("Invalid input.")
     else:
         copy_settings_json()
 
