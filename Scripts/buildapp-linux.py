@@ -1,5 +1,6 @@
-#!/usr/bin/python3
-# A Python script to compile ProperTree to run as a native Linux app. Officially supports x64, but any architecture/distro is theoretically supported.
+# A Python script to compile ProperTree to run as a native Linux app.
+# Officially supports x64, but any architecture/distro is theoretically supported.
+# ProperTree by CorpNewt, this script by Calebh101.
 
 # Usage: python3 buildapp-linux.py [--verbose] [--python PYTHON] [--always-overwrite] [--use-existing-payload]
     # "--verbose" or "-v": Verbose mode.
