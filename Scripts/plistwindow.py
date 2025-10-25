@@ -3010,10 +3010,10 @@ class PlistWindow(tk.Toplevel):
             if tag_text[1] == "/":
                 open_tag = tag_text.replace("/","")
                 # Got a closing tag - make sure it matches the last
-                # opening tag - or forego that prefixed info
+                # opening tag - or prepend the opening tag
                 if not len(tag_stack):
                     if last_open is None:
-                        tags_to_remove.append(tag)
+                        opening_tags.insert(0,open_tag)
                     continue
                 last_tag = tag_stack.pop()
                 if last_tag != open_tag:
@@ -3033,7 +3033,7 @@ class PlistWindow(tk.Toplevel):
                 tag_stack.append(tag_text)
                 last_open = tag_text
         # If we made it through - check if we need anything
-        if not any((tag_stack,tags_to_remove)):
+        if not any((opening_tags,tag_stack,tags_to_remove)) and parent_tag is None:
             return None
         # Walk the orphaned tags and return their closing elements
         closing_tags = []
