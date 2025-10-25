@@ -195,13 +195,13 @@ script = """#!/bin/sh
 set -eu
 
 for arg in "$@"; do
-  if [ "$arg" = "--clear-data" ]; then
-    echo "Removing data..."
-    rm -rf "$HOME/.ProperTree/settings.json" > /dev/null 2>&1
-    rm -rf "$HOME/.ProperTree/Configuration.tex" > /dev/null 2>&1
-    echo "Done! ProperTree data has been cleared."
-    exit 0
-  fi
+    if [ "$arg" = "--clear-data" ]; then
+        echo "Removing data..."
+        rm -rf "$HOME/.ProperTree/settings.json" > /dev/null 2>&1
+        rm -rf "$HOME/.ProperTree/Configuration.tex" > /dev/null 2>&1
+        echo "Done! ProperTree data has been cleared."
+        exit 0
+    fi
 done
 
 rand() {{
@@ -244,12 +244,12 @@ rm "$HOME/.local/bin/propertree" > /dev/null 2>&1 || true
 rm "$HOME/.local/share/applications/ProperTree.desktop" > /dev/null 2>&1 || true
 
 for arg in "$@"; do
-  if [ "$arg" = "--uninstall" ]; then
-    echo "Uninstalling..."
-    rm "$HOME/.ProperTree/icon.png" > /dev/null 2>&1 || true
-    echo "Done! ProperTree uninstalled. Your data was not affected."
-    exit 0
-  fi
+    if [ "$arg" = "--uninstall" ]; then
+        echo "Uninstalling..."
+        rm "$HOME/.ProperTree/icon.png" > /dev/null 2>&1 || true
+        echo "Done! ProperTree uninstalled. Your data was not affected."
+        exit 0
+    fi
 done
 
 desktop="[Desktop Entry]
@@ -294,12 +294,12 @@ else
 fi
 
 case ":$PATH:" in
-  *":$HOME/.local/bin:"*)
-    ;;
-  *)
-    echo "WARNING: $HOME/.local/bin is not in PATH. You will not be able to run ProperTree from the command line if it's not in PATH."
-    echo 'Please add '\''PATH="$PATH:$HOME/.local/bin"'\'" to your environmental variables."
-    ;;
+    *":$HOME/.local/bin:"*)
+        ;;
+    *)
+        echo "WARNING: $HOME/.local/bin is not in PATH. You will not be able to run ProperTree from the command line if it's not in PATH."
+        echo 'Please add '\''PATH="$PATH:$HOME/.local/bin"'\'" to your environmental variables."
+        ;;
 esac
 
 echo "Done! Run this script with --uninstall to uninstall the ProperTree application. You can also run ProperTree with --clear-data to clear ProperTree data."
