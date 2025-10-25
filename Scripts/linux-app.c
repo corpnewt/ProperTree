@@ -13,7 +13,7 @@ const size_t shell_script_len = sizeof(shell_script);
 int main(int argc, char *argv[]) {
     DIR *entry = opendir("/tmp/.ProperTree");
     if (entry == NULL) {
-        if (mkdir("/tmp/.ProperTree", 0777) != 0) { // Make /tmp/.ProperTree if it doesn't exist
+        if (mkdir("/tmp/.ProperTree", 0700) != 0) { // Make /tmp/.ProperTree if it doesn't exist
             perror("mkdir");
         }
     }
@@ -33,10 +33,21 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    close(fd);
+    int fl = fcntl(fd, F_GETFD);
+    if (fl != -1) fcntl(fd, F_SETFD, fl | FD_CLOEXEC);
 
-    if (chmod(filename, 0700) == -1) {
+    if (fsync(fd) != 0) {
+        perror("fsync");
+    }
+
+    if (chmod(filename, S_IRWXU) == -1) {
         perror("chmod");
+        unlink(filename);
+        return 1;
+    }
+
+    if (close(fd) != 0) {
+        perror("close");
         unlink(filename);
         return 1;
     }
