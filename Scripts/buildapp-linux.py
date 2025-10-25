@@ -1,29 +1,30 @@
-# A Python script to compile ProperTree to run as a native Linux app.
+# A Python script to compile ProperTree to run as a 'native' Linux app.
 # Officially supports x64, but any architecture/distro is theoretically supported.
 # ProperTree by CorpNewt, this script by Calebh101.
 
-# Usage: python3 buildapp-linux.py [--verbose] [--python PYTHON] [--always-overwrite] [--use-existing-payload]
+# Usage: python3 buildapp-linux.py [--verbose] [--python PYTHON] [--clear] [--dir DIR] [--out DIR] [--always-overwrite] [--use-existing-payload] [--skip-compile]
     # '--verbose' or '-v': Verbose mode.
     # '--python PYTHON' or '-p PYTHON': Select a Python executable to use (default is output of 'which python3').
-    # '--clear' or '-c': Clear /dist/linux. Does not respect --use-existing-payload.
+    # '--clear' or '-c': Clear /dist/linux. Does not respect '--use-existing-payload'.
     # '--dir DIR' or '-d DIR': Select the root directory of ProperTree to use.
     # '--out DIR' or '-o DIR': Select an output directory to use. All files will be placed in here; it will not make an extra subdirectory.
     # '--always-overwrite': Always overwrite applicable files instead of prompting.
+    # '--never-overwrite': Never overwrite applicable files instead of prompting. If '--always-overwrite' is present, this argument will not be applied.
     # '--use-existing-payload': Don't overwrite /dist/linux/payload. This was helpful in early debugging, where I was messing around with different techniques before deciding upon this one.
     # '--skip-compile': Skip compiling the script to an ELF executable.
 
 # Generated Directories - The script will build in /dist/linux.
-    # payload: This is where scripts and assets are processed and copied. This is what is extracted when the app is ran. It will extract into /tmp/.ProperTree/app-$ID.
-    # result: This is the directory with the results. It will have a ProperTree.sh (the raw shell file) and (maybe) an ELF executable named ProperTree.
+    # 'payload': This is where scripts and assets are processed and copied. This is what is extracted when the app is ran. It will extract into /tmp/.ProperTree/app-$ID.
+    # 'result': This is the directory with the results. It will have a ProperTree.sh (the raw shell file) and (maybe) an ELF executable named ProperTree.
 
 # Results - The script will build results in /dist/linux/result.
-    # ProperTree.sh: The shell script containing ProperTree. This manages all of ProperTree's files and data.
-    # ProperTree: The optional ELF executable that can be run as an application instead of as a script. This is only built for x64 systems, but for ARM-based systems, you can build main.c from source. main.c contains all the required data.
-    # ProperTree-Installer-V.sh: Installs ProperTree as an application.
+    # 'ProperTree.sh': The shell script containing ProperTree. This manages all of ProperTree's files and data.
+    # 'ProperTree': The optional ELF executable that can be run as an application instead of as a script. This is only built for x64 systems, but for ARM-based systems, you can build main.c from source. main.c contains all the required data.
+    # 'ProperTree-Installer-V.sh': Installs ProperTree as an application.
 
 # The Scripts
-    # ProperTree.sh: Runs ProperTree. Please note that it can be run with '--clear-data' to clear ProperTree data.
-    # ProperTree-Installer-V.sh: Installs ProperTree by adding 'ProperTree' and 'propertree' to /home/$USER/.local/bin and adding ProperTree.desktop to /home/$USER/.local/share/applications. Please note that it can be run with '--uninstall' to delete these three files.
+    # 'ProperTree.sh': Runs ProperTree. Please note that it can be run with '--clear-data' to clear ProperTree data.
+    # 'ProperTree-Installer-V.sh': Installs ProperTree by adding 'ProperTree' and 'propertree' to /home/$USER/.local/bin and adding ProperTree.desktop to /home/$USER/.local/share/applications. Please note that it can be run with '--uninstall' to delete these three files.
 
 # The Process
     # 1. Generate a main script and an install script.
@@ -56,7 +57,7 @@ import argparse
 parser = argparse.ArgumentParser(
     prog='buildapp-linux.py',
     description='A Python script to compile ProperTree to run as a native Linux app.',
-    usage='python3 buildapp-linux.py [--verbose] [--dir DIR] [--out DIR] [--clear] [--python PYTHON] [--always-overwrite] [--use-existing-payload]',
+    usage='python3 buildapp-linux.py [--verbose] [--python PYTHON] [--clear] [--dir DIR] [--out DIR] [--always-overwrite] [--never-overwrite] [--use-existing-payload] [--skip-compile]',
 )
 
 # Define script arguments.
@@ -66,6 +67,7 @@ parser.add_argument('-p', '--python', help="Select a Python executable to use. T
 parser.add_argument('-c', '--clear', help="Clear dist/linux.")
 parser.add_argument('-o', '--out', help="Specify a directory to use for the output. All files will be placed in here; it will not make an extra subdirectory. Default is dist/linux relative to the root directory of ProperTree.")
 parser.add_argument('--always-overwrite', action='store_true', help="Always overwrite applicable files instead of prompting.")
+parser.add_argument('--never-overwrite', action='store_true', help="Never overwrite applicable files instead of prompting.")
 parser.add_argument('--use-existing-payload', action='store_true', help="Don't overwrite dist/linux/payload.")
 parser.add_argument('--skip-compile', action="store_true", help="Skip compiling the script to an executable.")
 
@@ -78,7 +80,7 @@ dist = os.path.abspath(args.out) if args.out is not None else dir + "/dist" + "/
 payload_dir = dist + "/payload" # /dist/linux/payload
 payload_scripts = payload_dir + "/Scripts" # /dist/linux/payload/Scripts
 result_dir = dist + "/result" # /dist/linux/result
-settings = '/home/' + os.environ.get('USER') + '/.ProperTree' # /home/user/.ProperTree
+settings = '/home/' + subprocess.check_output(["id", "-un"], text=True).strip() + '/.ProperTree' # /home/user/.ProperTree
 
 if platform.system() != "Linux":
     print("Can only be run on Linux")
@@ -149,7 +151,7 @@ def is_python(path):
         log("is_python fail: exception:\n{}".format(e))
         return False
 
-    log("is_python fail: unkown overlow")
+    log("is_python fail: unknown overflow")
     return False
 
 if args.python:
@@ -260,7 +262,7 @@ Icon=$HOME/.ProperTree/icon.png
 Terminal=false
 Type=Application
 Categories=Utility
-MimeType=text/xml;"
+MimeType=text/xml;application/xml;application/x-plist;"
 
 mkdir -p "$HOME/.ProperTree" > /dev/null 2>&1
 mkdir -p "$HOME/.local/bin" > /dev/null 2>&1
@@ -327,7 +329,7 @@ def copy_settings_json():
 # Here, we're gonna transfer settings.json to our new settings directory.
 if os.path.exists(scripts + "/settings.json"):
     # If the file already exists, then ask the user if they want to overwrite it.
-    if os.path.exists(settings + "/settings.json") and not args.always_overwrite:
+    if os.path.exists(settings + "/settings.json") and not args.always_overwrite and not args.never_overwrite:
         while True:
             message = "Do you want to overwrite {}? (y/n/cancel): >> ".format(settings + "/settings.json")
             try: # Python 2
@@ -344,7 +346,7 @@ if os.path.exists(scripts + "/settings.json"):
                 exit(0)
             else:
                 print("Invalid input.")
-    else:
+    elif not args.never_overwrite:
         copy_settings_json()
 
 # This creates /dist, /dist/linux, /dist/linux/payload, /dist/linux/payload/Scripts, /dist/linux/result all in one check.
