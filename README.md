@@ -49,61 +49,75 @@ git clone https://github.com/corpnewt/ProperTree
 
 ## FAQ
 
-* **What does OC Snapshot do?**
+### About OC Snapshot
 
-  The OC Snapshot function will prompt you to select an OC folder, then walk the contents of the ACPI, Kexts, Tools, and Drivers directories within that folder - comparing all entries to the current document's `ACPI -> Add`, `Kernel -> Add`, `Misc -> Tools`, and `UEFI -> Drivers` respectively.  It will add or remove entries as needed, and also ensures kext load order by comparing each kext's `CFBundleIdentifier` to all other kexts' `OSBundleLibraries` within their Info.plist - making sure that any kext that is relied on by others is loaded before them.  It will also warn if it detects duplicate `CFBundleIdentifiers` (with support for `MinKernel`, `MaxKernel`, and `MatchKernel` overlap checks), and offer to disable all after the first found.  It checks for disabled parent kexts with enabled child kexts as well.  The schema used is (by default) determined by comparing the MD5 hash of the `OpenCore.efi` file to a known list of Acidanthera debug/release versions.  If the MD5 hash does not match any known version, it will fall back to the newest schema in the script's `snapshot.plist`.  This behavior can be customized in the Settings per the `OC Snapshot Target Version` menu.
+#### What does OC Snapshot do?
 
-* **What is the difference between OC Snapshot and OC Clean Snapshot?**
+The OC Snapshot function will prompt you to select an OC folder, then walk the contents of the ACPI, Kexts, Tools, and Drivers directories within that folder - comparing all entries to the current document's `ACPI -> Add`, `Kernel -> Add`, `Misc -> Tools`, and `UEFI -> Drivers` respectively.  It will add or remove entries as needed, and also ensures kext load order by comparing each kext's `CFBundleIdentifier` to all other kexts' `OSBundleLibraries` within their Info.plist - making sure that any kext that is relied on by others is loaded before them.  It will also warn if it detects duplicate `CFBundleIdentifiers` (with support for `MinKernel`, `MaxKernel`, and `MatchKernel` overlap checks), and offer to disable all after the first found.  It checks for disabled parent kexts with enabled child kexts as well.  The schema used is (by default) determined by comparing the MD5 hash of the `OpenCore.efi` file to a known list of Acidanthera debug/release versions.  If the MD5 hash does not match any known version, it will fall back to the newest schema in the script's `snapshot.plist`.  This behavior can be customized in the Settings per the `OC Snapshot Target Version` menu.
 
-  Both snapshot variants accomplish the same tasks - they just leverage different starting points.  An OC **Clean** Snapshot will first clear out `ACPI -> Add`, `Kernel -> Add`, `Misc -> Tools`, and `UEFI -> Drivers`, then add everything from within the respective ACPI, Kexts, Tools, and Drivers directory anew.  A regular OC Snapshot starts with the information within the current document for those four locations, and only pulls changes - adding and removing entries as needed.
-  
-* **When should I use an OC Clean Snapshot vs an OC Snapshot?**
+#### What is the difference between OC Snapshot and OC Clean Snapshot?
 
-  Typically, an OC **Clean** Snapshot should only be used the first time you snapshot to ensure any sample entries in the config.plist are removed and added anew.  Every subsequent snapshot should be a regular OC Snapshot to ensure any customizations you've made are preserved.
+Both snapshot variants accomplish the same tasks - they just leverage different starting points.  An OC **Clean** Snapshot will first clear out `ACPI -> Add`, `Kernel -> Add`, `Misc -> Tools`, and `UEFI -> Drivers`, then add everything from within the respective ACPI, Kexts, Tools, and Drivers directory anew.  A regular OC Snapshot starts with the information within the current document for those four locations, and only pulls changes - adding and removing entries as needed.
 
-* **Can't click anything on Sonoma (14.x) and Newer**
+#### When should I use an OC Clean Snapshot vs an OC Snapshot?
 
-  This appears to manifest when using python 3.11.x and older due to some isssue with tk and macOS.  Updating to at least python 3.12.0 (found [here](https://www.python.org/downloads/macos/)) appears to fix it.  If you are unable to update your python version, you can also move the window around before trying to click the elements in the treeview.
+Typically, an OC **Clean** Snapshot should only be used the first time you snapshot to ensure any sample entries in the config.plist are removed and added anew.  Every subsequent snapshot should be a regular OC Snapshot to ensure any customizations you've made are preserved.
 
-* **ProperTree opens a black window on macOS Monterey (12.x) and Newer**
+### Tk 8.5 on macOS
 
-  It appears the default tk implementation that ships with macOS Monterey (and the version installed with the Command Line Tools) doesn't display correctly.  A workaround is to download and install the latest build of python from python.org (found [here](https://www.python.org/downloads/macos/)) which has a compatible tk bundled, then use the `buildapp-select.command` located in ProperTree's `Scripts` directory to build an application bundle targeting the installed python's path.  You can then leverage the `ProperTree.app` bundle it creates.
-  
-* **ProperTree cannot open or save plist files on macOS Monterey (12.x)**
+TL;DR: tk versions before 8.6 are bugged on newer macOS. Unfortunately some versions of macOS ship with tk 8.5, so you need to get a version of Python linked to a newer version.
 
-  This appears to be an issue with the built-in tk, and the earlier "universal" installers from python.org.  With at least python 3.10.2, this issue has been resolved in the universal builds.  You can get the latest python 3 installer [here](https://www.python.org/downloads/macos/).  After installing, use the `buildapp-select.command` located in ProperTree's `Scripts` directory to build an application bundle targeting the installed python's path.  You can then leverage the `ProperTree.app` bundle it creates.
+#### Can't click anything on Sonoma (14.x) and Newer
 
-* **How can I have ProperTree open when I double-click a .plist file?**
+This appears to manifest when using python 3.11.x and older due to some isssue with tk and macOS.  Updating to at least python 3.12.0 (found [here](https://www.python.org/downloads/macos/)) appears to fix it.  If you are unable to update your python version, you can also move the window around before trying to click the elements in the treeview.
 
-  On macOS you can run `buildapp-select.command` located in ProperTree's `Scripts` directory to build an application bundle which can be associated with .plist files.
-  
-  On Windows, you can run `AssociatePlistFiles.bat` located in ProperTree's `Scripts` directory to associate .plist files with `ProperTree.bat`, and also to add an `Open with ProperTree` option to the contextual menu when right-clicking .plist files.  This approach is location-dependent, and moving your copy of ProperTree will require you re-run `AssociatePlistFiles.bat`.
+#### ProperTree opens a black window on macOS Monterey (12.x) and Newer
 
-* **When I try to run ProperTree, I get `[ModuleNotFoundError: No module name 'tkinter']`**
+It appears the default tk implementation that ships with macOS Monterey (and the version installed with the Command Line Tools) doesn't display correctly.  A workaround is to download and install the latest build of python from python.org (found [here](https://www.python.org/downloads/macos/)) which has a compatible tk bundled, then use the `buildapp-select.command` located in ProperTree's `Scripts` directory to build an application bundle targeting the installed python's path.  You can then leverage the `ProperTree.app` bundle it creates.
 
-  That is because the graphical interface library that ProperTree depends on isn't present or cannot be detected, you need to install `tkinter` from your package manager. 
+#### ProperTree cannot open or save plist files on macOS Monterey (12.x)
 
-  To install it on Ubuntu (and Ubuntu-based distros), you can run `sudo apt-get install python3-tk -y`
+This appears to be an issue with the built-in tk, and the earlier "universal" installers from python.org.  With at least python 3.10.2, this issue has been resolved in the universal builds.  You can get the latest python 3 installer [here](https://www.python.org/downloads/macos/).  After installing, use the `buildapp-select.command` located in ProperTree's `Scripts` directory to build an application bundle targeting the installed python's path.  You can then leverage the `ProperTree.app` bundle it creates.
 
-* **ProperTree doesn't run because it doesn't have permissions, what gives?**
+#### I use an international keyboard layout on macOS and some keys crash ProperTree with `NSRangeException', reason: '-[__NSCFConstantString characterAtIndex:]: Range or index out of bounds`
 
-  This shouldn't happen and it is recommended that you download only from the official ProperTree repository, but if you are confident about your source, then running `chmod +x ProperTree.command` should sort it out
+This is a bug in the Cocoa implementation of Tcl/Tk on macOS (discussed [here](https://bugs.python.org/issue22566)).  The latest python 2 installer from [python.org](https://www.python.org/downloads/release/python-2718/) ships with, and uses Tcl/Tk 8.6.8 which has this issue fixed.  Given that the shebang in `ProperTree.command` leverages `#!/usr/bin/env python` - the first python 2 binary found should be used. `buildapp-select.command` from ProperTree's `Scripts` directory can be used to hardcode a specific python install's path into the .app bundle's executable shebang.
 
-* **I use an international keyboard layout on macOS and some keys crash ProperTree with `NSRangeException', reason: '-[__NSCFConstantString characterAtIndex:]: Range or index out of bounds`**
+#### ProperTree crashes on Big Sur (macOS 11)
 
-  This is a bug in the Cocoa implementation of Tcl/Tk on macOS (discussed [here](https://bugs.python.org/issue22566)).  The latest python 2 installer from [python.org](https://www.python.org/downloads/release/python-2718/) ships with, and uses Tcl/Tk 8.6.8 which has this issue fixed.  Given that the shebang in `ProperTree.command` leverages `#!/usr/bin/env python` - the first python 2 binary found should be used. `buildapp-select.command` from ProperTree's `Scripts` directory can be used to hardcode a specific python install's path into the .app bundle's executable shebang.
-  
-* **ProperTree crashes on Big Sur (macOS 11)**
+__As of macOS 11.2 (20D5029f), the system's `tk` installation appears to be fixed, and works correctly.  As such, it should not require an external python version to function.__
 
-  __As of macOS 11.2 (20D5029f), the system's `tk` installation appears to be fixed, and works correctly.  As such, it should not require an external python version to function.__
+This is due to the default python installs on macOS leveraging an older `tk` version - which lacks support for macOS 11.  To solve this, you can download and install the latest python 3 version from https://www.python.org/downloads/mac-osx/ (note: Currently the "universal" 3.9.1 installer causes theme issues and should not be used) then leverage the `buildapp-select.command` from ProperTree's `Scripts` directory to build a .app bundle that will leverage that python version.
 
-  This is due to the default python installs on macOS leveraging an older `tk` version - which lacks support for macOS 11.  To solve this, you can download and install the latest python 3 version from https://www.python.org/downloads/mac-osx/ (note: Currently the "universal" 3.9.1 installer causes theme issues and should not be used) then leverage the `buildapp-select.command` from ProperTree's `Scripts` directory to build a .app bundle that will leverage that python version.
-  
-  If you already have python 3 installed via `brew` or another package manager - it is likely still linking to the system `tk` version, which will still have issues unless linked against a newer version. 
+If you already have python 3 installed via `brew` or another package manager - it is likely still linking to the system `tk` version, which will still have issues unless linked against a newer version. 
 
-* **`buildapp-select.command` Usage**
+### Other questions
 
-  An example of the output of `buildapp-select.command` is shown below.  It will walk the output of `which python` and `which python3`, then attempt to load the `tk` interface while keeping track of which work and which fail.  The example below is from macOS 11.2 (20D4029f) with the system versions of python 2 and 3, as well as python 3.9.1 installed from python.org.  If there's an existing `ProperTree.app` in the directory above the `Scripts` folder, the shebang of that app will be located and served up as the `C. Current` option.  At the following menu, I would select option `3` or `C` to use the non-system python install.
+#### When I try to run ProperTree, I get `[ModuleNotFoundError: No module name 'tkinter']`
+
+That is because the graphical interface library that ProperTree depends on isn't present or cannot be detected. You need to install the Python module `tkinter` from your package manager or `pip` -- or just get a new copy of Python with this module included.
+
+To get `tkinter` from your package manager:
+* For Ubuntu and other Debian-based distros, use `sudo apt install python3-tk -y`.
+* For Fedora, CentOS and friends, use `sudo dnf install python3-tkinter`. The "tk" package includes Tk itself, not `tkinter`, which is a glue between Python and Tk.
+* For Arch Linux and derivatives, use `sudo pacman -S tk`. This installs "tk" instead of `tkinter`. This is intended because `tkinter` is included in Arch's "python" package, but `tk` is not installed as a dependency.
+* For Homebrew, use `brew install python-tk`. Note that you may still bump into the Tk version issue described above so we recommend just getting a fresh install from https://python.org.
+
+To get `tkinter` from pip: `pip install tkinter` or `pip3 install tkinter`. This is what you should do on Windows. On other systems this will get you the module but not necessarily an actual installation of Tk, so use your system package manager (see above) if possible.
+
+#### ProperTree doesn't run because it doesn't have permissions, what gives?
+
+This shouldn't happen and it is recommended that you download only from the official ProperTree repository, but if you are confident about your source, then running `chmod +x ProperTree.command` should sort it out
+
+#### How can I have ProperTree open when I double-click a .plist file?
+
+On macOS you can run `buildapp-select.command` located in ProperTree's `Scripts` directory to build an application bundle which can be associated with .plist files.
+
+On Windows, you can run `AssociatePlistFiles.bat` located in ProperTree's `Scripts` directory to associate .plist files with `ProperTree.bat`, and also to add an `Open with ProperTree` option to the contextual menu when right-clicking .plist files.  This approach is location-dependent, and moving your copy of ProperTree will require you re-run `AssociatePlistFiles.bat`.
+
+#### `buildapp-select.command` Usage
+
+An example of the output of `buildapp-select.command` is shown below.  It will walk the output of `which python` and `which python3`, then attempt to load the `tk` interface while keeping track of which work and which fail.  The example below is from macOS 11.2 (20D4029f) with the system versions of python 2 and 3, as well as python 3.9.1 installed from python.org.  If there's an existing `ProperTree.app` in the directory above the `Scripts` folder, the shebang of that app will be located and served up as the `C. Current` option.  At the following menu, I would select option `3` or `C` to use the non-system python install.
 
 ```
  - Currently Available Python Versions -
@@ -119,3 +133,5 @@ Q. Quit
 
 Please select the python version to use:  
 ```
+
+Due to reasons mentioned above, you should pick an option with tk 8.6+.
