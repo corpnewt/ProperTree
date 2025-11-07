@@ -1941,7 +1941,7 @@ class PlistWindow(tk.Toplevel):
         if cyclic_dependencies:
             mb.showwarning(
                 "Cyclic Kext Dependencies",
-                "The following kexts list each other as dependencies, Kernel -> Add order may not be correct:\n\n{}".format(
+                "The following kexts have been omitted from the snapshot for cyclic dependencies:\n\n{}".format(
                     "\n".join([x.get("BundlePath","") for x in cyclic_kexts])
                 ),
                 parent=self
