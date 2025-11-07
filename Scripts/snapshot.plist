@@ -5,6 +5,7 @@
 	<dict>
 		<key>debug_hashes</key>
 		<array>
+			<string>741aee4b8f8b9c6a664de89918bc1f43</string>
 			<string>08d1e112047d667968062880ec458c2b</string>
 			<string>e967efcfe748a77b2dfde30bc5975202</string>
 			<string>de5452ddb91f000f705cd4e840cf10dc</string>
@@ -41,6 +42,7 @@
 		<string>0.8.4</string>
 		<key>release_hashes</key>
 		<array>
+			<string>108763df07f5fd553bcc670ddb99a290</string>
 			<string>43cb036c304cc8f43015e13859407f51</string>
 			<string>16eaf9fe40743aa62de8f00e3de6ec40</string>
 			<string>80ccfa3ce6863fefb2c66d5a09e6c82a</string>
