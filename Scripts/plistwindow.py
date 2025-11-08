@@ -362,11 +362,15 @@ class EntryPopup(EntryPlus):
         self.confirming = False
         return self.focus_force()
 
-    def check_edited(self, value):
-        # Make sure we're Edited if the value is different
-        if value != self.original_text and not self.master.edited:
-            self.master.edited = True
-            self.master.title(self.master.title()+" - Edited")
+    def check_edited(self, value, undo=None):
+        if value != self.original_text:
+            if undo:
+                # Add to our undo stack if something was changed
+                self.master.add_undo(undo)
+            if not self.master.edited:
+                # Reflect that we're Edited if needed
+                self.master.edited = True
+                self.master.title(self.master.title()+" - Edited")
 
     def confirm(self, event=None, no_prompt = False):
         if not self.winfo_exists():
@@ -392,11 +396,19 @@ class EntryPopup(EntryPlus):
                     # no_prompt is false and we wanted to continue editing - set focus again and return
                     return self.confirm_clear_and_focus()
             # Add to undo stack
-            self.master.add_undo({"type":"edit","cell":self.cell,"text":self.parent.item(self.cell,"text"),"values":self.parent.item(self.cell,"values")})
+            undo = {
+                "type":"edit",
+                "cell":self.cell,
+                "text":self.parent.item(self.cell,"text"),
+                "values":self.parent.item(self.cell,"values")
+            }
             # No matches, should be safe to set
             self.parent.item(self.cell, text=self.get())
             # Make sure we check if we're edited
-            self.check_edited(text)
+            self.check_edited(
+                text,
+                undo=undo
+            )
         else:
             # Need to walk the values and pad
             values = self.parent.item(self.cell)["values"] or []
@@ -424,13 +436,21 @@ class EntryPopup(EntryPlus):
             # Set the value to the new output
             value = output[1]
             # Add to undo stack
-            self.master.add_undo({"type":"edit","cell":self.cell,"text":self.parent.item(self.cell,"text"),"values":original})
+            undo = {
+                "type":"edit",
+                "cell":self.cell,
+                "text":self.parent.item(self.cell,"text"),
+                "values":original
+            }
             # Replace our value (may be slightly modified)
             values[index-1] = value
             # Set the values
             self.parent.item(self.cell, values=values)
             # Make sure we check if we're edited
-            self.check_edited(value.replace("<","").replace(">","") if type_value.lower() == "data" else value)
+            self.check_edited(
+                value.replace("<","").replace(">","") if type_value.lower() == "data" else value,
+                undo=undo
+            )
         # Call cancel to close the popup as we're done editing
         self.cancel(event)
 
@@ -607,6 +627,7 @@ class PlistWindow(tk.Toplevel):
         self._tree.bind("<BackSpace>", self.remove_row)
         self._tree.bind("<Return>", self.start_editing)
         self._tree.bind("<KP_Enter>", self.start_editing)
+        self._tree.bind("<{}-x>".format(key), self.hex_swap)
         self.bind("<FocusIn>", self.got_focus)
         self._tree.bind("<KeyPress>", self.quick_search)
 
@@ -1064,6 +1085,33 @@ class PlistWindow(tk.Toplevel):
                 return (False,"Invalid Integer Value","UIDs cannot not be negative, and must be less than 2**32 (4294967296)")
             value = str(value)
         return (True,value)
+
+    def hex_swap(self, cell=None):
+        if cell is None or isinstance(cell, tk.Event):
+            cell = "" if not len(self._tree.selection()) else self._tree.selection()[0]
+        # Get the type of the cell
+        if self.get_check_type(cell).lower() != "data":
+            return "break" # Not data
+        # Parse the value into bytes
+        try:
+            original_value = self.get_value_from_node(cell)
+            if len(original_value) < 2:
+                return "break" # Nothing to reverse
+            value = self.get_data(original_value[::-1])
+            values = self.get_padded_values(cell,3)
+            undo_dict = {
+                "type":"edit",
+                "cell":cell,
+                "text":self._tree.item(cell,"text"),
+                "values":[x for x in values]
+            }
+            values[1] = value
+            self._tree.item(cell,values=values)
+            self.add_undo(undo_dict)
+        except Exception as e:
+            self.bell()
+            mb.showerror("Error Reversing Endianness",e,parent=self)
+        return "break"
 
     def draw_frames(self, event=None, changed=None):
         self.find_frame.pack_forget()
@@ -3817,17 +3865,23 @@ class PlistWindow(tk.Toplevel):
         if cell: self.select(cell,alternate=False)
         # Build right click menu
         popup_menu = tk.Menu(self, tearoff=0)
-        if self.get_check_type(cell).lower() in ("array","dictionary"):
-            popup_menu.add_command(label="Expand Node", command=self.expand_node)
-            popup_menu.add_command(label="Collapse Node", command=self.collapse_node)
-            popup_menu.add_separator()
-            popup_menu.add_command(label="Expand Children", command=self.expand_children)
-            popup_menu.add_command(label="Collapse Children", command=self.collapse_children)
+        is_mac = sys.platform == "darwin"
+        check_type = self.get_check_type(cell).lower()
+        if check_type in ("array","dictionary","data"):
+            if check_type in ("array","dictionary"):
+                popup_menu.add_command(label="Expand Node", command=self.expand_node)
+                popup_menu.add_command(label="Collapse Node", command=self.collapse_node)
+                popup_menu.add_separator()
+                popup_menu.add_command(label="Expand Children", command=self.expand_children)
+                popup_menu.add_command(label="Collapse Children", command=self.collapse_children)
+            else:
+                popup_menu.add_command(label="Reverse Endianness{}".format(
+                    " (Cmd+X)" if is_mac else ""
+                ), command=lambda:self.hex_swap(cell), accelerator=None if is_mac else "(Ctrl+X)")
             popup_menu.add_separator()
         popup_menu.add_command(label="Expand All", command=self.expand_all)
         popup_menu.add_command(label="Collapse All", command=self.collapse_all)
         popup_menu.add_separator()
-        is_mac = sys.platform == "darwin"
         # Determine if we are adding a child or a sibling
         if cell in ("",self.get_root_node()):
             # Top level - get the Root
@@ -3835,9 +3889,17 @@ class PlistWindow(tk.Toplevel):
                 popup_menu.add_command(label="New top level entry{}".format(" (Cmd +)" if is_mac else ""), command=lambda:self.new_row(self.get_root_node()),accelerator=None if is_mac else "(Ctrl +)")
         else:
             if self.get_check_type(cell).lower() in ("dictionary","array") and (self._tree.item(cell,"open") or not len(self._tree.get_children(cell))):
-                popup_menu.add_command(label="New child under '{}'{}".format(self._tree.item(cell,"text")," (Cmd +)" if is_mac else ""), command=lambda:self.new_row(cell),accelerator=None if is_mac else "(Ctrl +)")
-                popup_menu.add_command(label="New sibling of '{}'".format(self._tree.item(cell,"text")), command=lambda:self.new_row(cell,True))
-                popup_menu.add_command(label="Remove '{}' and any children{}".format(self._tree.item(cell,"text")," (Cmd -)" if is_mac else ""), command=lambda:self.remove_row(cell),accelerator=None if is_mac else "(Ctrl -)")
+                popup_menu.add_command(label="New child under '{}'{}".format(
+                    self._tree.item(cell,"text"),
+                    " (Cmd +)" if is_mac else ""
+                ), command=lambda:self.new_row(cell),accelerator=None if is_mac else "(Ctrl +)")
+                popup_menu.add_command(label="New sibling of '{}'".format(
+                    self._tree.item(cell,"text")
+                ), command=lambda:self.new_row(cell,True))
+                popup_menu.add_command(label="Remove '{}' and any children{}".format(
+                    self._tree.item(cell,"text"),
+                    " (Cmd -)" if is_mac else "")
+                , command=lambda:self.remove_row(cell),accelerator=None if is_mac else "(Ctrl -)")
             else:
                 popup_menu.add_command(label="New sibling of '{}'{}".format(self._tree.item(cell,"text")," (Cmd +)" if is_mac else ""), command=lambda:self.new_row(cell),accelerator=None if is_mac else "(Ctrl +)")
                 popup_menu.add_command(label="Remove '{}'{}".format(self._tree.item(cell,"text")," (Cmd -)" if is_mac else ""), command=lambda:self.remove_row(cell),accelerator=None if is_mac else "(Ctrl -)")
