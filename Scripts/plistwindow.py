@@ -1108,6 +1108,7 @@ class PlistWindow(tk.Toplevel):
             values[1] = value
             self._tree.item(cell,values=values)
             self.add_undo(undo_dict)
+            self._ensure_edited()
         except Exception as e:
             self.bell()
             mb.showerror("Error Reversing Endianness",e,parent=self)
