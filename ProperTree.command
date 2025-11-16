@@ -126,11 +126,11 @@ download_py () {
     echo "Running python install package..."
     echo
     sudo installer -pkg "$tempdir/python.pkg" -target /
-    echo
     if [ "$?" != "0" ]; then
         echo " - Failed to install python!"
         exit $?
     fi
+    echo
     # Now we expand the package and look for a shell update script
     pkgutil --expand "$tempdir/python.pkg" "$tempdir/python"
     if [ -e "$tempdir/python/Python_Shell_Profile_Updater.pkg/Scripts/postinstall" ]; then
