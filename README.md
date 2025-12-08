@@ -81,9 +81,12 @@ git clone https://github.com/corpnewt/ProperTree
 
 * **When I try to run ProperTree, I get `[ModuleNotFoundError: No module name 'tkinter']`**
 
-  That is because the graphical interface library that ProperTree depends on isn't present or cannot be detected, you need to install `tkinter` from your package manager. 
+  That is because the graphical interface library that ProperTree depends on isn't present or cannot be detected, you need to install `tkinter` from your package manager. If you get this error on Windows, run the Python installer again, select modify, and then check the option that installs the Python standard libraries
 
   To install it on Ubuntu (and Ubuntu-based distros), you can run `sudo apt-get install python3-tk -y`
+  To install it on Fedora, you can run `sudo dnf install python3-tkinter` (do NOT use the “tk” package!)
+  To install it on Arch (and Arch-based distros) you can run `sudo pacman -S tk`
+
 
 * **ProperTree doesn't run because it doesn't have permissions, what gives?**
 
