@@ -23,13 +23,6 @@ except NameError:  # Python 3
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 from Scripts import plist, plistwindow, downloader
 
-# HiDPI fix for Windows 10/11
-if os.name == 'nt':
-    try:
-        ctypes.windll.shcore.SetProcessDpiAwareness(1)
-    except:
-        pass
-
 def _check_for_update(queue, version_url = None, user_initiated = False):
     args = [sys.executable]
     file_path = os.path.join(os.path.abspath(os.path.dirname(__file__)),"Scripts","update_check.py")
@@ -86,6 +79,12 @@ class ProperTree:
         self.queue = multiprocessing.Queue()
         self.tex_queue = multiprocessing.Queue()
         self.creating_window = False
+        # HiDPI fix for Windows
+        if os.name == "nt":
+            try:  # >= win 8.1
+                ctypes.windll.shcore.SetProcessDpiAwareness(2)
+            except:  # win 8.0 or less
+                ctypes.windll.user32.SetProcessDPIAware()
         # Create the new tk object
         self.tk = tk.Tk()
         self.tk.withdraw() # Try to remove before it's drawn
