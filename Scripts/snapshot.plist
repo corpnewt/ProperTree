@@ -4,7 +4,51 @@
 <array>
 	<dict>
 		<key>debug_hashes</key>
+		<array/>
+		<key>kext_add</key>
+		<dict>
+			<key>Arch</key>
+			<string>Any</string>
+			<key>MaxKernel</key>
+			<string></string>
+			<key>MinKernel</key>
+			<string></string>
+		</dict>
+		<key>min_version</key>
+		<string>1.0.8</string>
+		<key>release_hashes</key>
+		<array/>
+		<key>tool_add</key>
+		<dict>
+			<key>Arguments</key>
+			<string></string>
+			<key>Auxiliary</key>
+			<true/>
+			<key>Flavour</key>
+			<string>Auto</string>
+			<key>FullNvramAccess</key>
+			<false/>
+			<key>RealPath</key>
+			<false/>
+			<key>TextMode</key>
+			<false/>
+		</dict>
+		<key>driver_add</key>
+		<dict>
+			<key>Arguments</key>
+			<string></string>
+			<key>Comment</key>
+			<string></string>
+			<key>LoadEarly</key>
+			<false/>
+			<key>HideVerbose</key>
+			<false/>
+		</dict>
+	</dict>
+	<dict>
+		<key>debug_hashes</key>
 		<array>
+			<string>3fe43ec5f0c9f64e23ecce85a5b1027c</string>
 			<string>741aee4b8f8b9c6a664de89918bc1f43</string>
 			<string>08d1e112047d667968062880ec458c2b</string>
 			<string>e967efcfe748a77b2dfde30bc5975202</string>
@@ -40,8 +84,11 @@
 		</dict>
 		<key>min_version</key>
 		<string>0.8.4</string>
+		<key>max_version</key>
+		<string>1.0.7</string>
 		<key>release_hashes</key>
 		<array>
+			<string>c171f38a5a047c2803981f3439fd9183</string>
 			<string>108763df07f5fd553bcc670ddb99a290</string>
 			<string>43cb036c304cc8f43015e13859407f51</string>
 			<string>16eaf9fe40743aa62de8f00e3de6ec40</string>
