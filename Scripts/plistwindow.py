@@ -571,8 +571,15 @@ class PlistWindow(tk.Toplevel):
         # those cases.
         tk_or_ttk = tk if self.controller.should_set_header_text() is None else ttk
 
+        # Create the split pane (tree top, text bottom)
+        self._paned = tk.PanedWindow(self, orient=tk.VERTICAL, sashrelief=tk.RIDGE, sashwidth=5, bd=0)
+        self._show_text_view = True
+        self._syncing_text = False
+        self._text_update_id = None
+        self._text_apply_id = None
+
         # Create the treeview
-        self._tree_frame = tk.Frame(self)
+        self._tree_frame = tk.Frame(self._paned)
         # self._tree = ttk.Treeview(self._tree_frame, columns=("Type","Value","Drag"), selectmode="browse", style=self.style_name)
         self._tree = ttk.Treeview(self._tree_frame, columns=("Type","Value"), selectmode="browse", style=self.style_name)
         self._tree.heading("#0", text="Key")
@@ -630,6 +637,8 @@ class PlistWindow(tk.Toplevel):
         self._tree.bind("<{}-x>".format(key), self.hex_swap)
         self.bind("<FocusIn>", self.got_focus)
         self._tree.bind("<KeyPress>", self.quick_search)
+        # Toggle text view panel with Ctrl/Cmd+B
+        self.bind("<{}-b>".format(key), self.hide_show_text_view)
 
         # Set type and bool bindings
         self._tree.bind("<{}-Up>".format(key), lambda x:self.cycle_type(increment=False))
@@ -674,6 +683,7 @@ class PlistWindow(tk.Toplevel):
             file_menu.add_separator()
             file_menu.add_command(label="Toggle Find/Replace Pane",command=self.hide_show_find, accelerator="Ctrl+F")
             file_menu.add_command(label="Toggle Plist/Data/Int/Bool Type Pane",command=self.hide_show_type, accelerator="Ctrl+P")
+            file_menu.add_command(label="Toggle XML Source Pane",command=self.hide_show_text_view, accelerator="Ctrl+B")
             file_menu.add_separator()
             file_menu.add_command(label="Quit", command=self.controller.quit, accelerator="Ctrl+Q")
             self.config(menu=main_menu)
@@ -784,6 +794,42 @@ class PlistWindow(tk.Toplevel):
         # Add the scroll bars and show the treeview
         self.vsb.pack(side="right",fill="y")
         self._tree.pack(side="bottom",fill="both",expand=True)
+
+        # Create the XML text view (bottom pane)
+        self._text_frame = tk.Frame(self._paned)
+        # Header bar with label and Apply button
+        self._text_header = tk.Frame(self._text_frame, height=22)
+        self._text_header.pack_propagate(False)
+        self._text_header.pack(side="top", fill="x")
+        tk.Label(self._text_header, text="XML Source").pack(side="left", padx=6, pady=2)
+        self._text_apply_btn = ttk.Button(
+            self._text_header, text="Apply",
+            command=self.apply_text_view, width=6)
+        self._text_apply_btn.pack(side="right", padx=6, pady=1)
+        # Text widget with scrollbars
+        self._text_vsb = ttk.Scrollbar(self._text_frame, orient="vertical")
+        self._text_hsb = ttk.Scrollbar(self._text_frame, orient="horizontal")
+        self._text_view = tk.Text(
+            self._text_frame, wrap=tk.NONE,
+            yscrollcommand=self._text_vsb.set,
+            xscrollcommand=self._text_hsb.set,
+            font="TkFixedFont", undo=True)
+        self._text_vsb.config(command=self._text_view.yview)
+        self._text_hsb.config(command=self._text_view.xview)
+        self._text_vsb.pack(side="right", fill="y")
+        self._text_hsb.pack(side="bottom", fill="x")
+        self._text_view.pack(fill="both", expand=True)
+        # Tag for highlighting search results in text view
+        self._text_view.tag_configure("text_found", background="#ffff00", foreground="#000000")
+        # Bind text-change event for tree sync
+        self._text_view.bind("<<Modified>>", self.on_text_modified)
+        # Ctrl/Cmd+Return in text view applies changes immediately
+        self._text_view.bind("<{}-Return>".format(key), lambda e: self.apply_text_view() or "break")
+
+        # Add both frames to the paned window
+        self._paned.add(self._tree_frame, stretch="always", minsize=80)
+        self._paned.add(self._text_frame, stretch="always", minsize=50)
+
         self.draw_frames()
         self.entry_popup = None
         self.controller.set_window_opacity(window=self)
@@ -1120,12 +1166,16 @@ class PlistWindow(tk.Toplevel):
     def draw_frames(self, event=None, changed=None):
         self.find_frame.pack_forget()
         self.display_frame.pack_forget()
-        self._tree_frame.pack_forget()
+        self._paned.pack_forget()
         if self.show_find_replace:
             self.find_frame.pack(side="top",fill="x",padx=10)
         if self.show_type:
             self.display_frame.pack(side="bottom",fill="x",padx=10)
-        self._tree_frame.pack(fill="both",expand=True)
+        self._paned.pack(fill="both",expand=True)
+        # Set initial sash position (70% tree / 30% text) only on first draw
+        if changed is None and not getattr(self, "_sash_initialized", False):
+            self._sash_initialized = True
+            self.after(50, self._init_sash_position)
         # Check if we've toggled our find/replace pane and set focus
         if changed == "hideshow":
             if self.show_find_replace:
@@ -1153,6 +1203,17 @@ class PlistWindow(tk.Toplevel):
         # Let's find out if we're set to show
         self.show_type ^= True
         self.draw_frames(event,"showtype")
+        return "break"
+
+    def hide_show_text_view(self, event=None):
+        """Toggle the XML text view pane visibility."""
+        self._show_text_view ^= True
+        if self._show_text_view:
+            self._paned.add(self._text_frame, stretch="always", minsize=50)
+            self.after(50, self._init_sash_position)
+            self.schedule_text_update()
+        else:
+            self._paned.forget(self._text_frame)
         return "break"
 
     def get_index(self, iterable, item):
@@ -1376,9 +1437,11 @@ class PlistWindow(tk.Toplevel):
             if match[0] < index:
                 # Found one - select it
                 self.select(match[1])
+                self.sync_text_view_to_node(match[1])
                 return match
         # If we got here - start over
         self.select(matches[-1][1])
+        self.sync_text_view_to_node(matches[-1][1])
         return match[-1]
 
     def find_next(self, event=None, replacing=False):
@@ -1413,9 +1476,11 @@ class PlistWindow(tk.Toplevel):
             if match[0] > index:
                 # Found one - select it
                 self.select(match[1])
+                self.sync_text_view_to_node(match[1])
                 return match
         # If we got here - start over
         self.select(matches[0][1])
+        self.sync_text_view_to_node(matches[0][1])
         return match[0]
 
     def start_editing(self, event = None):
@@ -2440,6 +2505,9 @@ class PlistWindow(tk.Toplevel):
             while len(self.undo_stack) > max_undo:
                 self.undo_stack.popleft()
         self.redo_stack = [] # clear the redo stack
+        # Schedule a text view refresh (skip if this came from _apply_text_to_tree)
+        if not self._syncing_text:
+            self.schedule_text_update()
 
     def reundo(self, event=None, undo = True, single_undo = None):
         # We can't start a new reundo until the last has finished
@@ -2535,6 +2603,8 @@ class PlistWindow(tk.Toplevel):
         self.update_all_children()
         self.reselect((selected,nodes))
         self.reundoing = False
+        # Refresh text view to reflect undo/redo
+        self.schedule_text_update()
 
     def preselect(self):
         # Returns a tuple of the selected item and current visible nodes
@@ -2556,6 +2626,162 @@ class PlistWindow(tk.Toplevel):
             # Convert to a tuple, and get the index from there
             index = tuple(original_nodes).index(selected)
         self.select(nodes[index] if index < len(nodes) else nodes[-1])
+
+    # -------------------------------------------------------------------------
+    # XML Text View Methods
+    # -------------------------------------------------------------------------
+
+    def _init_sash_position(self):
+        """Set initial sash at ~70% from the top."""
+        try:
+            total = self._paned.winfo_height()
+            if total > 10:
+                self._paned.sash_place(0, 0, int(total * 0.70))
+        except Exception:
+            pass
+
+    def schedule_text_update(self):
+        """Debounced schedule of text view refresh (100 ms)."""
+        if self._text_update_id is not None:
+            try:
+                self.after_cancel(self._text_update_id)
+            except Exception:
+                pass
+        self._text_update_id = self.after(100, self._do_text_update)
+
+    def _do_text_update(self):
+        self._text_update_id = None
+        self.update_text_view()
+
+    def update_text_view(self):
+        """Refresh the XML text view from the current tree state."""
+        if not hasattr(self, "_text_view") or not self._text_view.winfo_exists():
+            return
+        if self._syncing_text:
+            return
+        self._syncing_text = True
+        try:
+            plist_data = self.nodes_to_values()
+            if plist_data is None:
+                return
+            xml_string = plist.dumps(
+                plist_data,
+                sort_keys=self.controller.settings.get("sort_dict", False))
+            if self.controller.settings.get("xcode_data", True):
+                xml_string = self._format_data_string(xml_string)
+            # Preserve vertical scroll position
+            yview = self._text_view.yview()
+            cursor = self._text_view.index(tk.INSERT)
+            self._text_view.delete("1.0", tk.END)
+            self._text_view.insert("1.0", xml_string)
+            # Restore positions
+            try:
+                self._text_view.mark_set(tk.INSERT, cursor)
+            except Exception:
+                pass
+            self._text_view.yview_moveto(yview[0])
+            self._text_view.edit_modified(False)
+        except Exception:
+            pass
+        finally:
+            self._syncing_text = False
+
+    def on_text_modified(self, event=None):
+        """Called when the text view content changes; schedules tree sync."""
+        if self._syncing_text:
+            # Our own update triggered this — just reset the flag and return
+            self._text_view.edit_modified(False)
+            return
+        # Reset modified flag so future edits are detected
+        self._text_view.edit_modified(False)
+        # Debounce: apply to tree 600 ms after the last keystroke
+        if hasattr(self, "_text_apply_id") and self._text_apply_id is not None:
+            try:
+                self.after_cancel(self._text_apply_id)
+            except Exception:
+                pass
+        self._text_apply_id = self.after(600, self._apply_text_to_tree)
+
+    def apply_text_view(self):
+        """Apply text view XML to the tree immediately, showing errors."""
+        self._apply_text_to_tree(report_errors=True)
+
+    def _apply_text_to_tree(self, report_errors=False):
+        """Parse the XML text view and reload the tree from it."""
+        if self._syncing_text:
+            return
+        content = self._text_view.get("1.0", tk.END).strip()
+        if not content:
+            return
+        try:
+            if sys.version_info >= (3, 0):
+                plist_data = plist.loads(content)
+            else:
+                plist_data = plist.loads(content.encode("utf-8"))
+        except Exception as e:
+            if report_errors:
+                self.bell()
+                mb.showerror("Invalid Plist", "Could not parse XML:\n{}".format(e), parent=self)
+            return
+        self._syncing_text = True
+        try:
+            # Remember focused node key so we can try to restore selection
+            sel = self._tree.selection()
+            sel_text = self._tree.item(sel[0], "text") if sel else None
+            # Rebuild tree
+            self._tree.delete(*self._tree.get_children())
+            self.add_node(plist_data, check_binary=False)
+            self.update_all_children()
+            # Restore selection
+            restored = False
+            if sel_text:
+                for node in self.iter_nodes(False):
+                    if self._tree.item(node, "text") == sel_text:
+                        self.select(node, alternate=True)
+                        restored = True
+                        break
+            if not restored:
+                root = self.get_root_node()
+                self.select(root, alternate=True)
+            # Mark as edited; tree was fully rebuilt so existing undo history
+            # references stale node IDs — clear both stacks.
+            self._ensure_edited(True)
+            self.undo_stack.clear()
+            self.redo_stack = []
+        except Exception:
+            pass
+        finally:
+            self._syncing_text = False
+
+    def sync_text_view_to_node(self, node):
+        """Scroll the text view to show the XML for the given tree node."""
+        if not hasattr(self, "_text_view") or not self._text_view.winfo_exists():
+            return
+        if not node:
+            return
+        self._text_view.tag_remove("text_found", "1.0", tk.END)
+        key_name = self._tree.item(node, "text")
+        # Try <key>name</key> first (dict keys)
+        if key_name:
+            search_term = "<key>{}</key>".format(key_name)
+            pos = self._text_view.search(search_term, "1.0", stopindex=tk.END)
+            if pos:
+                end = "{}+{}c".format(pos, len(search_term))
+                self._text_view.tag_add("text_found", pos, end)
+                self._text_view.see(pos)
+                return
+        # Fallback: search for the value text
+        values = self._tree.item(node, "values")
+        if values and len(values) >= 2:
+            val_text = str(values[1]).strip()
+            if val_text:
+                pos = self._text_view.search(val_text, "1.0", stopindex=tk.END)
+                if pos:
+                    end = "{}+{}c".format(pos, len(val_text))
+                    self._text_view.tag_add("text_found", pos, end)
+                    self._text_view.see(pos)
+
+    # -------------------------------------------------------------------------
 
     def got_focus(self, event=None):
         # Lift us to the top of the stack order
@@ -3021,6 +3247,8 @@ class PlistWindow(tk.Toplevel):
         root = self.get_root_node()
         self._tree.item(root,open=True)
         self.select(root,alternate=alternate)
+        # Populate the XML text view
+        self.after(10, self.update_text_view)
 
     def close_window(self, event = None, check_saving = True, check_close = True):
         # Check if we need to save first, then quit if we didn't cancel
