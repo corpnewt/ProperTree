@@ -406,12 +406,13 @@ class ProperTree:
         self.default_windows = (self.tk,self.settings_window)
 
         self.recent_menu = None
+        self.main_menu = None
         if str(sys.platform) == "darwin":
             # Setup the top level menu
             file_menu = tk.Menu(self.tk)
-            main_menu = tk.Menu(self.tk)
+            self.main_menu = tk.Menu(self.tk)
             self.recent_menu = tk.Menu(self.tk)
-            main_menu.add_cascade(label="File", menu=file_menu)
+            self.main_menu.add_cascade(label="File", menu=file_menu)
             file_menu.add_command(label="New (Cmd+N)", command=self.new_plist)
             file_menu.add_command(label="Open (Cmd+O)", command=self.open_plist)
             file_menu.add_cascade(label="Open Recent", menu=self.recent_menu, command=self.open_recent)
@@ -434,7 +435,8 @@ class ProperTree:
             file_menu.add_command(label="Toggle Plist/Data/Int Type Pane (Cmd+P)",command=self.hide_show_type)
             file_menu.add_separator()
             file_menu.add_command(label="Quit (Cmd+Q)", command=self.quit)
-            self.tk.config(menu=main_menu)
+            self.tk.config(menu=self.main_menu)
+            self.settings_window.config(menu=self.main_menu)
 
         # Set bindings
         # on at least macOS, tk 8.5 works with <Command-Z>, but 8.6 requires <Shift-Command-z>

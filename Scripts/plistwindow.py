@@ -649,7 +649,7 @@ class PlistWindow(tk.Toplevel):
 
         self.recent_menu = None
         # Setup menu bar (hopefully per-window) - only happens on non-mac systems
-        if not str(sys.platform) == "darwin":
+        if str(sys.platform) != "darwin":
             main_menu = tk.Menu(self)
             file_menu = tk.Menu(self, tearoff=0)
             self.recent_menu = tk.Menu(self, tearoff=0)
@@ -677,6 +677,9 @@ class PlistWindow(tk.Toplevel):
             file_menu.add_separator()
             file_menu.add_command(label="Quit", command=self.controller.quit, accelerator="Ctrl+Q")
             self.config(menu=main_menu)
+        else:
+            self.config(menu=self.controller.main_menu)
+
 
         # Get the right click menu options
         cwd = os.getcwd()
@@ -4271,6 +4274,9 @@ class PlistWindow(tk.Toplevel):
                 window.bind("<{}-w>".format("Command" if sys.platform == "darwin" else "Control"), self.controller.close_window)
                 self.controller.set_window_opacity(window=window)
                 self.controller.set_win_titlebar(windows=window)
+                # Check if we're on macOS running python 3.14 or later, and add the main menu
+                if str(sys.platform) == "darwin":
+                    window.config(menu=self.controller.main_menu)
             else:
                 window = self # Ensure we're lifted again
         # Ensure window is lifted
