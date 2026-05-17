@@ -4274,7 +4274,7 @@ class PlistWindow(tk.Toplevel):
                 window.bind("<{}-w>".format("Command" if sys.platform == "darwin" else "Control"), self.controller.close_window)
                 self.controller.set_window_opacity(window=window)
                 self.controller.set_win_titlebar(windows=window)
-                # Check if we're on macOS running python 3.14 or later, and add the main menu
+                # Check if we're on macOS and add the main menu
                 if str(sys.platform) == "darwin":
                     window.config(menu=self.controller.main_menu)
             else:
