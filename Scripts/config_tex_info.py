@@ -109,12 +109,6 @@ def display_info_window(config_tex, search_list, width, valid_only, show_urls, c
 
     # Madness to get the titlebar height
     offset_y = 0
-    if os.name == "nt":
-        import ctypes
-        try:  # >= win 8.1
-            ctypes.windll.shcore.SetProcessDpiAwareness(2)
-        except:  # win 8.0 or less
-            ctypes.windll.user32.SetProcessDPIAware()
     offset_y = int(info_window.geometry().rsplit('+', 1)[-1])
     bar_height = info_window.winfo_rooty() - offset_y
 
