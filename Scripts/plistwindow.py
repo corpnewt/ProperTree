@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys, os, plistlib, base64, binascii, datetime, tempfile, shutil, re, subprocess, math, hashlib, time
+import sys, os, plistlib, base64, binascii, datetime, tempfile, shutil, re, subprocess, math, hashlib, time, struct
 
 from collections import OrderedDict, deque
 from io import BytesIO
@@ -1562,28 +1562,55 @@ class PlistWindow(tk.Toplevel):
             # If it's not, assume it's a buffer or file handle
             f = path
             f.seek(0)
-        # Helper method to close file handles, or seek to 0
-        # as needed
-        def finish(f,path):
-            if isinstance(path,basestring):
+        try:
+            data = bytearray(f.read())
+            
+            # Only parse if file is a PE file with MZ header
+            if data.startswith(b'MZ'):
+                pe_offset = struct.unpack_from('<I', data, 0x3c)[0]
+                
+                if data[pe_offset:pe_offset+4] == b'PE\0\0':
+                    pe_magic = struct.unpack_from('<H', data, pe_offset + 24)[0]
+                    
+                    cert_dir_offset = pe_offset + (168 if pe_magic == 0x20B else 152)
+                    cert_offset, cert_size = struct.unpack_from('<II', data, cert_dir_offset)
+                    
+                    if 0 < cert_offset < len(data) and cert_offset + cert_size == len(data):
+                        
+                        # Parse Section Table to bypass potential Authenticode padding
+                        num_sections = struct.unpack_from('<H', data, pe_offset + 6)[0]
+                        size_opt_header = struct.unpack_from('<H', data, pe_offset + 20)[0]
+                        section_table_offset = pe_offset + 24 + size_opt_header
+                        
+                        true_size = 0
+                        for i in range(num_sections):
+                            sec_hdr = section_table_offset + (i * 40)
+                            size_raw, ptr_raw = struct.unpack_from('<II', data, sec_hdr + 16)
+                            if ptr_raw + size_raw > true_size:
+                                true_size = ptr_raw + size_raw
+                                
+                        if true_size == 0 or true_size > cert_offset:
+                            true_size = cert_offset
+                            
+                        # Strip signature AND any injected padding
+                        data = data[:true_size] 
+                        
+                        # Clear Certificate Directory
+                        data[cert_dir_offset:cert_dir_offset+8] = b'\x00' * 8 
+                        
+                        # Clear Checksum (Acidanthera leaves this zeroed natively)
+                        checksum_offset = pe_offset + 88
+                        data[checksum_offset:checksum_offset+4] = b'\x00\x00\x00\x00' 
+                        
+            return hashlib.md5(data).hexdigest()
+        except Exception:
+            return "" # Couldn't determine hash :(
+        # Make sure we close our file handle, or seek to 0
+        finally:
+            if isinstance(path, basestring):
                 f.close()
             else:
                 f.seek(0)
-        # Set up our hasher and hash in chunks
-        hasher = hashlib.md5()
-        try:
-            while True:
-                buffer = f.read(block_size)
-                if not buffer:
-                    break
-                hasher.update(buffer)
-            finish(f,path)
-            return hasher.hexdigest()
-        except:
-            pass
-        # Make sure we close our file handle, or seek to 0
-        finish(f,path)
-        return "" # Couldn't determine hash :(
 
     def oc_snapshot(self, event = None, clean = False):
         # Make sure we have snapshot data from the controller
