@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Comment</key>
+	<string>press enter and type something!</string>
+	<key>Boot-args</key>
+	<string>-v keepsyms=1 debug=0x100</string>
+	<key>csr-active-config</key>
+	<data>
+	ZwAAAA==
+	</data>
+	<key>Misc</key>
+	<dict>
+		<key>Boot</key>
+		<dict>
+			<key>Timeout</key>
+			<integer>5</integer>
+			<key>HibernateMode</key>
+			<string>Auto</string>
+			<key>PollAppleHotKeys</key>
+			<true/>
+			<key>LauncherOption</key>
+			<string>Full</string>
+		</dict>
+		<key>BlessOverride</key>
+		<array>
+			<string>\EFI\OC\Bootstrap\Bootstrap.efi</string>
+		</array>
+	</dict>
+	<key>NVRAM</key>
+	<dict>
+		<key>Add</key>
+		<dict>
+			<key>7C436110-AB2A-4BBB-A880-FE41995C9F82</key>
+			<dict>
+				<key>boot-args</key>
+				<string>keepsyms=1</string>
+				<key>prev-lang:kbd</key>
+				<string>en:0</string>
+			</dict>
+		</dict>
+	</dict>
+	<key>ACPI</key>
+	<dict>
+		<key>Add</key>
+		<array>
+			<dict>
+				<key>Comment</key>
+				<string>EC fix</string>
+				<key>Enabled</key>
+				<true/>
+				<key>Path</key>
+				<string>SSDT-EC.aml</string>
+			</dict>
+			<dict>
+				<key>Comment</key>
+				<string>USB map</string>
+				<key>Enabled</key>
+				<false/>
+				<key>Path</key>
+				<string>SSDT-USB.aml</string>
+			</dict>
+		</array>
+	</dict>
+	<key>Drivers</key>
+	<array>
+		<dict>
+			<key>Path</key>
+			<string>OpenRuntime.efi</string>
+			<key>Enabled</key>
+			<true/>
+		</dict>
+		<dict>
+			<key>Path</key>
+			<string>ResetNvram.efi</string>
+			<key>Enabled</key>
+			<false/>
+		</dict>
+	</array>
+	<key>Kernel</key>
+	<dict>
+		<key>Add</key>
+		<array/>
+		<key>Quirks</key>
+		<dict>
+			<key>AppleCpuPmCfgLock</key>
+			<true/>
+			<key>DisableIoMapper</key>
+			<false/>
+			<key>PanicNoKextDump</key>
+			<true/>
+		</dict>
+	</dict>
+	<key>Tags</key>
+	<array>
+		<string>hackintosh</string>
+		<string>opencore</string>
+		<string>plist</string>
+	</array>
+	<key>Built</key>
+	<date>2026-09-03T12:00:00Z</date>
+</dict>
+</plist>

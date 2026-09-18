@@ -108,3 +108,6 @@ Scripts/settings.json
 Configuration.tex
 .DS_Store
 ProperTree.app
+
+# personal build notes for this fork, not part of the tool
+ROADMAP.local.md
