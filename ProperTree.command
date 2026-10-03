@@ -169,16 +169,16 @@ print_error() {
     clear
     cleanup
     echo "  ###                      ###"
-    echo " #     Python Not Found     #"
+    echo " #  Compatible Python      #"
     echo "###                      ###"
     echo
-    echo "Python is not installed or not found in your PATH var."
+    echo "No Python with a compatible Tk installation was found in PATH."
     echo
     if [ "$kernel" == "Darwin" ]; then
         echo "Please go to https://www.python.org/downloads/macos/ to"
         echo "download and install the latest version, then try again."
     else
-        echo "Please install python through your package manager and"
+        echo "Please install python and Tk through your package manager and"
         echo "try again."
     fi
     echo
@@ -217,7 +217,7 @@ vercomp () {
 get_local_python_version() {
     # $1 = Python bin name (defaults to python3)
     # Echoes the path to the highest version of the passed python bin if any
-    local py_name="$1" max_version= python= python_version= python_path=
+    local py_name="$1" max_version= python= python_version= python_path= tk_version=
     if [ -z "$py_name" ]; then
         py_name="python3"
     fi
@@ -236,9 +236,18 @@ get_local_python_version() {
                 continue
             fi
         fi
-        python_version="$(get_python_version $python)"
+        python_version="$(get_python_version "$python")"
         if [ -z "$python_version" ]; then
             # Didn't find a py version - skip
+            continue
+        fi
+        tk_version="$(get_tk_version "$python" "$python_version")"
+        if [ -z "$tk_version" ]; then
+            # ProperTree needs Tk, so this Python cannot launch it.
+            continue
+        fi
+        if [ "$kernel" == "Darwin" ] && [ "$(vercomp "$(sw_vers -productVersion)" "11")" != "2" ] && [ "$(vercomp "$tk_version" "8.6")" == "2" ]; then
+            # Tk 8.5 and older do not work on macOS 11 or later.
             continue
         fi
         # Got the py version - compare to our max
@@ -251,11 +260,19 @@ get_local_python_version() {
     echo "$python_path"
 }
 
+get_tk_version() {
+    local py_path="$1" py_version="$2" tk_module="tkinter"
+    if [ "$py_version" == 2.* ]; then
+        tk_module="Tkinter"
+    fi
+    "$py_path" -c "import $tk_module as tk; print(tk.TkVersion)" 2>/dev/null
+}
+
 get_python_version() {
     local py_path="$1" py_version=
     # Get the python version by piping stderr into stdout (for py2), then grepping the output for
     # the word "python", getting the second element, and grepping for an alphanumeric version number
-    py_version="$($py_path -V 2>&1 | grep -i python | cut -d' ' -f2 | grep -E "[A-Za-z\d\.]+")"
+    py_version="$("$py_path" -V 2>&1 | grep -i python | cut -d' ' -f2 | grep -E "[A-Za-z\d\.]+")"
     if [ ! -z "$py_version" ]; then
         echo "$py_version"
     fi
@@ -268,7 +285,7 @@ prompt_and_download() {
     fi
     clear
     echo "  ###                      ###"
-    echo " #     Python Not Found     #"
+    echo " #  Compatible Python      #"
     echo "###                      ###"
     echo
     target_py="Python 3"
@@ -279,7 +296,7 @@ prompt_and_download() {
         target_py="Python 2"
         printed_py="Python 2"
     fi
-    echo "Could not locate $printed_py!"
+    echo "Could not locate $printed_py with compatible Tk!"
     echo
     echo "This script requires $printed_py to run."
     echo
