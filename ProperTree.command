@@ -131,21 +131,19 @@ download_py () {
         exit $?
     fi
     echo
-    # Now we expand the package and look for a shell update script
-    pkgutil --expand "$tempdir/python.pkg" "$tempdir/python"
-    if [ -e "$tempdir/python/Python_Shell_Profile_Updater.pkg/Scripts/postinstall" ]; then
-        # Run the script
-        echo "Updating PATH..."
-        echo
-        "$tempdir/python/Python_Shell_Profile_Updater.pkg/Scripts/postinstall"
-        echo
-    fi
     vers_folder="Python $(echo "$vers" | cut -d'.' -f1 -f2)"
     if [ -f "/Applications/$vers_folder/Install Certificates.command" ]; then
         # Certs script exists - let's execute that to make sure our certificates are updated
         echo "Updating Certificates..."
         echo
         "/Applications/$vers_folder/Install Certificates.command"
+        echo
+    fi
+    if [ -f "/Applications/$vers_folder/Update Shell Profile.command" ]; then
+        # Certs script exists - let's execute that to make sure our certificates are updated
+        echo "Updating Shell Profile..."
+        echo
+        "/Applications/$vers_folder/Update Shell Profile.command"
         echo
     fi
     echo "Cleaning up..."

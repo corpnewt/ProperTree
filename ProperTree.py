@@ -118,6 +118,7 @@ class ProperTree:
         self.allowed_int   = ("Decimal","Hex")
         self.allowed_bool  = ("True/False","YES/NO","On/Off","1/0",u"\u2714/\u274c")
         self.allowed_conv  = ("Ascii","Base64","Decimal","Hex","Binary")
+        self.f_options     = ("Key", "Boolean", "Data", "Date", "Number", "UID", "String")
 
         # If should_set_header_text() returns None, we're running in macOS
         # with a window that does not support native dark mode.  The result
@@ -174,26 +175,31 @@ class ProperTree:
         bool_label = tk.Label(self.settings_window,text="Boolean Display Default:")
         bool_label.grid(row=10,column=0,sticky="w",padx=10)
         self.bool_type_menu.grid(row=10,column=1,columnspan=2,sticky="we",padx=10)
+        self.find_type_string = tk.StringVar(self.settings_window)
+        self.find_type_menu = tk_or_ttk.OptionMenu(self.settings_window, self.find_type_string, *self.get_option_menu_list(self.f_options), command=self.change_find_default)
+        find_type_label = tk.Label(self.settings_window,text="Find Type Default:")
+        find_type_label.grid(row=11,column=0,sticky="w",padx=10)
+        self.find_type_menu.grid(row=11,column=1,columnspan=2,sticky="we",padx=10)
         self.snapshot_string = tk.StringVar(self.settings_window)
         self.snapshot_menu = tk_or_ttk.OptionMenu(self.settings_window, self.snapshot_string, "Auto-detect", command=self.change_snapshot_version)
         snapshot_label = tk.Label(self.settings_window,text="OC Snapshot Target Version:")
-        snapshot_label.grid(row=11,column=0,sticky="w",padx=10)
-        self.snapshot_menu.grid(row=11,column=1,columnspan=2,sticky="we",padx=10)
+        snapshot_label.grid(row=12,column=0,sticky="w",padx=10)
+        self.snapshot_menu.grid(row=12,column=1,columnspan=2,sticky="we",padx=10)
         self.schema_check = tk_or_ttk.Checkbutton(self.settings_window,text="Force Update Snapshot Schema",variable=self.force_schema,command=self.schema_command)
-        self.schema_check.grid(row=12,column=0,columnspan=3,sticky="w",padx=10)
+        self.schema_check.grid(row=13,column=0,columnspan=3,sticky="w",padx=10)
         self.mod_check = tk.IntVar()
         self.enable_mod_check = tk_or_ttk.Checkbutton(self.settings_window,text="Warn If Files Are Externally Modified",variable=self.mod_check,command=self.mod_check_command)
-        self.enable_mod_check.grid(row=13,column=0,columnspan=3,stick="w",padx=10)
+        self.enable_mod_check.grid(row=14,column=0,columnspan=3,stick="w",padx=10)
         self.first_check = tk.IntVar()
         self.enable_first_check = tk_or_ttk.Checkbutton(self.settings_window,text="Enter Edits Values Before Keys Where Possible",variable=self.first_check,command=self.first_check_command)
-        self.enable_first_check.grid(row=14,column=0,columnspan=3,stick="w",padx=10)
+        self.enable_first_check.grid(row=15,column=0,columnspan=3,stick="w",padx=10)
         self.enable_drag_and_drop = tk.BooleanVar()
         self.toggle_drag_drop = tk_or_ttk.Checkbutton(self.settings_window,text="Enable Row Drag & Drop", variable=self.enable_drag_and_drop,command=self.drag_drop_command)
-        self.toggle_drag_drop.grid(row=15,column=0,columnspan=3,sticky="w",padx=10)
+        self.toggle_drag_drop.grid(row=16,column=0,columnspan=3,sticky="w",padx=10)
         self.drag_label = tk.Label(self.settings_window,text="Drag Dead Zone (1-100 pixels):")
-        self.drag_label.grid(row=16,column=0,sticky="w",padx=10)
+        self.drag_label.grid(row=17,column=0,sticky="w",padx=10)
         self.drag_pixels = tk.Label(self.settings_window,text="20")
-        self.drag_pixels.grid(row=16,column=1,sticky="w",padx=(10,0))
+        self.drag_pixels.grid(row=17,column=1,sticky="w",padx=(10,0))
         self.drag_scale = tk_or_ttk.Scale(self.settings_window,from_=1,to=100,orient=tk.HORIZONTAL,command=self.scale_command)
         # Try to hide the value if using tk - will throw an exception in ttk
         try: self.drag_scale.configure(showvalue=False)
@@ -412,12 +418,13 @@ class ProperTree:
         self.default_windows = (self.tk,self.settings_window)
 
         self.recent_menu = None
+        self.main_menu = None
         if str(sys.platform) == "darwin":
             # Setup the top level menu
             file_menu = tk.Menu(self.tk)
-            main_menu = tk.Menu(self.tk)
+            self.main_menu = tk.Menu(self.tk)
             self.recent_menu = tk.Menu(self.tk)
-            main_menu.add_cascade(label="File", menu=file_menu)
+            self.main_menu.add_cascade(label="File", menu=file_menu)
             file_menu.add_command(label="New (Cmd+N)", command=self.new_plist)
             file_menu.add_command(label="Open (Cmd+O)", command=self.open_plist)
             file_menu.add_cascade(label="Open Recent", menu=self.recent_menu, command=self.open_recent)
@@ -440,7 +447,8 @@ class ProperTree:
             file_menu.add_command(label="Toggle Plist/Data/Int Type Pane (Cmd+P)",command=self.hide_show_type)
             file_menu.add_separator()
             file_menu.add_command(label="Quit (Cmd+Q)", command=self.quit)
-            self.tk.config(menu=main_menu)
+            self.tk.config(menu=self.main_menu)
+            self.settings_window.config(menu=self.main_menu)
 
         # Set bindings
         # on at least macOS, tk 8.5 works with <Command-Z>, but 8.6 requires <Shift-Command-z>
@@ -1173,6 +1181,9 @@ class ProperTree:
     def change_bool_type(self, event = None):
         self.settings["display_bool_as"] = self.bool_type_string.get()
 
+    def change_find_default(self, event = None):
+        self.settings["find_type_default"] = self.find_type_string.get()
+
     def change_snapshot_version(self, event = None):
         self.settings["snapshot_version"] = self.snapshot_string.get().split(" ")[0]
 
@@ -1289,6 +1300,8 @@ class ProperTree:
         self.int_type_string.set(int_type if int_type in self.allowed_int else self.allowed_int[0])
         bool_type = self.settings.get("display_bool_as",self.allowed_bool[0])
         self.bool_type_string.set(bool_type if bool_type in self.allowed_bool else self.allowed_bool[0])
+        find_type = self.settings.get("find_type_default",self.f_options[0])
+        self.find_type_string.set(find_type if find_type in self.f_options else self.f_options[0])
         conv_f_type = self.settings.get("convert_from_type",self.allowed_conv[1])
         self.f_title.set(conv_f_type if conv_f_type in self.allowed_conv else self.allowed_conv[1])
         conv_t_type = self.settings.get("convert_to_type",self.allowed_conv[-1])
